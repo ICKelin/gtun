@@ -5,34 +5,50 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/ICKelin/glog"
-	"github.com/songgao/water"
 )
 
 var client = make(map[string]net.Conn)
-var ippool = make(map[string]bool)
 
-func init() {
+type DHCPPool struct {
+	sync.Mutex
+	ippool map[string]bool
+}
+
+func NewDHCPPool() (pool *DHCPPool) {
+	pool = &DHCPPool{}
+	pool.ippool = make(map[string]bool)
 	for i := 10; i < 250; i++ {
 		ip := fmt.Sprintf("10.10.253.%d", i)
-		ippool[ip] = false
+		pool.ippool[ip] = false
 	}
+	return pool
 }
+
+func (this *DHCPPool) SelectIP() (ip string, err error) {
+	this.Lock()
+	defer this.Unlock()
+	for ip, v := range this.ippool {
+		if v == false {
+			this.ippool[ip] = true
+			return ip, nil
+		}
+	}
+	return "", fmt.Errorf("not enough ip in pool")
+}
+
+func (this *DHCPPool) RecycleIP(ip string) {
+	this.Lock()
+	defer this.Unlock()
+	this.ippool[ip] = false
+}
+
+var dhcppool = NewDHCPPool()
 
 func main() {
 	listener, err := net.Listen("tcp", ":9621")
-	if err != nil {
-		glog.ERROR(err)
-		return
-	}
-
-	cfg := water.Config{
-		DeviceType: water.TUN,
-	}
-	cfg.Name = "gtun_srv"
-	ifce, err := water.New(cfg)
-
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -46,20 +62,20 @@ func main() {
 		}
 
 		glog.INFO("accept gtun client")
-		go HandleClient(conn, ifce)
+		go HandleClient(conn)
 	}
 }
 
-func HandleClient(conn net.Conn, ifce *water.Interface) {
+func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
-	cip, err := SelectIP()
+	cip, err := dhcppool.SelectIP()
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	defer RecycleIP(cip)
+	defer dhcppool.RecycleIP(cip)
 
 	client[cip] = conn
 	defer delete(client, cip)
@@ -90,10 +106,7 @@ func HandleClient(conn net.Conn, ifce *water.Interface) {
 		if c != nil {
 			c.Write(buff[:nr])
 		} else {
-			_, err = ifce.Write(buff[4:nr])
-			if err != nil {
-				glog.ERROR(err)
-			}
+			glog.ERROR(dst, "offline")
 		}
 	}
 }
@@ -108,18 +121,4 @@ func DHCP(conn net.Conn, clientip string) (err error) {
 
 	_, err = conn.Write(payload)
 	return err
-}
-
-func SelectIP() (ip string, err error) {
-	for ip, v := range ippool {
-		if v == false {
-			ippool[ip] = true
-			return ip, nil
-		}
-	}
-	return "", fmt.Errorf("not enough ip in pool")
-}
-
-func RecycleIP(cip string) {
-	ippool[cip] = false
 }

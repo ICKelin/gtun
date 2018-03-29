@@ -60,7 +60,7 @@ func main() {
 }
 
 func IfaceRead(ifce *water.Interface, conn net.Conn) {
-	packet := make([]byte, 2048)
+	packet := make([]byte, 65536)
 	for {
 		n, err := ifce.Read(packet)
 		if err != nil {
@@ -76,7 +76,7 @@ func IfaceRead(ifce *water.Interface, conn net.Conn) {
 }
 
 func IfaceWrite(ifce *water.Interface, conn net.Conn) {
-	packet := make([]byte, 2000)
+	packet := make([]byte, 65536)
 	for {
 		nr, err := conn.Read(packet)
 		if err != nil {
@@ -108,7 +108,6 @@ func ForwardSrv(srvcon net.Conn, buff []byte) (err error) {
 
 		left -= nw
 	}
-
 	return err
 }
 

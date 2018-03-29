@@ -10,8 +10,6 @@ import (
 	"github.com/ICKelin/glog"
 )
 
-var client = make(map[string]net.Conn)
-
 type DHCPPool struct {
 	sync.Mutex
 	ippool map[string]bool
@@ -45,7 +43,37 @@ func (this *DHCPPool) RecycleIP(ip string) {
 	this.ippool[ip] = false
 }
 
+type ClientPool struct {
+	sync.Mutex
+	client map[string]net.Conn
+}
+
+func NewClientPool() (clientpool *ClientPool) {
+	clientpool = &ClientPool{}
+	clientpool.client = make(map[string]net.Conn)
+	return clientpool
+}
+
+func (this *ClientPool) Add(cip string, conn net.Conn) {
+	this.Lock()
+	defer this.Unlock()
+	this.client[cip] = conn
+}
+
+func (this *ClientPool) Get(cip string) (conn net.Conn) {
+	this.Lock()
+	defer this.Unlock()
+	return this.client[cip]
+}
+
+func (this *ClientPool) Del(cip string) {
+	this.Lock()
+	defer this.Unlock()
+	delete(this.client, cip)
+}
+
 var dhcppool = NewDHCPPool()
+var clientpool = NewClientPool()
 
 func main() {
 	listener, err := net.Listen("tcp", ":9621")
@@ -74,11 +102,10 @@ func HandleClient(conn net.Conn) {
 		glog.ERROR(err)
 		return
 	}
-
 	defer dhcppool.RecycleIP(cip)
 
-	client[cip] = conn
-	defer delete(client, cip)
+	clientpool.Add(cip, conn)
+	defer clientpool.Del(cip)
 
 	if err := DHCP(conn, cip); err != nil {
 		glog.ERROR("dhcp ip for client fail", err)
@@ -102,7 +129,7 @@ func HandleClient(conn net.Conn) {
 
 		dst := fmt.Sprintf("%d.%d.%d.%d", buff[20], buff[21], buff[22], buff[23])
 
-		c := client[dst]
+		c := clientpool.Get(dst)
 		if c != nil {
 			c.Write(buff[:nr])
 		} else {

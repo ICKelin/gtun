@@ -1,4 +1,5 @@
 *.log
 *.swp
 gtun
+gtun_arm
 gtun_srv

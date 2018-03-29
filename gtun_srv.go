@@ -1,13 +1,13 @@
 package main
 
 import (
-	"encoding/binary"
 	"io"
 	"net"
 
 	"github.com/ICKelin/glog"
-	"github.com/songgao/water"
 )
+
+var client = make([]net.Conn, 0)
 
 func main() {
 	listener, err := net.Listen("tcp", ":9621")
@@ -15,18 +15,6 @@ func main() {
 		glog.ERROR(err)
 		return
 	}
-
-	cfg := water.Config{
-		DeviceType: water.TUN,
-	}
-	cfg.Name = "gtun_srv"
-	ifce, err := water.New(cfg)
-
-	if err != nil {
-		glog.ERROR(err)
-		return
-	}
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -34,31 +22,18 @@ func main() {
 			break
 		}
 
-		go HandleClient(conn, ifce)
+		client = append(client, conn)
+		glog.INFO("accept gtun client")
+		go HandleClient(conn)
 	}
 }
 
-func IfRead(ifce *water.Interface, conn net.Conn) {
-	buff := make([]byte, 2048)
-	for {
-		nr, err := ifce.Read(buff)
-		if err != nil {
-			glog.ERROR(err)
-			break
-		}
-
-		conn.Write(buff[:nr])
-	}
-}
-
-func HandleClient(conn net.Conn, ifce *water.Interface) {
+func HandleClient(conn net.Conn) {
 	defer conn.Close()
 
-	go IfRead(ifce, conn)
-	plen := make([]byte, 4)
-
+	buff := make([]byte, 65536)
 	for {
-		nr, err := conn.Read(plen)
+		nr, err := conn.Read(buff)
 		if err != nil {
 			if err != io.EOF {
 				glog.ERROR(err)
@@ -66,28 +41,12 @@ func HandleClient(conn net.Conn, ifce *water.Interface) {
 			break
 		}
 
-		if nr != 4 {
-			glog.ERROR("too short data", nr)
-			continue
-		}
-
-		payloadLength := binary.BigEndian.Uint32(plen)
-
-		buff := make([]byte, payloadLength)
-		nr, err = conn.Read(buff)
-		if err != nil {
-			glog.ERROR(err)
-			continue
-		}
-
-		if nr != int(payloadLength) {
-			glog.ERROR("size no match ", nr, payloadLength)
-			continue
-		}
-
-		_, err = ifce.Write(buff[:nr])
-		if err != nil {
-			glog.ERROR(err)
+		// broadcast
+		// TODO select peer
+		for _, c := range client {
+			if c.RemoteAddr().String() != conn.RemoteAddr().String() {
+				c.Write(buff[:nr])
+			}
 		}
 	}
 }

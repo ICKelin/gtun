@@ -37,8 +37,8 @@ func main() {
 		return
 	}
 
-	go IfRead(ifce, conn)
-	go IfWrite(ifce, conn)
+	go IfaceRead(ifce, conn)
+	go IfaceWrite(ifce, conn)
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
@@ -53,8 +53,8 @@ func ConServer(srv string) (conn net.Conn, err error) {
 	return conn, err
 }
 
-func IfRead(ifce *water.Interface, conn net.Conn) {
-	packet := make([]byte, 2000)
+func IfaceRead(ifce *water.Interface, conn net.Conn) {
+	packet := make([]byte, 2048)
 	for {
 		n, err := ifce.Read(packet)
 		if err != nil {
@@ -69,7 +69,7 @@ func IfRead(ifce *water.Interface, conn net.Conn) {
 	}
 }
 
-func IfWrite(ifce *water.Interface, conn net.Conn) {
+func IfaceWrite(ifce *water.Interface, conn net.Conn) {
 	packet := make([]byte, 2000)
 	for {
 		nr, err := conn.Read(packet)
@@ -78,7 +78,7 @@ func IfWrite(ifce *water.Interface, conn net.Conn) {
 			break
 		}
 
-		_, err = ifce.Write(packet[:nr])
+		_, err = ifce.Write(packet[4:nr])
 		if err != nil {
 			glog.ERROR(err)
 		}

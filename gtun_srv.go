@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/ICKelin/glog"
 )
@@ -76,20 +77,30 @@ var dhcppool = NewDHCPPool()
 var clientpool = NewClientPool()
 
 func main() {
-	listener, err := net.Listen("tcp", ":9621")
+	laddr, err := net.ResolveTCPAddr("tcp", "9621")
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
+
+	listener, err := net.ListenTCP("tcp", laddr)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := listener.AcceptTCP()
 		if err != nil {
 			glog.ERROR(err)
 			break
 		}
 
 		glog.INFO("accept gtun client")
+
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(time.Minute * 1)
+
 		go HandleClient(conn)
 	}
 }

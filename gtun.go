@@ -17,6 +17,7 @@ import (
 var (
 	psrv = flag.String("s", "120.25.214.63:9621", "srv address")
 	pdev = flag.String("dev", "gtun", "local tun device name")
+	pkey = flag.String("key", "gtun_authorize", "client authorize key")
 )
 
 func main() {
@@ -38,6 +39,15 @@ func main() {
 		glog.ERROR(err)
 		return
 	}
+	defer conn.Close()
+
+	err = Authorize(conn, *pkey)
+	if err != nil {
+		glog.ERROR("authorize fail")
+		return
+	}
+
+	glog.INFO("authorize success...")
 
 	tunip, err := GetTunIP(conn)
 	if err != nil {
@@ -156,4 +166,37 @@ func SetTunIP(dev, tunip string) (err error) {
 	}
 
 	return nil
+}
+
+func Authorize(conn net.Conn, key string) (err error) {
+	plen := make([]byte, 4)
+	binary.BigEndian.PutUint32(plen, uint32(len(key)))
+
+	buff := make([]byte, 0)
+	buff = append(buff, plen...)
+	buff = append(buff, []byte(key)...)
+
+	_, err = conn.Write(buff)
+	if err != nil {
+		return err
+	}
+
+	status := make([]byte, 1)
+	nr, err := conn.Read(status)
+	if err != nil {
+		return err
+	}
+
+	if nr != 1 {
+		return fmt.Errorf("unexpected authorize status length")
+	}
+
+	if status[0] == 0x00 {
+		return fmt.Errorf("authorize fail")
+	}
+
+	if status[0] == 0x01 {
+		return nil
+	}
+	return fmt.Errorf("unexpected authorize status")
 }

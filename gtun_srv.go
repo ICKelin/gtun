@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -76,8 +77,19 @@ func (this *ClientPool) Del(cip string) {
 var dhcppool = NewDHCPPool()
 var clientpool = NewClientPool()
 
+var (
+	pkey = flag.String("key", "gtun_authorize", "client authorize key")
+)
+
+const (
+	AUTHORIZE_FAIL    = 0x00
+	AUTHORIZE_SUCCESS = 0x01
+)
+
 func main() {
-	laddr, err := net.ResolveTCPAddr("tcp", "9621")
+	flag.Parse()
+
+	laddr, err := net.ResolveTCPAddr("tcp", ":9621")
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -107,6 +119,12 @@ func main() {
 
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
+
+	err := Authorize(conn)
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
 
 	cip, err := dhcppool.SelectIP()
 	if err != nil {
@@ -147,6 +165,33 @@ func HandleClient(conn net.Conn) {
 			glog.ERROR(dst, "offline")
 		}
 	}
+}
+
+func Authorize(conn net.Conn) (err error) {
+	plen := make([]byte, 4)
+	nr, err := conn.Read(plen)
+	if err != nil {
+		return err
+	}
+
+	payloadlength := binary.BigEndian.Uint32(plen)
+	authorizekey := make([]byte, payloadlength)
+	nr, err = conn.Read(authorizekey)
+	if err != nil {
+		return err
+	}
+
+	if nr != int(payloadlength) {
+		return fmt.Errorf("too short authorize key")
+	}
+
+	if string(authorizekey) == *pkey {
+		conn.Write([]byte{AUTHORIZE_SUCCESS})
+	} else {
+		conn.Write([]byte{AUTHORIZE_FAIL})
+	}
+
+	return nil
 }
 
 func DHCP(conn net.Conn, clientip string) (err error) {

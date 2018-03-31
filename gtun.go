@@ -86,15 +86,30 @@ func IfaceRead(ifce *water.Interface, conn net.Conn) {
 }
 
 func IfaceWrite(ifce *water.Interface, conn net.Conn) {
-	packet := make([]byte, 65536)
+	plen := make([]byte, 4)
 	for {
-		nr, err := conn.Read(packet)
+		nr, err := conn.Read(plen)
 		if err != nil {
 			glog.ERROR(err)
 			break
 		}
 
-		_, err = ifce.Write(packet[4:nr])
+		payloadlength := uint32(0)
+		binary.BigEndian.PutUint32(plen, payloadlength)
+
+		if payloadlength > 65536 {
+			glog.ERROR("too big ip payload")
+			continue
+		}
+
+		packet := make([]byte, payloadlength)
+		nr, err = conn.Read(packet)
+		if err != nil {
+			glog.ERROR(err)
+			break
+		}
+
+		_, err = ifce.Write(packet[:nr])
 		if err != nil {
 			glog.ERROR(err)
 		}
@@ -112,8 +127,9 @@ func ForwardSrv(srvcon net.Conn, buff []byte) (err error) {
 	left := len(output)
 	for left > 0 {
 		nw, er := srvcon.Write(output)
-		if err != nil {
+		if er != nil {
 			err = er
+			break
 		}
 
 		left -= nw

@@ -23,6 +23,17 @@ ifconfig cmd you will get a tun device wiht an ip delivery by gtun_srv
 
 ```
 
+### example
+
+eg
+connect between you office and home computer
+
+running gtun in you office server and home computer, ssh the gtun nic ip and you will access you office environment.
+
+also, run gtun in you public server is allow, and there is no need to run gtun for every staff. connect to public server and will access to all gtun client, public server is just like a jumper server.
+
+![usage_example](./example.jpg)
+
 ### more
 [tun/tap vpn](https://github.com/ICKelin/article/issues/9)
 

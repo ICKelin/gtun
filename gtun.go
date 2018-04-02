@@ -86,30 +86,15 @@ func IfaceRead(ifce *water.Interface, conn net.Conn) {
 }
 
 func IfaceWrite(ifce *water.Interface, conn net.Conn) {
-	plen := make([]byte, 4)
+	packet := make([]byte, 65536)
 	for {
-		nr, err := conn.Read(plen)
+		nr, err := conn.Read(packet)
 		if err != nil {
 			glog.ERROR(err)
 			break
 		}
 
-		payloadlength := uint32(0)
-		binary.BigEndian.PutUint32(plen, payloadlength)
-
-		if payloadlength > 65536 {
-			glog.ERROR("too big ip payload")
-			continue
-		}
-
-		packet := make([]byte, payloadlength)
-		nr, err = conn.Read(packet)
-		if err != nil {
-			glog.ERROR(err)
-			break
-		}
-
-		_, err = ifce.Write(packet[:nr])
+		_, err = ifce.Write(packet[4:nr])
 		if err != nil {
 			glog.ERROR(err)
 		}

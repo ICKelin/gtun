@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/ICKelin/glog"
 	"github.com/songgao/water"
@@ -123,11 +124,24 @@ func ForwardSrv(srvcon net.Conn, buff []byte) (err error) {
 }
 
 func ConServer(srv string) (conn net.Conn, err error) {
-	conn, err = net.Dial("tcp", srv)
+	srvaddr, err := net.ResolveTCPAddr("tcp", srv)
 	if err != nil {
 		return nil, err
 	}
-	return conn, err
+
+	tryCount := 0
+	for {
+		conn, err = net.DialTCP("tcp", nil, srvaddr)
+		if err != nil {
+			if tryCount > 10 {
+				return nil, err
+			}
+			tryCount++
+			time.Sleep(time.Second * 10)
+			continue
+		}
+		return conn, err
+	}
 }
 
 func GetTunIP(conn net.Conn) (tunip string, err error) {

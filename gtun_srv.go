@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/ICKelin/glog"
 )
@@ -109,10 +108,6 @@ func main() {
 		}
 
 		glog.INFO("accept gtun client")
-
-		conn.SetKeepAlive(true)
-		conn.SetKeepAlivePeriod(time.Minute * 1)
-
 		go HandleClient(conn)
 	}
 }

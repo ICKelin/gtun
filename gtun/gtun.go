@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -58,15 +59,15 @@ func main() {
 		return
 	}
 
-	go IfaceRead(ifce, conn)
-	go IfaceWrite(ifce, conn)
+	go IfaceRead(ifce, conn, s2cauthorize.AccessIP)
+	go IfaceWrite(ifce, conn, s2cauthorize.AccessIP)
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
 	<-sig
 }
 
-func IfaceRead(ifce *water.Interface, conn net.Conn) {
+func IfaceRead(ifce *water.Interface, conn net.Conn, lip string) {
 	packet := make([]byte, 65536)
 	for {
 		n, err := ifce.Read(packet)
@@ -75,19 +76,30 @@ func IfaceRead(ifce *water.Interface, conn net.Conn) {
 			break
 		}
 
-		err = ForwardSrv(conn, packet[:n])
-		if err != nil {
-			glog.ERROR(err)
+		err = ForwardSrv(conn, packet[:n], lip)
+		if err != nil && err == io.EOF {
+			conn, err = ReConServer(*psrv, lip, *pkey)
+			if err != nil {
+				glog.ERROR(err)
+				break
+			}
 		}
 	}
 }
 
-func IfaceWrite(ifce *water.Interface, conn net.Conn) {
+func IfaceWrite(ifce *water.Interface, conn net.Conn, lip string) {
 	packet := make([]byte, 65536)
 	for {
 		nr, err := conn.Read(packet)
 		if err != nil {
-			glog.ERROR(err)
+			if err == io.EOF {
+				conn, err = ReConServer(*psrv, lip, *pkey)
+				if err != nil {
+					break
+				} else {
+					continue
+				}
+			}
 			break
 		}
 
@@ -98,7 +110,7 @@ func IfaceWrite(ifce *water.Interface, conn net.Conn) {
 	}
 }
 
-func ForwardSrv(srvcon net.Conn, buff []byte) (err error) {
+func ForwardSrv(srvcon net.Conn, buff []byte, lip string) (err error) {
 	output := make([]byte, 0)
 	bsize := make([]byte, 4)
 	binary.BigEndian.PutUint32(bsize, uint32(len(buff)))
@@ -110,7 +122,6 @@ func ForwardSrv(srvcon net.Conn, buff []byte) (err error) {
 	for left > 0 {
 		nw, er := srvcon.Write(output)
 		if er != nil {
-			err = er
 			break
 		}
 
@@ -138,6 +149,20 @@ func ConServer(srv string) (conn net.Conn, err error) {
 		}
 		return conn, err
 	}
+}
+
+func ReConServer(srv, accessIP, key string) (conn net.Conn, err error) {
+	conn, err = ConServer(srv)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = Authorize(conn, accessIP, *pkey)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, err
 }
 
 func SetTunIP(dev, tunip string) (err error) {

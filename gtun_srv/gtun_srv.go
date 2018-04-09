@@ -122,7 +122,7 @@ func HandleClient(conn net.Conn) {
 		return
 	}
 
-	glog.INFO("accept gtun client, assign ip", accessip)
+	glog.INFO("accept gtun client from", conn.RemoteAddr().String(), "assign ip", accessip)
 	defer dhcppool.RecycleIP(accessip)
 
 	clientpool.Add(accessip, conn)
@@ -165,6 +165,8 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 	if err != nil {
 		return "", err
 	}
+
+	accessip = auth.AccessIP
 
 	s2cauthorize := &common.S2CAuthorize{}
 	if auth.Key != *pkey {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -156,21 +155,9 @@ func HandleClient(conn net.Conn) {
 }
 
 func Authorize(conn net.Conn) (accessip string, err error) {
-	plen := make([]byte, 4)
-	nr, err := conn.Read(plen)
+	payload, err := common.Decode(conn)
 	if err != nil {
 		return "", err
-	}
-
-	payloadlength := binary.BigEndian.Uint32(plen)
-	payload := make([]byte, payloadlength)
-	nr, err = conn.Read(payload)
-	if err != nil {
-		return "", err
-	}
-
-	if nr != int(payloadlength) {
-		return "", fmt.Errorf("too short authorize key")
 	}
 
 	auth := &common.C2SAuthorize{}
@@ -199,11 +186,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		return "", err
 	}
 
-	buff := make([]byte, 0)
-	binary.BigEndian.PutUint32(plen, uint32(len(resp)))
-
-	buff = append(buff, plen...)
-	buff = append(buff, resp...)
+	buff := common.Encode(resp)
 	_, err = conn.Write(buff)
 	if err != nil {
 		return "", err

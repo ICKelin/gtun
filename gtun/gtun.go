@@ -46,7 +46,7 @@ func main() {
 
 	s2cauthorize, err := Authorize(conn, "", *pkey)
 	if err != nil {
-		glog.ERROR("authorize fail")
+		glog.ERROR("authorize fail", err)
 		return
 	}
 
@@ -168,34 +168,20 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 		return nil, err
 	}
 
-	plen := make([]byte, 4)
-	binary.BigEndian.PutUint32(plen, uint32(len(payload)))
-
-	buff := make([]byte, 0)
-	buff = append(buff, plen...)
-
-	buff = append(buff, payload...)
+	buff := common.Encode(payload)
 
 	_, err = conn.Write(buff)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = conn.Read(plen)
-	if err != nil {
-		return nil, err
-	}
-
-	payloadlength := uint32(0)
-	payloadlength = binary.BigEndian.Uint32(plen)
-	resp := make([]byte, payloadlength)
-	nr, err := conn.Read(resp)
+	resp, err := common.Decode(conn)
 	if err != nil {
 		return nil, err
 	}
 
 	s2cauthorize = &common.S2CAuthorize{}
-	err = json.Unmarshal(resp[:nr], s2cauthorize)
+	err = json.Unmarshal(resp, s2cauthorize)
 	if err != nil {
 		return nil, err
 	}

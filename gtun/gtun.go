@@ -116,6 +116,8 @@ func ForwardSrv(srvcon net.Conn, buff []byte, lip string) (err error) {
 	binary.BigEndian.PutUint32(bsize, uint32(len(buff)))
 
 	output = append(output, bsize...)
+	// TODO append dst ip in header
+
 	output = append(output, buff...)
 
 	left := len(output)

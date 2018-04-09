@@ -143,6 +143,7 @@ func HandleClient(conn net.Conn) {
 			continue
 		}
 
+		// TODO: remove
 		dst := fmt.Sprintf("%d.%d.%d.%d", buff[20], buff[21], buff[22], buff[23])
 
 		c := clientpool.Get(dst)

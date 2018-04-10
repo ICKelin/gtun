@@ -134,13 +134,16 @@ func ConServer(srv string) (conn net.Conn, err error) {
 	}
 
 	for {
-		conn, err = net.DialTCP("tcp", nil, srvaddr)
+		tcp, err := net.DialTCP("tcp", nil, srvaddr)
 		if err != nil {
 			glog.ERROR(err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
-		return conn, nil
+		tcp.SetKeepAlive(true)
+		tcp.SetKeepAlivePeriod(time.Second * 30)
+
+		return tcp, nil
 	}
 }
 

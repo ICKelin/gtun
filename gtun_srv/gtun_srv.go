@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
@@ -109,6 +110,8 @@ func main() {
 			break
 		}
 
+		conn.SetKeepAlive(true)
+		conn.SetKeepAlivePeriod(time.Second * 30)
 		go HandleClient(conn)
 	}
 }

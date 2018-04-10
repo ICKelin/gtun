@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,6 +29,7 @@ type GtunContext struct {
 	srv    string
 	key    string
 	dhcpip string
+	ldev   string
 }
 
 func (this *GtunContext) ConServer() (err error) {
@@ -65,8 +68,9 @@ func main() {
 	}
 
 	gtun := &GtunContext{
-		srv: *psrv,
-		key: *pkey,
+		srv:  *psrv,
+		key:  *pkey,
+		ldev: ifce.Name(),
 	}
 
 	err = gtun.ConServer()
@@ -75,7 +79,7 @@ func main() {
 		return
 	}
 
-	err = SetTunIP(*pdev, gtun.dhcpip)
+	err = SetTunIP(gtun.ldev, gtun.dhcpip)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -148,17 +152,39 @@ func ConServer(srv string) (conn net.Conn, err error) {
 }
 
 func SetTunIP(dev, tunip string) (err error) {
-	uptun := fmt.Sprintf("ifconfig %s up", dev)
-	setip := fmt.Sprintf("ip addr add %s/24 dev %s", tunip, dev)
-
-	err = exec.Command("/bin/sh", "-c", uptun).Run()
-	if err != nil {
-		return fmt.Errorf("up %s error %s", dev, err.Error())
+	type CMD struct {
+		cmd  string
+		args []string
 	}
 
-	err = exec.Command("/bin/sh", "-c", setip).Run()
-	if err != nil {
-		return fmt.Errorf("up %s error %s", dev, err.Error())
+	cmdlist := make([]*CMD, 0)
+
+	cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
+
+	switch runtime.GOOS {
+	case "linux":
+		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", tunip, dev), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
+
+	case "darwin":
+		args := strings.Split(fmt.Sprintf("%s %s %s", dev, tunip, tunip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
+
+		sp := strings.Split(tunip, ".")
+
+		gateway := fmt.Sprintf("%s.%s.%s.0/24", sp[0], sp[1], sp[2])
+
+		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", gateway, tunip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
+
+	default:
+	}
+
+	for _, c := range cmdlist {
+		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("run %s error %s", c, string(output))
+		}
 	}
 
 	return nil

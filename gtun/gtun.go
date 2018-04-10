@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -24,50 +22,74 @@ var (
 	pkey = flag.String("key", "gtun_authorize", "client authorize key")
 )
 
+type GtunContext struct {
+	conn   net.Conn
+	srv    string
+	key    string
+	dhcpip string
+}
+
+func (this *GtunContext) ConServer() (err error) {
+	conn, err := ConServer(this.srv)
+	if err != nil {
+		return err
+	}
+
+	s2c, err := Authorize(conn, this.dhcpip, this.key)
+	if err != nil {
+		return err
+	}
+
+	this.dhcpip = s2c.AccessIP
+	this.conn = conn
+
+	return nil
+}
+
+func (this *GtunContext) ReConServer() (err error) {
+	return this.ConServer()
+}
+
 func main() {
 	flag.Parse()
 
 	cfg := water.Config{
 		DeviceType: water.TUN,
 	}
+
 	cfg.Name = *pdev
 	ifce, err := water.New(cfg)
-
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	conn, err := ConServer(*psrv)
-	if err != nil {
-		glog.ERROR(err)
-		return
-	}
-	defer conn.Close()
-
-	s2cauthorize, err := Authorize(conn, "", *pkey)
-	if err != nil {
-		glog.ERROR("authorize fail", err)
-		return
+	gtun := &GtunContext{
+		srv: *psrv,
+		key: *pkey,
 	}
 
-	glog.INFO("authorize success...")
-
-	err = SetTunIP(*pdev, s2cauthorize.AccessIP)
+	err = gtun.ConServer()
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	go IfaceRead(ifce, conn, s2cauthorize.AccessIP)
-	go IfaceWrite(ifce, conn, s2cauthorize.AccessIP)
+	err = SetTunIP(*pdev, gtun.dhcpip)
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
+
+	go IfaceRead(ifce, gtun)
+	go IfaceWrite(ifce, gtun)
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
 	<-sig
 }
 
-func IfaceRead(ifce *water.Interface, conn net.Conn, lip string) {
+func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 	packet := make([]byte, 65536)
 	for {
 		n, err := ifce.Read(packet)
@@ -76,31 +98,24 @@ func IfaceRead(ifce *water.Interface, conn net.Conn, lip string) {
 			break
 		}
 
-		err = ForwardSrv(conn, packet[:n], lip)
-		if err != nil && err == io.EOF {
-			conn, err = ReConServer(*psrv, lip, *pkey)
-			if err != nil {
-				glog.ERROR(err)
-				break
-			}
+		bytes := common.Encode(packet[:n])
+		nw, err := gtun.conn.Write(bytes)
+		if err != nil {
+			glog.INFO("reconnect since since", err)
+			gtun.ReConServer()
+			continue
 		}
 	}
 }
 
-func IfaceWrite(ifce *water.Interface, conn net.Conn, lip string) {
+func IfaceWrite(ifce *water.Interface, gtun *GtunContext) {
 	packet := make([]byte, 65536)
 	for {
-		nr, err := conn.Read(packet)
+		nr, err := gtun.conn.Read(packet)
 		if err != nil {
-			if err == io.EOF {
-				conn, err = ReConServer(*psrv, lip, *pkey)
-				if err != nil {
-					break
-				} else {
-					continue
-				}
-			}
-			break
+			glog.INFO("reconnect since ", err)
+			gtun.ReConServer()
+			continue
 		}
 
 		_, err = ifce.Write(packet[4:nr])
@@ -110,61 +125,21 @@ func IfaceWrite(ifce *water.Interface, conn net.Conn, lip string) {
 	}
 }
 
-func ForwardSrv(srvcon net.Conn, buff []byte, lip string) (err error) {
-	output := make([]byte, 0)
-	bsize := make([]byte, 4)
-	binary.BigEndian.PutUint32(bsize, uint32(len(buff)))
-
-	output = append(output, bsize...)
-	// TODO append dst ip in header
-
-	output = append(output, buff...)
-
-	left := len(output)
-	for left > 0 {
-		nw, er := srvcon.Write(output)
-		if er != nil {
-			break
-		}
-
-		left -= nw
-	}
-	return err
-}
-
 func ConServer(srv string) (conn net.Conn, err error) {
 	srvaddr, err := net.ResolveTCPAddr("tcp", srv)
 	if err != nil {
 		return nil, err
 	}
 
-	tryCount := 0
 	for {
 		conn, err = net.DialTCP("tcp", nil, srvaddr)
 		if err != nil {
-			if tryCount > 10 {
-				return nil, err
-			}
-			tryCount++
+			glog.ERROR(err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
-		return conn, err
+		return conn, nil
 	}
-}
-
-func ReConServer(srv, accessIP, key string) (conn net.Conn, err error) {
-	conn, err = ConServer(srv)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = Authorize(conn, accessIP, *pkey)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, err
 }
 
 func SetTunIP(dev, tunip string) (err error) {

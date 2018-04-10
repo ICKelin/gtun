@@ -99,9 +99,9 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 		}
 
 		bytes := common.Encode(packet[:n])
-		nw, err := gtun.conn.Write(bytes)
+		_, err = gtun.conn.Write(bytes)
 		if err != nil {
-			glog.INFO("reconnect since since", err)
+			glog.INFO("reconnect since", err)
 			gtun.ReConServer()
 			continue
 		}
@@ -109,16 +109,15 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 }
 
 func IfaceWrite(ifce *water.Interface, gtun *GtunContext) {
-	packet := make([]byte, 65536)
 	for {
-		nr, err := gtun.conn.Read(packet)
+		pkt, err := common.Decode(gtun.conn)
 		if err != nil {
-			glog.INFO("reconnect since ", err)
+			glog.INFO("reconnect since", err)
 			gtun.ReConServer()
 			continue
 		}
 
-		_, err = ifce.Write(packet[4:nr])
+		_, err = ifce.Write(pkt)
 		if err != nil {
 			glog.ERROR(err)
 		}

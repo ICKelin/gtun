@@ -99,7 +99,10 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 		}
 
 		bytes := common.Encode(packet[:n])
+		gtun.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
 		_, err = gtun.conn.Write(bytes)
+		gtun.conn.SetWriteDeadline(time.Time{})
+
 		if err != nil {
 			glog.INFO("reconnect since", err)
 			gtun.ReConServer()

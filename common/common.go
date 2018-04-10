@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"net"
+	"time"
 )
 
 type C2SAuthorize struct {
@@ -35,7 +36,10 @@ func Decode(conn net.Conn) ([]byte, error) {
 
 	payloadlength := binary.BigEndian.Uint32(plen)
 	resp := make([]byte, payloadlength)
+
+	conn.SetReadDeadline(time.Now().Add(time.Second * 30))
 	nr, err := conn.Read(resp)
+	conn.SetReadDeadline(time.Time{})
 	if err != nil {
 		return nil, err
 	}

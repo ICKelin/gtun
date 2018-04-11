@@ -1,3 +1,7 @@
 *.log
 *.swp
+*.json
 gtun_arm
+gtun_darwin
+gtun_linux
+gtun_vpn*

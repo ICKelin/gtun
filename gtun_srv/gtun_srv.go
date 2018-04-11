@@ -118,12 +118,13 @@ func main() {
 
 func HandleClient(conn net.Conn) {
 	defer conn.Close()
-
 	accessip, err := Authorize(conn)
 	if err != nil {
-		glog.ERROR(err)
+		glog.ERROR("authorize fail", err)
 		return
 	}
+
+	defer glog.INFO("disconnect from", conn.RemoteAddr().String(), "his ip is ", accessip)
 
 	glog.INFO("accept gtun client from", conn.RemoteAddr().String(), "assign ip", accessip)
 	defer dhcppool.RecycleIP(accessip)
@@ -133,7 +134,9 @@ func HandleClient(conn net.Conn) {
 
 	buff := make([]byte, 65536)
 	for {
+		conn.SetReadDeadline(time.Now().Add(time.Minute * 30))
 		nr, err := conn.Read(buff)
+		conn.SetReadDeadline(time.Time{})
 		if err != nil {
 			if err != io.EOF {
 				glog.ERROR(err)
@@ -151,7 +154,12 @@ func HandleClient(conn net.Conn) {
 
 		c := clientpool.Get(dst)
 		if c != nil {
-			c.Write(buff[:nr])
+			c.SetWriteDeadline(time.Now().Add(time.Secon * 10))
+			_, err = c.Write(buff[:nr])
+			c.SetWriteDeadline(time.Time{})
+			if err != nil {
+				glog.ERROR("write to peer ", c.RemoteAddr().String(), dst, err)
+			}
 		} else {
 			glog.ERROR(dst, "offline")
 		}
@@ -177,7 +185,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		s2cauthorize.AccessIP = ""
 		s2cauthorize.Status = "authorize fail"
 	} else {
-		if accessip == "" || dhcppool.InUsed(accessip) {
+		if accessip == "" {
 			accessip, err = dhcppool.SelectIP()
 			if err != nil {
 				return "", err

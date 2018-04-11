@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/ICKelin/glog"
@@ -85,13 +88,25 @@ var dhcppool = NewDHCPPool()
 var clientpool = NewClientPool()
 
 var (
-	pkey = flag.String("key", "gtun_authorize", "client authorize key")
+	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
+	pcloud = flag.Bool("cloud", false, "cloud mode")
 )
 
 func main() {
 	flag.Parse()
+	if *pcloud {
+		go CloudMode("gtun", "10.10.253.1", ":9621")
+	} else {
+		go LANMode(":9621")
+	}
 
-	laddr, err := net.ResolveTCPAddr("tcp", ":9621")
+	sig := make(chan os.Signal, 3)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
+	<-sig
+}
+
+func LANMode(addr string) {
+	laddr, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -125,8 +140,8 @@ func HandleClient(conn net.Conn) {
 	}
 
 	defer glog.INFO("disconnect from", conn.RemoteAddr().String(), "his ip is ", accessip)
-
 	glog.INFO("accept gtun client from", conn.RemoteAddr().String(), "assign ip", accessip)
+
 	defer dhcppool.RecycleIP(accessip)
 
 	clientpool.Add(accessip, conn)
@@ -154,7 +169,7 @@ func HandleClient(conn net.Conn) {
 
 		c := clientpool.Get(dst)
 		if c != nil {
-			c.SetWriteDeadline(time.Now().Add(time.Secon * 10))
+			c.SetWriteDeadline(time.Now().Add(time.Second * 10))
 			_, err = c.Write(buff[:nr])
 			c.SetWriteDeadline(time.Time{})
 			if err != nil {

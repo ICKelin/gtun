@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ICKelin/gltun.svg?branch=master)](https://travis-ci.org/ICKelin/gtun)
+[![Build Status](https://travis-ci.org/ICKelin/gtun.svg?branch=master)](https://travis-ci.org/ICKelin/gtun)
 ### gtun
 gtun is a vpn written in golang for diffrent area to connect like a local area network. 
 

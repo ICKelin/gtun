@@ -110,7 +110,7 @@ func IfceWrite(ifce *water.Interface) {
 		c := clientpool.Get(dst)
 		if c != nil {
 			c.SetWriteDeadline(time.Now().Add(time.Second * 10))
-			bytes := common.Encode(buff[:nr])
+			bytes := common.Encode(common.C2S_DATA, buff[:nr])
 			_, err = c.Write(bytes)
 			c.SetWriteDeadline(time.Time{})
 			if err != nil {

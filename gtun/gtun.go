@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -19,17 +20,23 @@ import (
 )
 
 var (
-	psrv = flag.String("s", "120.25.214.63:9621", "srv address")
-	pdev = flag.String("dev", "gtun", "local tun device name")
-	pkey = flag.String("key", "gtun_authorize", "client authorize key")
+	psrv   = flag.String("s", "120.25.214.63:9621", "srv address")
+	pdev   = flag.String("dev", "gtun", "local tun device name")
+	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
+	pdebug = flag.Bool("debug", false, "debug mode")
 )
 
 type GtunContext struct {
-	conn   net.Conn
-	srv    string
-	key    string
-	dhcpip string
-	ldev   string
+	sync.Mutex
+	conn       net.Conn
+	srv        string
+	key        string
+	dhcpip     string
+	ldev       string
+	sndqueue   chan []byte
+	rcvqueue   chan []byte
+	readclose  chan bool
+	writeclose chan bool
 }
 
 func (this *GtunContext) ConServer() (err error) {
@@ -43,18 +50,21 @@ func (this *GtunContext) ConServer() (err error) {
 		return err
 	}
 
+	this.Lock()
 	this.dhcpip = s2c.AccessIP
 	this.conn = conn
+	this.Unlock()
 
 	return nil
 }
 
-func (this *GtunContext) ReConServer() (err error) {
-	return this.ConServer()
-}
-
 func main() {
 	flag.Parse()
+	if *pdebug {
+		glog.Init("gtun", glog.PRIORITY_DEBUG, "./", glog.OPT_DATE, 1024*10)
+	} else {
+		glog.Init("gtun", glog.PRIORITY_INFO, "./", glog.OPT_DATE, 1024*10)
+	}
 
 	cfg := water.Config{
 		DeviceType: water.TUN,
@@ -68,9 +78,14 @@ func main() {
 	}
 
 	gtun := &GtunContext{
-		srv:  *psrv,
-		key:  *pkey,
-		ldev: ifce.Name(),
+		srv:        *psrv,
+		key:        *pkey,
+		ldev:       ifce.Name(),
+		sndqueue:   make(chan []byte),
+		rcvqueue:   make(chan []byte),
+		dhcpip:     "",
+		readclose:  make(chan bool),
+		writeclose: make(chan bool),
 	}
 
 	err = gtun.ConServer()
@@ -85,12 +100,80 @@ func main() {
 		return
 	}
 
+	go Heartbeat(gtun)
 	go IfaceRead(ifce, gtun)
-	go IfaceWrite(ifce, gtun)
+
+	for {
+		go Snd(ifce, gtun)
+		go Rcv(ifce, gtun)
+
+		<-gtun.readclose
+		<-gtun.writeclose
+
+		glog.INFO("reconnect")
+
+		err = gtun.ConServer()
+		if err != nil {
+			glog.ERROR(err)
+			break
+		}
+
+	}
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
 	<-sig
+}
+
+func Rcv(ifce *water.Interface, gtun *GtunContext) {
+	for {
+		cmd, pkt, err := common.Decode(gtun.conn)
+		if err != nil {
+			glog.ERROR(err)
+			break
+		}
+
+		switch cmd {
+		case common.S2C_HEARTBEAT:
+			glog.DEBUG("heartbeat from srv")
+
+		case common.C2C_DATA:
+			_, err := ifce.Write(pkt)
+			if err != nil {
+				glog.ERROR(err)
+			}
+
+		default:
+			glog.ERROR("unimplement cmd", int(cmd), pkt)
+		}
+	}
+
+	gtun.readclose <- true
+}
+
+func Snd(ifce *water.Interface, gtun *GtunContext) {
+	for {
+		pkt := <-gtun.sndqueue
+		gtun.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+		_, err := gtun.conn.Write(pkt)
+		gtun.conn.SetWriteDeadline(time.Time{})
+		if err != nil {
+			glog.ERROR(err)
+			break
+		}
+	}
+
+	gtun.writeclose <- true
+}
+
+func Heartbeat(gtun *GtunContext) {
+	for {
+		select {
+		case <-time.After(time.Second * 3):
+			bytes := common.Encode(common.C2S_HEARTBEAT, nil)
+			gtun.sndqueue <- bytes
+		}
+	}
 }
 
 func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
@@ -101,33 +184,8 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 			glog.ERROR(err)
 			break
 		}
-
-		bytes := common.Encode(packet[:n])
-		gtun.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
-		_, err = gtun.conn.Write(bytes)
-		gtun.conn.SetWriteDeadline(time.Time{})
-
-		if err != nil {
-			glog.INFO("reconnect since", err)
-			gtun.ReConServer()
-			continue
-		}
-	}
-}
-
-func IfaceWrite(ifce *water.Interface, gtun *GtunContext) {
-	for {
-		pkt, err := common.Decode(gtun.conn)
-		if err != nil {
-			glog.INFO("reconnect since", err)
-			gtun.ReConServer()
-			continue
-		}
-
-		_, err = ifce.Write(pkt)
-		if err != nil {
-			glog.ERROR(err)
-		}
+		bytes := common.Encode(common.C2C_DATA, packet[:n])
+		gtun.sndqueue <- bytes
 	}
 }
 
@@ -201,15 +259,20 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 		return nil, err
 	}
 
-	buff := common.Encode(payload)
+	buff := common.Encode(common.C2S_AUTHORIZE, payload)
 
 	_, err = conn.Write(buff)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := common.Decode(conn)
+	cmd, resp, err := common.Decode(conn)
 	if err != nil {
+		return nil, err
+	}
+
+	if cmd != common.S2C_AUTHORIZE {
+		err = fmt.Errorf("invalid authorize cmd %d", cmd)
 		return nil, err
 	}
 

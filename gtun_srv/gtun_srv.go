@@ -95,7 +95,7 @@ var (
 func main() {
 	flag.Parse()
 	if *pcloud {
-		go CloudMode("gtun", "10.10.253.1", ":9621")
+		// go CloudMode("gtun", "10.10.253.1", ":9621")
 	} else {
 		go LANMode(":9621")
 	}
@@ -147,10 +147,9 @@ func HandleClient(conn net.Conn) {
 	clientpool.Add(accessip, conn)
 	defer clientpool.Del(accessip)
 
-	buff := make([]byte, 65536)
 	for {
 		conn.SetReadDeadline(time.Now().Add(time.Minute * 30))
-		nr, err := conn.Read(buff)
+		cmd, pkt, err := common.Decode(conn)
 		conn.SetReadDeadline(time.Time{})
 		if err != nil {
 			if err != io.EOF {
@@ -159,32 +158,44 @@ func HandleClient(conn net.Conn) {
 			break
 		}
 
-		if nr < 25 {
-			glog.ERROR("too short ippkt")
-			continue
-		}
+		switch cmd {
+		case common.C2S_HEARTBEAT:
+			bytes := common.Encode(common.S2C_HEARTBEAT, nil)
+			conn.Write(bytes)
 
-		// TODO: remove
-		dst := fmt.Sprintf("%d.%d.%d.%d", buff[20], buff[21], buff[22], buff[23])
+		case common.C2C_DATA:
+			// TODO: remove
+			dst := fmt.Sprintf("%d.%d.%d.%d", pkt[16], pkt[17], pkt[18], pkt[19])
 
-		c := clientpool.Get(dst)
-		if c != nil {
-			c.SetWriteDeadline(time.Now().Add(time.Second * 10))
-			_, err = c.Write(buff[:nr])
-			c.SetWriteDeadline(time.Time{})
-			if err != nil {
-				glog.ERROR("write to peer ", c.RemoteAddr().String(), dst, err)
+			glog.DEBUG("write to peer", dst)
+
+			c := clientpool.Get(dst)
+			if c != nil {
+				c.SetWriteDeadline(time.Now().Add(time.Second * 10))
+				bytes := common.Encode(common.C2C_DATA, pkt)
+				_, err = c.Write(bytes)
+				c.SetWriteDeadline(time.Time{})
+				if err != nil {
+					glog.ERROR("write to peer ", c.RemoteAddr().String(), dst, err)
+				}
+			} else {
+				glog.ERROR(dst, "offline")
 			}
-		} else {
-			glog.ERROR(dst, "offline")
+		default:
+			glog.INFO("unimplement cmd", cmd)
+
 		}
 	}
 }
 
 func Authorize(conn net.Conn) (accessip string, err error) {
-	payload, err := common.Decode(conn)
+	cmd, payload, err := common.Decode(conn)
 	if err != nil {
 		return "", err
+	}
+
+	if cmd != common.C2S_AUTHORIZE {
+		return "", fmt.Errorf("invalid authhorize cmd %d", cmd)
 	}
 
 	auth := &common.C2SAuthorize{}
@@ -215,7 +226,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		return "", err
 	}
 
-	buff := common.Encode(resp)
+	buff := common.Encode(common.S2C_AUTHORIZE, resp)
 	_, err = conn.Write(buff)
 	if err != nil {
 		return "", err

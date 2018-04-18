@@ -1,18 +1,102 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net"
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
 	"github.com/songgao/water"
 )
+
+type DHCPPool struct {
+	sync.Mutex
+	ippool map[string]bool
+}
+
+func NewDHCPPool() (pool *DHCPPool) {
+	pool = &DHCPPool{}
+	pool.ippool = make(map[string]bool)
+	for i := 10; i < 250; i++ {
+		ip := fmt.Sprintf("10.10.253.%d", i)
+		pool.ippool[ip] = false
+	}
+	return pool
+}
+
+func (this *DHCPPool) SelectIP() (ip string, err error) {
+	this.Lock()
+	defer this.Unlock()
+	for ip, v := range this.ippool {
+		if v == false {
+			this.ippool[ip] = true
+			return ip, nil
+		}
+	}
+	return "", fmt.Errorf("not enough ip in pool")
+}
+
+func (this *DHCPPool) RecycleIP(ip string) {
+	this.Lock()
+	defer this.Unlock()
+	this.ippool[ip] = false
+}
+
+func (this *DHCPPool) InUsed(ip string) bool {
+	this.Lock()
+	defer this.Unlock()
+	return this.ippool[ip]
+}
+
+type ClientPool struct {
+	sync.Mutex
+	client map[string]net.Conn
+}
+
+func NewClientPool() (clientpool *ClientPool) {
+	clientpool = &ClientPool{}
+	clientpool.client = make(map[string]net.Conn)
+	return clientpool
+}
+
+func (this *ClientPool) Add(cip string, conn net.Conn) {
+	this.Lock()
+	defer this.Unlock()
+	this.client[cip] = conn
+}
+
+func (this *ClientPool) Get(cip string) (conn net.Conn) {
+	this.Lock()
+	defer this.Unlock()
+	return this.client[cip]
+}
+
+func (this *ClientPool) Del(cip string) {
+	this.Lock()
+	defer this.Unlock()
+	delete(this.client, cip)
+}
+
+var dhcppool = NewDHCPPool()
+var clientpool = NewClientPool()
+
+var (
+	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
+	pcloud = flag.Bool("cloud", false, "cloud mode")
+)
+
+func main() {
+	flag.Parse()
+	CloudMode("gtun", "10.10.253.1", ":9621")
+}
 
 type GtunClientContext struct {
 	conn    net.Conn
@@ -192,4 +276,49 @@ func SetTunIP(dev, tunip string) (err error) {
 	}
 
 	return nil
+}
+
+func Authorize(conn net.Conn) (accessip string, err error) {
+	cmd, payload, err := common.Decode(conn)
+	if err != nil {
+		return "", err
+	}
+
+	if cmd != common.C2S_AUTHORIZE {
+		return "", fmt.Errorf("invalid authhorize cmd %d", cmd)
+	}
+
+	auth := &common.C2SAuthorize{}
+	err = json.Unmarshal(payload, &auth)
+	if err != nil {
+		return "", err
+	}
+
+	accessip = auth.AccessIP
+
+	s2cauthorize := &common.S2CAuthorize{}
+	if auth.Key != *pkey {
+		s2cauthorize.AccessIP = ""
+		s2cauthorize.Status = "authorize fail"
+	} else if accessip == "" {
+		accessip, err = dhcppool.SelectIP()
+		if err != nil {
+			return "", err
+		}
+		s2cauthorize.AccessIP = accessip
+		s2cauthorize.Status = "authorize success"
+	}
+
+	resp, err := json.Marshal(s2cauthorize)
+	if err != nil {
+		return "", err
+	}
+
+	buff := common.Encode(common.S2C_AUTHORIZE, resp)
+	_, err = conn.Write(buff)
+	if err != nil {
+		return "", err
+	}
+
+	return accessip, nil
 }

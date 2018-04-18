@@ -8,3 +8,6 @@ gtun_vpn*
 
 # ignore iplib
 iplib
+
+# ignore research file
+research

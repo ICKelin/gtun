@@ -6,6 +6,9 @@ gtun_darwin
 gtun_linux
 gtun_vpn*
 
+# ignore bin
+bin
+
 # ignore iplib
 iplib
 

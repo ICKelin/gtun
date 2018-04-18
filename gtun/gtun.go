@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -110,7 +111,7 @@ func main() {
 		glog.INFO("reconnect")
 
 		err = gtun.ConServer()
-		if err != nil {
+		if err != nil && err != io.EOF {
 			glog.ERROR(err)
 			break
 		}

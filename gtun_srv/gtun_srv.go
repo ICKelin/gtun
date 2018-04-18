@@ -95,7 +95,7 @@ var (
 func main() {
 	flag.Parse()
 	if *pcloud {
-		// go CloudMode("gtun", "10.10.253.1", ":9621")
+		go CloudMode("gtun", "10.10.253.1", ":9621")
 	} else {
 		go LANMode(":9621")
 	}
@@ -148,14 +148,12 @@ func HandleClient(conn net.Conn) {
 	defer clientpool.Del(accessip)
 
 	for {
-		conn.SetReadDeadline(time.Now().Add(time.Minute * 30))
 		cmd, pkt, err := common.Decode(conn)
-		conn.SetReadDeadline(time.Time{})
 		if err != nil {
 			if err != io.EOF {
 				glog.ERROR(err)
 			}
-			break
+			continue
 		}
 
 		switch cmd {
@@ -164,26 +162,31 @@ func HandleClient(conn net.Conn) {
 			conn.Write(bytes)
 
 		case common.C2C_DATA:
-			// TODO: remove
-			dst := fmt.Sprintf("%d.%d.%d.%d", pkt[16], pkt[17], pkt[18], pkt[19])
+			if len(pkt) < 20 {
+				glog.ERROR("invalid ippkt length", len(pkt))
+				break
+			}
 
+			dst := fmt.Sprintf("%d.%d.%d.%d", pkt[16], pkt[17], pkt[18], pkt[19])
 			glog.DEBUG("write to peer", dst)
 
-			c := clientpool.Get(dst)
-			if c != nil {
-				c.SetWriteDeadline(time.Now().Add(time.Second * 10))
+			peer := clientpool.Get(dst)
+			if peer != nil {
 				bytes := common.Encode(common.C2C_DATA, pkt)
-				_, err = c.Write(bytes)
-				c.SetWriteDeadline(time.Time{})
+
+				peer.SetWriteDeadline(time.Now().Add(time.Second * 10))
+				_, err = peer.Write(bytes)
+				peer.SetWriteDeadline(time.Time{})
+
 				if err != nil {
-					glog.ERROR("write to peer ", c.RemoteAddr().String(), dst, err)
+					glog.ERROR("write to peer ", peer.RemoteAddr().String(), dst, err)
 				}
 			} else {
 				glog.ERROR(dst, "offline")
 			}
-		default:
-			glog.INFO("unimplement cmd", cmd)
 
+		default:
+			glog.INFO("unimplement cmd", cmd, len(pkt))
 		}
 	}
 }
@@ -210,12 +213,10 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 	if auth.Key != *pkey {
 		s2cauthorize.AccessIP = ""
 		s2cauthorize.Status = "authorize fail"
-	} else {
-		if accessip == "" {
-			accessip, err = dhcppool.SelectIP()
-			if err != nil {
-				return "", err
-			}
+	} else if accessip == "" {
+		accessip, err = dhcppool.SelectIP()
+		if err != nil {
+			return "", err
 		}
 		s2cauthorize.AccessIP = accessip
 		s2cauthorize.Status = "authorize success"

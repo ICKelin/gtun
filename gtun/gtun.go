@@ -28,26 +28,24 @@ var (
 
 type GtunContext struct {
 	sync.Mutex
-	conn       net.Conn
-	srv        string
-	key        string
-	dhcpip     string
-	ldev       string
-	sndqueue   chan []byte
-	rcvqueue   chan []byte
-	readclose  chan bool
-	writeclose chan bool
+	conn     net.Conn
+	srv      string
+	key      string
+	dhcpip   string
+	ldev     string
+	sndqueue chan []byte
+	rcvqueue chan []byte
 }
 
 func (this *GtunContext) ConServer() (err error) {
 	conn, err := ConServer(this.srv)
 	if err != nil {
-		return err
+		return fmt.Errorf("connect server %s", err.Error())
 	}
 
 	s2c, err := Authorize(conn, this.dhcpip, this.key)
 	if err != nil {
-		return err
+		return fmt.Errorf("authorize fail %s", err.Error())
 	}
 
 	this.Lock()
@@ -78,14 +76,12 @@ func main() {
 	}
 
 	gtun := &GtunContext{
-		srv:        *psrv,
-		key:        *pkey,
-		ldev:       ifce.Name(),
-		sndqueue:   make(chan []byte),
-		rcvqueue:   make(chan []byte),
-		dhcpip:     "",
-		readclose:  make(chan bool),
-		writeclose: make(chan bool),
+		srv:      *psrv,
+		key:      *pkey,
+		ldev:     ifce.Name(),
+		sndqueue: make(chan []byte),
+		rcvqueue: make(chan []byte),
+		dhcpip:   "",
 	}
 
 	err = gtun.ConServer()
@@ -104,12 +100,13 @@ func main() {
 	go IfaceRead(ifce, gtun)
 
 	for {
-		go Snd(ifce, gtun)
-		go Rcv(ifce, gtun)
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
 
-		<-gtun.readclose
-		<-gtun.writeclose
+		go Snd(ifce, gtun, wg)
+		go Rcv(ifce, gtun, wg)
 
+		wg.Wait()
 		glog.INFO("reconnect")
 
 		err = gtun.ConServer()
@@ -125,14 +122,16 @@ func main() {
 	<-sig
 }
 
-func Rcv(ifce *water.Interface, gtun *GtunContext) {
+func Rcv(ifce *water.Interface, gtun *GtunContext, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer gtun.conn.Close()
+
 	for {
 		cmd, pkt, err := common.Decode(gtun.conn)
 		if err != nil {
-			glog.ERROR(err)
+			glog.INFO(cmd, pkt, err)
 			break
 		}
-
 		switch cmd {
 		case common.S2C_HEARTBEAT:
 			glog.DEBUG("heartbeat from srv")
@@ -144,14 +143,15 @@ func Rcv(ifce *water.Interface, gtun *GtunContext) {
 			}
 
 		default:
-			glog.ERROR("unimplement cmd", int(cmd), pkt)
+			glog.INFO("unimplement cmd", int(cmd), pkt)
 		}
 	}
-
-	gtun.readclose <- true
 }
 
-func Snd(ifce *water.Interface, gtun *GtunContext) {
+func Snd(ifce *water.Interface, gtun *GtunContext, wg *sync.WaitGroup) {
+	defer wg.Done()
+	defer gtun.conn.Close()
+
 	for {
 		pkt := <-gtun.sndqueue
 		gtun.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
@@ -162,8 +162,6 @@ func Snd(ifce *water.Interface, gtun *GtunContext) {
 			break
 		}
 	}
-
-	gtun.writeclose <- true
 }
 
 func Heartbeat(gtun *GtunContext) {

@@ -1,3 +1,36 @@
+/*
+
+MIT License
+
+Copyright (c) 2018 ICKelin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+/*
+	DESCRIPTION:
+				This program is a gtun client for game/ip accelator.
+
+	Author: ICKelin
+*/
+
 package main
 
 import (
@@ -26,36 +59,6 @@ var (
 	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
 	pdebug = flag.Bool("debug", false, "debug mode")
 )
-
-type GtunContext struct {
-	sync.Mutex
-	conn     net.Conn
-	srv      string
-	key      string
-	dhcpip   string
-	ldev     string
-	sndqueue chan []byte
-	rcvqueue chan []byte
-}
-
-func (this *GtunContext) ConServer() (err error) {
-	conn, err := ConServer(this.srv)
-	if err != nil {
-		return fmt.Errorf("connect server %s", err.Error())
-	}
-
-	s2c, err := Authorize(conn, this.dhcpip, this.key)
-	if err != nil {
-		return fmt.Errorf("authorize fail %s", err.Error())
-	}
-
-	this.Lock()
-	this.dhcpip = s2c.AccessIP
-	this.conn = conn
-	this.Unlock()
-
-	return nil
-}
 
 func main() {
 	flag.Parse()
@@ -121,6 +124,36 @@ func main() {
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
 	<-sig
+}
+
+type GtunContext struct {
+	sync.Mutex
+	conn     net.Conn
+	srv      string
+	key      string
+	dhcpip   string
+	ldev     string
+	sndqueue chan []byte
+	rcvqueue chan []byte
+}
+
+func (this *GtunContext) ConServer() (err error) {
+	conn, err := ConServer(this.srv)
+	if err != nil {
+		return fmt.Errorf("connect server %s", err.Error())
+	}
+
+	s2c, err := Authorize(conn, this.dhcpip, this.key)
+	if err != nil {
+		return fmt.Errorf("authorize fail %s", err.Error())
+	}
+
+	this.Lock()
+	this.dhcpip = s2c.AccessIP
+	this.conn = conn
+	this.Unlock()
+
+	return nil
 }
 
 func Rcv(ifce *water.Interface, gtun *GtunContext, wg *sync.WaitGroup) {
@@ -280,6 +313,8 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: Download route rule
 
 	return s2cauthorize, nil
 }

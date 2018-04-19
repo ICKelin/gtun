@@ -1,3 +1,36 @@
+/*
+
+MIT License
+
+Copyright (c) 2018 ICKelin
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+/*
+	DESCRIPTION:
+				This program is a gtun server for game/ip accelator.
+
+	Author: ICKelin
+*/
+
 package main
 
 import (
@@ -9,7 +42,6 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ICKelin/glog"
@@ -17,90 +49,34 @@ import (
 	"github.com/songgao/water"
 )
 
-type DHCPPool struct {
-	sync.Mutex
-	ippool map[string]bool
-}
-
-func NewDHCPPool() (pool *DHCPPool) {
-	pool = &DHCPPool{}
-	pool.ippool = make(map[string]bool)
-	for i := 10; i < 250; i++ {
-		ip := fmt.Sprintf("10.10.253.%d", i)
-		pool.ippool[ip] = false
-	}
-	return pool
-}
-
-func (this *DHCPPool) SelectIP() (ip string, err error) {
-	this.Lock()
-	defer this.Unlock()
-	for ip, v := range this.ippool {
-		if v == false {
-			this.ippool[ip] = true
-			return ip, nil
-		}
-	}
-	return "", fmt.Errorf("not enough ip in pool")
-}
-
-func (this *DHCPPool) RecycleIP(ip string) {
-	this.Lock()
-	defer this.Unlock()
-	this.ippool[ip] = false
-}
-
-func (this *DHCPPool) InUsed(ip string) bool {
-	this.Lock()
-	defer this.Unlock()
-	return this.ippool[ip]
-}
-
-type ClientPool struct {
-	sync.Mutex
-	client map[string]net.Conn
-}
-
-func NewClientPool() (clientpool *ClientPool) {
-	clientpool = &ClientPool{}
-	clientpool.client = make(map[string]net.Conn)
-	return clientpool
-}
-
-func (this *ClientPool) Add(cip string, conn net.Conn) {
-	this.Lock()
-	defer this.Unlock()
-	this.client[cip] = conn
-}
-
-func (this *ClientPool) Get(cip string) (conn net.Conn) {
-	this.Lock()
-	defer this.Unlock()
-	return this.client[cip]
-}
-
-func (this *ClientPool) Del(cip string) {
-	this.Lock()
-	defer this.Unlock()
-	delete(this.client, cip)
-}
-
-var dhcppool = NewDHCPPool()
-var clientpool = NewClientPool()
-
 var (
-	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
-	pcloud = flag.Bool("cloud", false, "cloud mode")
-)
+	pkey     = flag.String("k", "gtun_authorize", "client authorize key")
+	pgateway = flag.String("g", "192.168.253.1", "local tun device ip")
+	pladdr   = flag.String("l", ":9621", "local listen address")
+	proute   = flag.String("r", "http://120.25.214.63:9099/us.zone", "router rules url")
+	phelp    = flag.Bool("h", false, "print usage")
 
-func main() {
-	flag.Parse()
-	CloudMode("gtun", "10.10.253.1", ":9621")
-}
+	dhcppool   = NewDHCPPool()
+	clientpool = NewClientPool()
+	gRoute     = make([]string, 0)
+)
 
 type GtunClientContext struct {
 	conn    net.Conn
 	payload []byte
+}
+
+func main() {
+	flag.Parse()
+	if *phelp {
+		ShowUsage()
+		return
+	}
+	CloudMode("gtun", *pgateway, ":9621")
+}
+
+func ShowUsage() {
+	flag.Usage()
 }
 
 func CloudMode(device, lip, listenAddr string) {
@@ -309,6 +285,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		s2cauthorize.Status = "authorize success"
 	}
 
+	s2cauthorize.RouteUrl = *proute
 	resp, err := json.Marshal(s2cauthorize)
 	if err != nil {
 		return "", err

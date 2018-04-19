@@ -12,4 +12,4 @@ script:
     - cd $HOME/gopath/src/github.com/ICKelin/gtun/gtun
     - GOOS=linux go build -o gtun gtun.go
     - cd $HOME/gopath/src/github.com/ICKelin/gtun/gtun_srv
-    - GOOS=linux go build -o gtun_srv gtun_srv.go
+    - GOOS=linux go build -o gtun_srv *.go

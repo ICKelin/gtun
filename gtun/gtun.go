@@ -108,7 +108,6 @@ func main() {
 		go Rcv(ifce, gtun, wg)
 
 		wg.Wait()
-		glog.INFO("reconnect")
 
 		err = gtun.ConServer()
 		if err != nil && err != io.EOF {
@@ -116,6 +115,7 @@ func main() {
 			break
 		}
 
+		glog.INFO("reconnect success")
 	}
 
 	sig := make(chan os.Signal, 3)

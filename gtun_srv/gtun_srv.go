@@ -207,7 +207,7 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 			continue
 		}
 
-		if nr < 25 {
+		if nr < 20 {
 			glog.ERROR("too short ippkt")
 			continue
 		}

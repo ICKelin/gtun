@@ -100,6 +100,8 @@ func main() {
 		return
 	}
 
+	InsertRoute(gtun.route, gtun.ldev, gtun.dhcpip)
+
 	go Heartbeat(gtun)
 	go IfaceRead(ifce, gtun)
 
@@ -115,7 +117,7 @@ func main() {
 		err = gtun.ConServer()
 		if err != nil && err != io.EOF {
 			glog.ERROR(err)
-			break
+			continue
 		}
 
 		glog.INFO("reconnect success")
@@ -133,6 +135,7 @@ type GtunContext struct {
 	key      string
 	dhcpip   string
 	ldev     string
+	route    []string
 	sndqueue chan []byte
 	rcvqueue chan []byte
 }
@@ -151,6 +154,7 @@ func (this *GtunContext) ConServer() (err error) {
 	this.Lock()
 	this.dhcpip = s2c.AccessIP
 	this.conn = conn
+	this.route = s2c.RouteRule
 	this.Unlock()
 
 	return nil
@@ -314,7 +318,39 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 		return nil, err
 	}
 
-	// TODO: Download route rule
-
 	return s2cauthorize, nil
+}
+
+func InsertRoute(route []string, ldev, dhcpip string) {
+	for _, address := range route {
+		insertRoute(address, ldev, dhcpip)
+	}
+}
+
+func insertRoute(address, device, tunip string) {
+	type CMD struct {
+		cmd  string
+		args []string
+	}
+
+	cmd := &CMD{}
+
+	switch runtime.GOOS {
+	case "linux":
+		args := strings.Split(fmt.Sprintf("ro add %s dev %s", address, device), " ")
+		cmd = &CMD{cmd: "ip", args: args}
+
+	case "darwin":
+		args := strings.Split(fmt.Sprintf("add -net %s %s", address, tunip), " ")
+		cmd = &CMD{cmd: "route", args: args}
+
+	default:
+		return
+	}
+
+	output, err := exec.Command(cmd.cmd, cmd.args...).CombinedOutput()
+	if err != nil {
+		glog.DEBUG("add", address, "fail:", string(output))
+	}
+	glog.DEBUG("add route", string(output))
 }

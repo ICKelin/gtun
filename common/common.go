@@ -13,9 +13,9 @@ type C2SAuthorize struct {
 	Key      string `json:"key"`
 }
 type S2CAuthorize struct {
-	Status   string `json:"status"`
-	AccessIP string `json:"access_ip"`
-	RouteUrl string `json:"route_rul"`
+	Status    string   `json:"status"`
+	AccessIP  string   `json:"access_ip"`
+	RouteRule []string `json:"route_rule"`
 }
 
 func Encode(cmd byte, payload []byte) []byte {

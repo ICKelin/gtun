@@ -34,11 +34,13 @@ SOFTWARE.
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -53,7 +55,7 @@ var (
 	pkey     = flag.String("k", "gtun_authorize", "client authorize key")
 	pgateway = flag.String("g", "192.168.253.1", "local tun device ip")
 	pladdr   = flag.String("l", ":9621", "local listen address")
-	proute   = flag.String("r", "http://120.25.214.63:9099/us.zone", "router rules url")
+	proute   = flag.String("r", "", "router rules url")
 	phelp    = flag.Bool("h", false, "print usage")
 
 	dhcppool   = NewDHCPPool()
@@ -72,11 +74,59 @@ func main() {
 		ShowUsage()
 		return
 	}
+
+	if *proute != "" {
+		err := LoadRules(*proute)
+		if err != nil {
+			glog.WARM("load rules fail: ", err)
+		}
+
+		glog.DEBUG("loaded", *proute, len(gRoute))
+	}
+
 	CloudMode("gtun", *pgateway, ":9621")
 }
 
 func ShowUsage() {
 	flag.Usage()
+}
+
+func LoadRules(rfile string) error {
+	fp, err := os.Open(rfile)
+	if err != nil {
+		return err
+	}
+
+	linecount := 0
+	reader := bufio.NewReader(fp)
+	for {
+		bline, _, err := reader.ReadLine()
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
+		}
+
+		line := string(bline)
+		linecount += 1
+
+		// 2018.04.20 rule store max 20 rule record
+		// There is no plan to fix this "feature" for CN
+		if linecount > 20 {
+			gRoute = []string{}
+			return fmt.Errorf("rules set max record set to 20, suggest using url instead of rule file")
+		}
+
+		// ignore comment
+		if len(line) > 0 && line[0] == '#' {
+			continue
+		}
+
+		gRoute = append(gRoute, line)
+	}
+
+	return nil
 }
 
 func CloudMode(device, lip, listenAddr string) {
@@ -272,20 +322,24 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 
 	accessip = auth.AccessIP
 
-	s2cauthorize := &common.S2CAuthorize{}
-	if auth.Key != *pkey {
-		s2cauthorize.AccessIP = ""
-		s2cauthorize.Status = "authorize fail"
-	} else if accessip == "" {
-		accessip, err = dhcppool.SelectIP()
-		if err != nil {
-			return "", err
-		}
-		s2cauthorize.AccessIP = accessip
-		s2cauthorize.Status = "authorize success"
+	s2cauthorize := &common.S2CAuthorize{
+		AccessIP:  accessip,
+		Status:    "authorize fail",
+		RouteRule: make([]string, 0),
 	}
 
-	s2cauthorize.RouteUrl = *proute
+	if auth.Key == *pkey {
+		s2cauthorize.Status = "authorize success"
+		if accessip == "" {
+			accessip, err = dhcppool.SelectIP()
+			if err != nil {
+				return "", err
+			}
+			s2cauthorize.AccessIP = accessip
+		}
+		s2cauthorize.RouteRule = gRoute
+	}
+
 	resp, err := json.Marshal(s2cauthorize)
 	if err != nil {
 		return "", err

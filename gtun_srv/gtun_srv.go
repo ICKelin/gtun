@@ -84,7 +84,7 @@ func main() {
 		glog.DEBUG("loaded", *proute, len(gRoute))
 	}
 
-	CloudMode("gtun", *pgateway, ":9621")
+	CloudMode("gtun", *pgateway, *pladdr)
 }
 
 func ShowUsage() {
@@ -98,6 +98,8 @@ func LoadRules(rfile string) error {
 	}
 
 	linecount := 0
+	maxbytes := 0xff00
+	curbytes := 0
 	reader := bufio.NewReader(fp)
 	for {
 		bline, _, err := reader.ReadLine()
@@ -116,6 +118,15 @@ func LoadRules(rfile string) error {
 		if linecount > 20 {
 			gRoute = []string{}
 			return fmt.Errorf("rules set max record set to 20, suggest using url instead of rule file")
+		}
+
+		// 2018.04.20 check max bytes
+		// since the protocol header set 2bytes for pkt header
+		// once overflow, cli json decode fail
+		curbytes += len(bline)
+		if curbytes > maxbytes {
+			gRoute = []string{}
+			return fmt.Errorf("rule set max bytes 0xff00")
 		}
 
 		// ignore comment

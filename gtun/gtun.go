@@ -37,7 +37,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -114,12 +113,16 @@ func main() {
 
 		wg.Wait()
 
-		err = gtun.ConServer()
-		if err != nil && err != io.EOF {
-			glog.ERROR(err)
-			continue
+		// reconnect
+		for {
+			err = gtun.ConServer()
+			if err != nil {
+				glog.ERROR(err)
+				time.Sleep(time.Second * 3)
+				continue
+			}
+			break
 		}
-
 		glog.INFO("reconnect success")
 	}
 
@@ -167,7 +170,7 @@ func Rcv(ifce *water.Interface, gtun *GtunContext, wg *sync.WaitGroup) {
 	for {
 		cmd, pkt, err := common.Decode(gtun.conn)
 		if err != nil {
-			glog.INFO(cmd, pkt, err)
+			glog.INFO(err)
 			break
 		}
 		switch cmd {

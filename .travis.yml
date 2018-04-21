@@ -13,3 +13,11 @@ script:
     - GOOS=linux go build -o gtun gtun.go
     - cd $HOME/gopath/src/github.com/ICKelin/gtun/gtun_srv
     - GOOS=linux go build -o gtun_srv *.go
+
+deploy:
+  provider: releases
+  api_key: "ec95e41f5f77ea2791a102af224c85d701492838"
+  file: "$HOME/gopath/src/github.com/ICKelin/gtun/gtun_srv/gtun_srv"
+  skip_cleanup: true
+  on:
+    tags: true

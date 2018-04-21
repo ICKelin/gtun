@@ -20,4 +20,4 @@ deploy:
   file: "$HOME/gopath/src/github.com/ICKelin/gtun/gtun_srv/gtun_srv"
   skip_cleanup: true
   on:
-    tags: false
+    tags: true

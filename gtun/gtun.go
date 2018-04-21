@@ -71,12 +71,13 @@ func main() {
 		DeviceType: water.TUN,
 	}
 
-	cfg.Name = *pdev
 	ifce, err := water.New(cfg)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
+
+	*pdev = ifce.Name()
 
 	gtun := &GtunContext{
 		srv:      *psrv,
@@ -133,14 +134,15 @@ func main() {
 
 type GtunContext struct {
 	sync.Mutex
-	conn     net.Conn
-	srv      string
-	key      string
-	dhcpip   string
-	ldev     string
-	route    []string
-	sndqueue chan []byte
-	rcvqueue chan []byte
+	conn       net.Conn
+	srv        string
+	key        string
+	dhcpip     string
+	ldev       string
+	route      []string
+	nameserver []string
+	sndqueue   chan []byte
+	rcvqueue   chan []byte
 }
 
 func (this *GtunContext) ConServer() (err error) {
@@ -158,6 +160,7 @@ func (this *GtunContext) ConServer() (err error) {
 	this.dhcpip = s2c.AccessIP
 	this.conn = conn
 	this.route = s2c.RouteRule
+	this.nameserver = s2c.Nameservers
 	this.Unlock()
 
 	return nil

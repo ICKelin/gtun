@@ -52,15 +52,17 @@ import (
 )
 
 var (
-	pkey     = flag.String("k", "gtun_authorize", "client authorize key")
-	pgateway = flag.String("g", "192.168.253.1", "local tun device ip")
-	pladdr   = flag.String("l", ":9621", "local listen address")
-	proute   = flag.String("r", "", "router rules url")
-	phelp    = flag.Bool("h", false, "print usage")
+	pkey        = flag.String("k", "gtun_authorize", "client authorize key")
+	pgateway    = flag.String("g", "192.168.253.1", "local tun device ip")
+	pladdr      = flag.String("l", ":9621", "local listen address")
+	proute      = flag.String("r", "", "router rules url")
+	pnameserver = flag.String("n", "", "nameservers for gtun_cli")
+	phelp       = flag.Bool("h", false, "print usage")
 
-	dhcppool   = NewDHCPPool()
-	clientpool = NewClientPool()
-	gRoute     = make([]string, 0)
+	dhcppool    = NewDHCPPool()
+	clientpool  = NewClientPool()
+	gRoute      = make([]string, 0)
+	gNameserver = make([]string, 0)
 )
 
 type GtunClientContext struct {
@@ -82,6 +84,10 @@ func main() {
 		}
 
 		glog.DEBUG("loaded", *proute, len(gRoute))
+	}
+
+	if *pnameserver != "" {
+		gNameserver = strings.Split(*pnameserver, ",")
 	}
 
 	CloudMode("gtun", *pgateway, *pladdr)
@@ -349,6 +355,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 			s2cauthorize.AccessIP = accessip
 		}
 		s2cauthorize.RouteRule = gRoute
+		s2cauthorize.Nameservers = gNameserver
 	}
 
 	resp, err := json.Marshal(s2cauthorize)

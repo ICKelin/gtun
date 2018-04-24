@@ -15,7 +15,7 @@ func NewDHCPPool() (pool *DHCPPool) {
 	pool = &DHCPPool{}
 	pool.ippool = make(map[string]bool)
 	for i := 10; i < 250; i++ {
-		ip := fmt.Sprintf("192.168.253.%d", i)
+		ip := fmt.Sprintf("192.168.8.%d", i)
 		pool.ippool[ip] = false
 	}
 	return pool

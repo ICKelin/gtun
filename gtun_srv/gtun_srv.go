@@ -42,7 +42,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"time"
 
@@ -57,7 +56,9 @@ var (
 	pladdr      = flag.String("l", ":9621", "local listen address")
 	proute      = flag.String("r", "", "router rules url")
 	pnameserver = flag.String("n", "", "nameservers for gtun_cli")
+	pdev        = flag.String("d", "gtun", "local device name")
 	phelp       = flag.Bool("h", false, "print usage")
+	ptap        = flag.Bool("t", false, "tap device")
 
 	dhcppool    = NewDHCPPool()
 	clientpool  = NewClientPool()
@@ -90,7 +91,7 @@ func main() {
 		gNameserver = strings.Split(*pnameserver, ",")
 	}
 
-	CloudMode("gtun", *pgateway, *pladdr)
+	CloudMode(*pdev, *pgateway, *pladdr)
 }
 
 func ShowUsage() {
@@ -147,11 +148,14 @@ func LoadRules(rfile string) error {
 }
 
 func CloudMode(device, lip, listenAddr string) {
-	cfg := water.Config{
-		DeviceType: water.TUN,
+	cfg := water.Config{}
+
+	if *ptap {
+		cfg.DeviceType = water.TAP
+	} else {
+		cfg.DeviceType = water.TUN
 	}
 
-	cfg.Name = device
 	ifce, err := water.New(cfg)
 	if err != nil {
 		glog.ERROR(err)
@@ -223,14 +227,25 @@ func HandleCloudClient(ifce *water.Interface, conn net.Conn, sndqueue chan *Gtun
 			sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
 
 		case common.C2C_DATA:
-			if len(pkt) < 20 {
-				glog.ERROR("invalid ippkt length", len(pkt))
-				break
-			}
+			if *ptap {
+				dstMac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5])
+				srcMac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", pkt[6], pkt[7], pkt[8], pkt[9], pkt[10], pkt[11])
+				ptype := fmt.Sprintf("%02x%02x", pkt[12], pkt[13])
+				glog.INFO(srcMac, "->", dstMac, ptype)
+				_, err = ifce.Write(pkt)
+				if err != nil {
+					glog.ERROR(err)
+				}
+			} else {
+				if len(pkt) < 20 {
+					glog.ERROR("invalid ippkt length", len(pkt))
+					break
+				}
 
-			_, err = ifce.Write(pkt)
-			if err != nil {
-				glog.ERROR(err)
+				_, err = ifce.Write(pkt)
+				if err != nil {
+					glog.ERROR(err)
+				}
 			}
 
 		default:
@@ -250,18 +265,29 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 			continue
 		}
 
-		if nr < 20 {
-			glog.ERROR("too short ippkt")
-			continue
-		}
-
-		dst := fmt.Sprintf("%d.%d.%d.%d", buff[16], buff[17], buff[18], buff[19])
-		c := clientpool.Get(dst)
-		if c != nil {
-			bytes := common.Encode(common.C2C_DATA, buff[:nr])
-			sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+		if *ptap {
+			// broadcast pkt
+			// TODO: record macAddr->net.Conn
+			clientpool.Lock()
+			for _, c := range clientpool.client {
+				bytes := common.Encode(common.C2C_DATA, buff[:nr])
+				sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+			}
+			clientpool.Unlock()
 		} else {
-			glog.ERROR(dst, "offline")
+			if nr < 20 {
+				glog.ERROR("too short ippkt")
+				continue
+			}
+
+			dst := fmt.Sprintf("%d.%d.%d.%d", buff[16], buff[17], buff[18], buff[19])
+			c := clientpool.Get(dst)
+			if c != nil {
+				bytes := common.Encode(common.C2C_DATA, buff[:nr])
+				sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+			} else {
+				glog.ERROR(dst, "offline")
+			}
 		}
 	}
 }
@@ -292,24 +318,8 @@ func SetTunIP(dev, tunip string) (err error) {
 
 	cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
 
-	switch runtime.GOOS {
-	case "linux":
-		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", tunip, dev), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
-
-	case "darwin":
-		args := strings.Split(fmt.Sprintf("%s %s %s", dev, tunip, tunip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
-
-		sp := strings.Split(tunip, ".")
-
-		gateway := fmt.Sprintf("%s.%s.%s.0/24", sp[0], sp[1], sp[2])
-
-		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", gateway, tunip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
-
-	default:
-	}
+	args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", tunip, dev), " ")
+	cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
 
 	for _, c := range cmdlist {
 		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
@@ -340,9 +350,11 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 	accessip = auth.AccessIP
 
 	s2cauthorize := &common.S2CAuthorize{
-		AccessIP:  accessip,
-		Status:    "authorize fail",
-		RouteRule: make([]string, 0),
+		AccessIP:    accessip,
+		Status:      "authorize fail",
+		RouteRule:   make([]string, 0),
+		Nameservers: make([]string, 0),
+		Gateway:     *pgateway,
 	}
 
 	if auth.Key == *pkey {

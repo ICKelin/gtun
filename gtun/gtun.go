@@ -54,7 +54,6 @@ import (
 
 var (
 	psrv   = flag.String("s", "120.25.214.63:9621", "srv address")
-	pdev   = flag.String("dev", "gtun", "local tun device name")
 	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
 	pdebug = flag.Bool("debug", false, "debug mode")
 )
@@ -67,17 +66,11 @@ func main() {
 		glog.Init("gtun", glog.PRIORITY_INFO, "./", glog.OPT_DATE, 1024*10)
 	}
 
-	cfg := water.Config{
-		DeviceType: water.TUN,
-	}
-
-	ifce, err := water.New(cfg)
+	ifce, err := NewIfce()
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
-
-	*pdev = ifce.Name()
 
 	gtun := &GtunContext{
 		srv:      *psrv,
@@ -94,38 +87,40 @@ func main() {
 		return
 	}
 
-	err = SetTunIP(gtun.ldev, gtun.dhcpip)
+	err = SetTunIP(gtun)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	InsertRoute(gtun.route, gtun.ldev, gtun.dhcpip)
+	InsertRoute(gtun)
 
 	go Heartbeat(gtun)
 	go IfaceRead(ifce, gtun)
 
-	for {
-		wg := &sync.WaitGroup{}
-		wg.Add(2)
-
-		go Snd(ifce, gtun, wg)
-		go Rcv(ifce, gtun, wg)
-
-		wg.Wait()
-
-		// reconnect
+	go func() {
 		for {
-			err = gtun.ConServer()
-			if err != nil {
-				glog.ERROR(err)
-				time.Sleep(time.Second * 3)
-				continue
+			wg := &sync.WaitGroup{}
+			wg.Add(2)
+
+			go Snd(ifce, gtun, wg)
+			go Rcv(ifce, gtun, wg)
+
+			wg.Wait()
+
+			// reconnect
+			for {
+				err = gtun.ConServer()
+				if err != nil {
+					glog.ERROR(err)
+					time.Sleep(time.Second * 3)
+					continue
+				}
+				break
 			}
-			break
+			glog.INFO("reconnect success")
 		}
-		glog.INFO("reconnect success")
-	}
+	}()
 
 	sig := make(chan os.Signal, 3)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGHUP)
@@ -141,6 +136,7 @@ type GtunContext struct {
 	ldev       string
 	route      []string
 	nameserver []string
+	gateway    string
 	sndqueue   chan []byte
 	rcvqueue   chan []byte
 }
@@ -156,13 +152,11 @@ func (this *GtunContext) ConServer() (err error) {
 		return fmt.Errorf("authorize fail %s", err.Error())
 	}
 
-	this.Lock()
 	this.dhcpip = s2c.AccessIP
 	this.conn = conn
 	this.route = s2c.RouteRule
 	this.nameserver = s2c.Nameservers
-	this.Unlock()
-
+	this.gateway = s2c.Gateway
 	return nil
 }
 
@@ -226,6 +220,7 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 			glog.ERROR(err)
 			break
 		}
+
 		bytes := common.Encode(common.C2C_DATA, packet[:n])
 		gtun.sndqueue <- bytes
 	}
@@ -251,7 +246,7 @@ func ConServer(srv string) (conn net.Conn, err error) {
 	}
 }
 
-func SetTunIP(dev, tunip string) (err error) {
+func SetTunIP(gtun *GtunContext) (err error) {
 	type CMD struct {
 		cmd  string
 		args []string
@@ -259,25 +254,25 @@ func SetTunIP(dev, tunip string) (err error) {
 
 	cmdlist := make([]*CMD, 0)
 
-	cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
-
 	switch runtime.GOOS {
 	case "linux":
-		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", tunip, dev), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{gtun.ldev, "up"}})
+		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", gtun.dhcpip, gtun.ldev), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
 
 	case "darwin":
-		args := strings.Split(fmt.Sprintf("%s %s %s", dev, tunip, tunip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{gtun.ldev, "up"}})
+
+		args := strings.Split(fmt.Sprintf("%s %s %s", gtun.ldev, gtun.dhcpip, gtun.dhcpip), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
 
-		sp := strings.Split(tunip, ".")
-
-		gateway := fmt.Sprintf("%s.%s.%s.0/24", sp[0], sp[1], sp[2])
-
-		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", gateway, tunip), " ")
+		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", gtun.gateway, gtun.dhcpip), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
 
-	default:
+	case "windows":
+		glog.INFO(gtun.gateway)
+		args := strings.Split(fmt.Sprintf("interface ip set address name=\"%s\" addr=%s source=static mask=255.255.255.0 gateway=%s", gtun.ldev, gtun.dhcpip, gtun.gateway), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "netsh", args: args})
 	}
 
 	for _, c := range cmdlist {
@@ -327,13 +322,23 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 	return s2cauthorize, nil
 }
 
-func InsertRoute(route []string, ldev, dhcpip string) {
-	for _, address := range route {
-		insertRoute(address, ldev, dhcpip)
+func InsertRoute(gtun *GtunContext) {
+	// Windows platform route add need iface index args.
+	ifceIndex := -1
+	ifce, err := net.InterfaceByName(gtun.ldev)
+	if err != nil {
+		if runtime.GOOS == "windows" {
+			return
+		}
+	} else {
+		ifceIndex = ifce.Index
+	}
+	for _, address := range gtun.route {
+		insertRoute(address, gtun.ldev, gtun.dhcpip, gtun.gateway, ifceIndex)
 	}
 }
 
-func insertRoute(address, device, tunip string) {
+func insertRoute(address, device, tunip, gateway string, ifceIndex int) {
 	type CMD struct {
 		cmd  string
 		args []string
@@ -350,6 +355,10 @@ func insertRoute(address, device, tunip string) {
 		args := strings.Split(fmt.Sprintf("add -net %s %s", address, tunip), " ")
 		cmd = &CMD{cmd: "route", args: args}
 
+	case "windows":
+		args := strings.Split(fmt.Sprintf("add %s %s if %d", address, gateway, ifceIndex), " ")
+		cmd = &CMD{cmd: "route", args: args}
+
 	default:
 		return
 	}
@@ -358,5 +367,5 @@ func insertRoute(address, device, tunip string) {
 	if err != nil {
 		glog.DEBUG("add", address, "fail:", string(output))
 	}
-	glog.DEBUG("add route", string(output))
+	glog.DEBUG(cmd, "output", string(output))
 }

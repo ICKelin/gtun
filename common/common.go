@@ -17,6 +17,7 @@ type S2CAuthorize struct {
 	AccessIP    string   `json:"access_ip"`
 	RouteRule   []string `json:"route_rule"`
 	Nameservers []string `json:"nameservers"`
+	Gateway     string   `json:"gateway"`
 }
 
 func Encode(cmd byte, payload []byte) []byte {

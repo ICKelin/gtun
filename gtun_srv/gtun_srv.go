@@ -60,7 +60,7 @@ var (
 	phelp       = flag.Bool("h", false, "print usage")
 	ptap        = flag.Bool("t", false, "tap device")
 
-	dhcppool    = NewDHCPPool()
+	dhcppool    *DHCPPool
 	clientpool  = NewClientPool()
 	gRoute      = make([]string, 0)
 	gNameserver = make([]string, 0)
@@ -89,6 +89,20 @@ func main() {
 	if *pnameserver != "" {
 		gNameserver = strings.Split(*pnameserver, ",")
 	}
+
+	if *pgateway == "" {
+		glog.ERROR("gateway MUST NOT be empty")
+		return
+	}
+
+	sp := strings.Split(*pgateway, ".")
+	if len(sp) != 4 {
+		glog.ERROR("ip address format fail", *pgateway)
+		return
+	}
+
+	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
+	dhcppool = NewDHCPPool(prefix)
 
 	GtunServe(*pgateway, *pladdr)
 }

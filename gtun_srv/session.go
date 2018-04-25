@@ -11,11 +11,12 @@ type DHCPPool struct {
 	ippool map[string]bool
 }
 
-func NewDHCPPool() (pool *DHCPPool) {
+func NewDHCPPool(prefix string) (pool *DHCPPool) {
 	pool = &DHCPPool{}
 	pool.ippool = make(map[string]bool)
 	for i := 10; i < 250; i++ {
-		ip := fmt.Sprintf("192.168.8.%d", i)
+		// Force C class ip address
+		ip := fmt.Sprintf("%s.%d", prefix, i)
 		pool.ippool[ip] = false
 	}
 	return pool

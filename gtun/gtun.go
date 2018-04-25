@@ -66,6 +66,9 @@ func main() {
 		glog.Init("gtun", glog.PRIORITY_INFO, "./", glog.OPT_DATE, 1024*10)
 	}
 
+	// 2018.04.25
+	// Force using tun in !windows
+	// Force using tap in windows
 	ifce, err := NewIfce()
 	if err != nil {
 		glog.ERROR(err)
@@ -87,7 +90,7 @@ func main() {
 		return
 	}
 
-	err = SetTunIP(gtun)
+	err = SetDeviceIP(gtun)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -134,9 +137,9 @@ type GtunContext struct {
 	key        string
 	dhcpip     string
 	ldev       string
-	route      []string
-	nameserver []string
-	gateway    string
+	route      []string // route info from gtun_srv
+	nameserver []string // nameserver from gtun_srv UNUSED
+	gateway    string   // gateway from gtun_srv
 	sndqueue   chan []byte
 	rcvqueue   chan []byte
 }
@@ -246,7 +249,7 @@ func ConServer(srv string) (conn net.Conn, err error) {
 	}
 }
 
-func SetTunIP(gtun *GtunContext) (err error) {
+func SetDeviceIP(gtun *GtunContext) (err error) {
 	type CMD struct {
 		cmd  string
 		args []string

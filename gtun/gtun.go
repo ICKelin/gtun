@@ -270,7 +270,6 @@ func SetTunIP(gtun *GtunContext) (err error) {
 		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
 
 	case "windows":
-		glog.INFO(gtun.gateway)
 		args := strings.Split(fmt.Sprintf("interface ip set address name=\"%s\" addr=%s source=static mask=255.255.255.0 gateway=%s", gtun.ldev, gtun.dhcpip, gtun.gateway), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "netsh", args: args})
 	}

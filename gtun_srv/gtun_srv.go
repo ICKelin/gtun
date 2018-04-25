@@ -43,6 +43,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ICKelin/glog"
@@ -56,7 +57,6 @@ var (
 	pladdr      = flag.String("l", ":9621", "local listen address")
 	proute      = flag.String("r", "", "router rules url")
 	pnameserver = flag.String("n", "", "nameservers for gtun_cli")
-	pdev        = flag.String("d", "gtun", "local device name")
 	phelp       = flag.Bool("h", false, "print usage")
 	ptap        = flag.Bool("t", false, "tap device")
 
@@ -73,6 +73,7 @@ type GtunClientContext struct {
 
 func main() {
 	flag.Parse()
+
 	if *phelp {
 		ShowUsage()
 		return
@@ -83,21 +84,24 @@ func main() {
 		if err != nil {
 			glog.WARM("load rules fail: ", err)
 		}
-
-		glog.DEBUG("loaded", *proute, len(gRoute))
 	}
 
 	if *pnameserver != "" {
 		gNameserver = strings.Split(*pnameserver, ",")
 	}
 
-	CloudMode(*pdev, *pgateway, *pladdr)
+	GtunServe(*pgateway, *pladdr)
 }
 
 func ShowUsage() {
 	flag.Usage()
 }
 
+// Purpose:
+//			Loading ip/cidr from file and deploy to gtun_cli
+//			It seems like deploy router table to client, tell
+//			the client to route these ips/cidrs
+//			THERE IS NOT IP VALIDATE
 func LoadRules(rfile string) error {
 	fp, err := os.Open(rfile)
 	if err != nil {
@@ -121,7 +125,7 @@ func LoadRules(rfile string) error {
 		linecount += 1
 
 		// 2018.04.20 rule store max 20 rule record
-		// There is no plan to fix this "feature" for CN
+		// There is no plan to fix this "feature"
 		if linecount > 20 {
 			gRoute = []string{}
 			return fmt.Errorf("rules set max record set to 20, suggest using url instead of rule file")
@@ -147,7 +151,7 @@ func LoadRules(rfile string) error {
 	return nil
 }
 
-func CloudMode(device, lip, listenAddr string) {
+func GtunServe(lip, listenAddr string) {
 	cfg := water.Config{}
 
 	if *ptap {
@@ -162,7 +166,7 @@ func CloudMode(device, lip, listenAddr string) {
 		return
 	}
 
-	err = SetTunIP(ifce.Name(), lip)
+	err = SetDeviceIP(ifce.Name(), lip)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -182,7 +186,7 @@ func CloudMode(device, lip, listenAddr string) {
 
 	sndqueue := make(chan *GtunClientContext)
 	go IfceRead(ifce, sndqueue)
-	go RespGtunCloudClient(sndqueue)
+	go RespClient(sndqueue)
 
 	for {
 		conn, err := listener.AcceptTCP()
@@ -193,11 +197,11 @@ func CloudMode(device, lip, listenAddr string) {
 
 		conn.SetKeepAlive(true)
 		conn.SetKeepAlivePeriod(time.Second * 30)
-		go HandleCloudClient(ifce, conn, sndqueue)
+		go HandleClient(ifce, conn, sndqueue)
 	}
 }
 
-func HandleCloudClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClientContext) {
+func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClientContext) {
 	defer conn.Close()
 
 	accessip, err := Authorize(conn)
@@ -227,25 +231,9 @@ func HandleCloudClient(ifce *water.Interface, conn net.Conn, sndqueue chan *Gtun
 			sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
 
 		case common.C2C_DATA:
-			if *ptap {
-				dstMac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", pkt[0], pkt[1], pkt[2], pkt[3], pkt[4], pkt[5])
-				srcMac := fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", pkt[6], pkt[7], pkt[8], pkt[9], pkt[10], pkt[11])
-				ptype := fmt.Sprintf("%02x%02x", pkt[12], pkt[13])
-				glog.INFO(srcMac, "->", dstMac, ptype)
-				_, err = ifce.Write(pkt)
-				if err != nil {
-					glog.ERROR(err)
-				}
-			} else {
-				if len(pkt) < 20 {
-					glog.ERROR("invalid ippkt length", len(pkt))
-					break
-				}
-
-				_, err = ifce.Write(pkt)
-				if err != nil {
-					glog.ERROR(err)
-				}
+			_, err = ifce.Write(pkt)
+			if err != nil {
+				glog.ERROR(err)
 			}
 
 		default:
@@ -254,6 +242,14 @@ func HandleCloudClient(ifce *water.Interface, conn net.Conn, sndqueue chan *Gtun
 	}
 }
 
+// Purpose:
+//			Read pkt/frame from tun/tap device and send back to gtun_cli
+//			For tap device, I do not record MAC address table, STILL USE
+//			IP ADDRESS AS SESSION KEY.
+// Parameters:
+//			ifce => device to read
+//			sndqueue => send back queue
+//
 func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 	buff := make([]byte, 65536)
 	for {
@@ -265,34 +261,54 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 			continue
 		}
 
-		if *ptap {
-			// broadcast pkt
-			// TODO: record macAddr->net.Conn
-			clientpool.Lock()
-			for _, c := range clientpool.client {
-				bytes := common.Encode(common.C2C_DATA, buff[:nr])
-				sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-			}
-			clientpool.Unlock()
-		} else {
-			if nr < 20 {
-				glog.ERROR("too short ippkt")
+		ethOffset := 0
+
+		if ifce.IsTAP() {
+			if nr < 14 {
+				glog.WARM("too short ethernet frame", nr)
 				continue
 			}
 
-			dst := fmt.Sprintf("%d.%d.%d.%d", buff[16], buff[17], buff[18], buff[19])
-			c := clientpool.Get(dst)
-			if c != nil {
-				bytes := common.Encode(common.C2C_DATA, buff[:nr])
-				sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-			} else {
-				glog.ERROR(dst, "offline")
+			// Not eq ip pkt, just broadcast it
+			// This handle maybe dangerous
+			if WhichProtocol(buff) != syscall.IPPROTO_IP {
+				clientpool.Lock()
+				for _, c := range clientpool.client {
+					bytes := common.Encode(common.C2C_DATA, buff[:nr])
+					sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+				}
+				clientpool.Unlock()
+				continue
+			}
+
+			ethOffset = 14
+		}
+
+		if ifce.IsTUN() {
+			if nr < 20 {
+				glog.WARM("too short ippkt", nr)
+				continue
 			}
 		}
+
+		if nr < ethOffset+20 {
+			glog.WARM("to short ippkt", nr, ethOffset+20)
+			continue
+		}
+
+		dst := fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
+		c := clientpool.Get(dst)
+		if c != nil {
+			bytes := common.Encode(common.C2C_DATA, buff[:nr])
+			sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+		} else {
+			glog.ERROR(dst, "offline")
+		}
+
 	}
 }
 
-func RespGtunCloudClient(sndqueue chan *GtunClientContext) {
+func RespClient(sndqueue chan *GtunClientContext) {
 	for {
 		ctx := <-sndqueue
 		ctx.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
@@ -308,7 +324,7 @@ func RespGtunCloudClient(sndqueue chan *GtunClientContext) {
 	}
 }
 
-func SetTunIP(dev, tunip string) (err error) {
+func SetDeviceIP(dev, tunip string) (err error) {
 	type CMD struct {
 		cmd  string
 		args []string
@@ -382,4 +398,11 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 	}
 
 	return accessip, nil
+}
+
+func WhichProtocol(frame []byte) int {
+	if len(frame) > 14 {
+		return int(frame[12])<<8 + int(frame[13])
+	}
+	return -1
 }

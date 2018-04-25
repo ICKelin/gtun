@@ -1,0 +1,7 @@
+2018.04.19
+            * gtun_srv.go:  Add route rule file, deploy route rule ip when authorize success.
+                            Currently max route rule ip/cidr set to 20 since I don't want to 
+                            transport too much data in cmd s2c to gtun_cli.
+
+            * gtun.go:  Opt reconnect, reconnect until success.... or program exit.
+                        Remove tun name setting since cross platform compile.

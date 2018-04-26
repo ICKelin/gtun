@@ -5,3 +5,7 @@
 
             * gtun.go:  Opt reconnect, reconnect until success.... or program exit.
                         Remove tun name setting since cross platform compile.
+            
+            Using tap device to support windows, windows users should installl tap-windows first.
+            For !windows, only support tun device although tap driver can be support in linux.
+            

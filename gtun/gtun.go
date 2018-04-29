@@ -56,6 +56,7 @@ var (
 	psrv   = flag.String("s", "120.25.214.63:9621", "srv address")
 	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
 	pdebug = flag.Bool("debug", false, "debug mode")
+	ptap   = flag.Bool("tap", false, "tap mode")
 )
 
 func main() {
@@ -69,7 +70,7 @@ func main() {
 	// 2018.04.25
 	// Force using tun in !windows
 	// Force using tap in windows
-	ifce, err := NewIfce()
+	ifce, err := NewIfce(*ptap)
 	if err != nil {
 		glog.ERROR(err)
 		return

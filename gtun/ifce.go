@@ -6,11 +6,13 @@ import (
 	"github.com/songgao/water"
 )
 
-func NewIfce() (*water.Interface, error) {
-	cfg := water.Config{
-		DeviceType: water.TUN,
+func NewIfce(tap bool) (*water.Interface, error) {
+	cfg := water.Config{}
+	if tap {
+		cfg.DeviceType = water.TAP
+	} else {
+		cfg.DeviceType = water.TUN
 	}
-
 	ifce, err := water.New(cfg)
 	if err != nil {
 		return nil, err

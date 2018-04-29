@@ -6,7 +6,7 @@ import (
 	"github.com/songgao/water"
 )
 
-func NewIfce() (*water.Interface, error) {
+func NewIfce(tap bool) (*water.Interface, error) {
 	cfg := water.Config{
 		DeviceType: water.TAP,
 	}

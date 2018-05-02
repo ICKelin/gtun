@@ -48,6 +48,7 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/reverse"
 	"github.com/songgao/water"
 )
 
@@ -57,18 +58,25 @@ var (
 	pladdr      = flag.String("l", ":9621", "local listen address")
 	proute      = flag.String("r", "", "router rules url")
 	pnameserver = flag.String("n", "", "nameservers for gtun_cli")
+	preverse    = flag.String("p", "./reverse", "reverse proxy policy path")
 	phelp       = flag.Bool("h", false, "print usage")
 	ptap        = flag.Bool("t", false, "tap device")
 
-	dhcppool    *DHCPPool
-	clientpool  = NewClientPool()
-	gRoute      = make([]string, 0)
-	gNameserver = make([]string, 0)
+	dhcppool       *DHCPPool
+	clientpool     = NewClientPool()
+	gRoute         = make([]string, 0)
+	gNameserver    = make([]string, 0)
+	gReversePolicy = make([]*ReversePolicy, 0)
 )
 
 type GtunClientContext struct {
 	conn    net.Conn
 	payload []byte
+}
+
+type ReversePolicy struct {
+	From string `json:"from"`
+	To   string `to:"json"`
 }
 
 func main() {
@@ -103,6 +111,19 @@ func main() {
 
 	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
 	dhcppool = NewDHCPPool(prefix)
+
+	// 2018.05.03
+	// Support for reverse proxy
+	if *preverse != "" {
+		err := LoadReversePolicy(*preverse)
+		if err != nil {
+			glog.WARM("load reverse policy fail:", err)
+		} else {
+			for _, r := range gReversePolicy {
+				go reverse.Proxy(r.From, r.To)
+			}
+		}
+	}
 
 	GtunServe(*pgateway, *pladdr)
 }
@@ -160,6 +181,48 @@ func LoadRules(rfile string) error {
 		}
 
 		gRoute = append(gRoute, line)
+	}
+
+	return nil
+}
+
+// 2018.05.03
+// Purpose:
+//			Loading reverse policy from path
+//			The format of policy is from->to (example::58422->192.168.8.10:8000)
+//
+func LoadReversePolicy(path string) error {
+	fp, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(fp)
+	for {
+		bline, _, err := reader.ReadLine()
+		if err != nil {
+			if err != io.EOF {
+				return err
+			}
+			break
+		}
+
+		line := string(bline)
+		if len(line) > 0 && line[0] == '#' {
+			continue
+		}
+
+		sp := strings.Split(line, "->")
+		if len(sp) != 2 {
+			continue
+		}
+
+		reversePolicy := &ReversePolicy{
+			From: sp[0],
+			To:   sp[1],
+		}
+
+		gReversePolicy = append(gReversePolicy, reversePolicy)
 	}
 
 	return nil
@@ -310,7 +373,18 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 			continue
 		}
 
-		dst := fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
+		// TODO ip version
+		dst := ""
+		if isIPV4(buff[ethOffset]) {
+			dst = fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
+		} else {
+			ipv6 := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+				buff[ethOffset+8], buff[ethOffset+9], buff[ethOffset+10], buff[ethOffset+11],
+				buff[ethOffset+12], buff[ethOffset+13], buff[ethOffset+14], buff[ethOffset+15],
+				buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19],
+				buff[ethOffset+20], buff[ethOffset+21], buff[ethOffset+22], buff[ethOffset+23])
+			glog.INFO(ipv6)
+		}
 		c := clientpool.Get(dst)
 		if c != nil {
 			bytes := common.Encode(common.C2C_DATA, buff[:nr])
@@ -318,7 +392,6 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 		} else {
 			glog.ERROR(dst, "offline")
 		}
-
 	}
 }
 
@@ -419,4 +492,11 @@ func WhichProtocol(frame []byte) int {
 		return int(frame[12])<<8 + int(frame[13])
 	}
 	return -1
+}
+
+func isIPV4(vhl byte) bool {
+	if (vhl >> 4) == 4 {
+		return true
+	}
+	return false
 }

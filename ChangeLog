@@ -9,3 +9,8 @@
             Using tap device to support windows, windows users should installl tap-windows first.
             For !windows, only support tun device although tap driver can be support in linux.
             
+2018.05.1
+            Reverse proxy is supported!!!! using reverse to proxy your public ip:port to gtun_cli_ip:port
+            In this case, you can use your local raspberry pi/vm as a public service.
+
+            

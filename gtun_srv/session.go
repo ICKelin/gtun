@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 )
 
@@ -73,4 +75,72 @@ func (this *ClientPool) Del(cip string) {
 	this.Lock()
 	defer this.Unlock()
 	delete(this.client, cip)
+}
+
+type UserInfo struct {
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Keycode   string `json:"keycode"`
+	ExpiredIn int64  `json:"expired_in"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+
+type UserPool struct {
+	sync.Mutex
+	Path  string               `json:"-"`
+	Users map[string]*UserInfo `json:"users"`
+}
+
+func NewUserPool(path string) *UserPool {
+	p := &UserPool{
+		Path:  path,
+		Users: make(map[string]*UserInfo),
+	}
+	return p
+}
+
+func (this *UserPool) Add(user string) {
+	this.Lock()
+	defer this.Unlock()
+	u := &UserInfo{
+		Keycode: user,
+	}
+	this.Users[user] = u
+}
+
+func (this *UserPool) Get(user string) *UserInfo {
+	this.Lock()
+	defer this.Unlock()
+	return this.Users[user]
+}
+
+func (this *UserPool) Del(user string) string {
+	this.Lock()
+	defer this.Unlock()
+	delete(this.Users, user)
+	this.Save()
+}
+
+func (this *UserPool) Save() error {
+	fp, err := os.Open(this.Path)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+
+	bytes, err := json.MarshalIndent(this, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	_, err = fp.Write(bytes)
+	return err
+}
+
+func (this *UserPool) List() (string, error) {
+	this.Lock()
+	defer this.Unlock()
+	bytes, err := json.Marshal(this)
+	return string(bytes), err
 }

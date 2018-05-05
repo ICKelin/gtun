@@ -189,7 +189,7 @@ func LoadRules(rfile string) error {
 // 2018.05.03
 // Purpose:
 //			Loading reverse policy from path
-//			The format of policy is from->to (example::58422->192.168.8.10:8000)
+//			The format of policy is from->to (example: :58422->192.168.8.10:8000)
 //
 func LoadReversePolicy(path string) error {
 	fp, err := os.Open(path)
@@ -378,12 +378,13 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 		if isIPV4(buff[ethOffset]) {
 			dst = fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
 		} else {
-			ipv6 := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+			srcipv6 := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
 				buff[ethOffset+8], buff[ethOffset+9], buff[ethOffset+10], buff[ethOffset+11],
 				buff[ethOffset+12], buff[ethOffset+13], buff[ethOffset+14], buff[ethOffset+15],
 				buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19],
 				buff[ethOffset+20], buff[ethOffset+21], buff[ethOffset+22], buff[ethOffset+23])
-			glog.INFO(ipv6)
+			glog.INFO(srcipv6)
+			continue
 		}
 		c := clientpool.Get(dst)
 		if c != nil {

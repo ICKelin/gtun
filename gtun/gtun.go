@@ -225,6 +225,20 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 			break
 		}
 
+		// check ipv6
+		if n > 0 && packet[0]>>4 == 6 {
+			glog.INFO("version 6")
+			ethOffset := 0
+			ethOffset += 16
+			ipv6 := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
+				packet[ethOffset+8], packet[ethOffset+9], packet[ethOffset+10], packet[ethOffset+11],
+				packet[ethOffset+12], packet[ethOffset+13], packet[ethOffset+14], packet[ethOffset+15],
+				packet[ethOffset+16], packet[ethOffset+17], packet[ethOffset+18], packet[ethOffset+19],
+				packet[ethOffset+20], packet[ethOffset+21], packet[ethOffset+22], packet[ethOffset+23])
+			glog.INFO(ipv6)
+			continue
+		}
+
 		bytes := common.Encode(common.C2C_DATA, packet[:n])
 		gtun.sndqueue <- bytes
 	}

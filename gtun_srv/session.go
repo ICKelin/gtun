@@ -115,7 +115,7 @@ func (this *UserPool) Get(user string) *UserInfo {
 	return this.Users[user]
 }
 
-func (this *UserPool) Del(user string) string {
+func (this *UserPool) Del(user string) {
 	this.Lock()
 	defer this.Unlock()
 	delete(this.Users, user)

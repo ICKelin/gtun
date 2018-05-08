@@ -61,6 +61,7 @@ var (
 	preverse    = flag.String("p", "./reverse", "reverse proxy policy path")
 	phelp       = flag.Bool("h", false, "print usage")
 	ptap        = flag.Bool("t", false, "tap device")
+	pcenter     = flag.String("c", "", "center server")
 
 	dhcppool       *DHCPPool
 	clientpool     = NewClientPool()
@@ -69,21 +70,17 @@ var (
 	gReversePolicy = make([]*ReversePolicy, 0)
 )
 
-type GtunClientContext struct {
-	conn    net.Conn
-	payload []byte
-}
-
-type ReversePolicy struct {
-	From string `json:"from"`
-	To   string `to:"json"`
-}
-
 func main() {
 	flag.Parse()
 
 	if *phelp {
 		ShowUsage()
+		return
+	}
+
+	// TODO register
+	if err := Register(*pcenter); err != nil {
+		glog.ERROR(err)
 		return
 	}
 
@@ -128,8 +125,22 @@ func main() {
 	GtunServe(*pgateway, *pladdr)
 }
 
+type GtunClientContext struct {
+	conn    net.Conn
+	payload []byte
+}
+
+type ReversePolicy struct {
+	From string `json:"from"`
+	To   string `to:"json"`
+}
+
 func ShowUsage() {
 	flag.Usage()
+}
+
+func Register(center string) error {
+	return nil
 }
 
 // Purpose:

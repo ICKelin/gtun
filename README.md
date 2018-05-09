@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/ICKelin/gtun.svg?branch=master)](https://travis-ci.org/ICKelin/gtun)
 
-[doc](./README-EN.md)
+[doc](./README-EN.md) | [release](https://github.com/ICKelin/gtun/releases)
 ### gtun是什么
 gtun是一个加速器，包含有加速器的客户端和服务端的实现，同时gtun为所有客户端虚拟出一个局域网，客户端与客户端之间通过局域网ip即可进行访问。
 

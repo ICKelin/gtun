@@ -2,7 +2,9 @@
 
 [doc](./README-EN.md) | [release](https://github.com/ICKelin/gtun/releases)
 ### gtun是什么
-gtun是一个加速器，包含有加速器的客户端和服务端的实现，同时gtun为所有客户端虚拟出一个局域网，客户端与客户端之间通过局域网ip即可进行访问。
+- gtun是一个加速器，包含有加速器的客户端和服务端的实现
+- gtun支持构建虚拟局域网
+- gtun支持内网穿透（version-0.0.3）
 
 ### 限制
 

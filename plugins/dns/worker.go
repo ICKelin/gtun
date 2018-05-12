@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"strings"
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gone/algo"
@@ -109,11 +108,6 @@ func (this *Worker) HandleJob() {
 			}
 
 			this.FinishJob(dnsQuery, response)
-
-			// 是否开启审计功能
-			if GetConfig().Audit {
-				audit.Add(GetDNSQuestions(response), strings.Split(dnsQuery.clientAddr.String(), ":")[0])
-			}
 			break
 		}
 	}

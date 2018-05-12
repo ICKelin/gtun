@@ -1,15 +1,9 @@
 package dns
 
 import (
-	"flag"
-
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/glog"
-)
-
-var (
-	flgConfig = flag.String("conf", "./config.json", "config file")
 )
 
 func Run(confpath string) {

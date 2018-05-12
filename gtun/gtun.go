@@ -61,6 +61,7 @@ var (
 
 func main() {
 	flag.Parse()
+
 	if *pdebug {
 		glog.Init("gtun", glog.PRIORITY_DEBUG, "./", glog.OPT_DATE, 1024*10)
 	} else {

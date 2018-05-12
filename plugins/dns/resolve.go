@@ -49,19 +49,10 @@ func (this *Resolver) Resolve(query *dns.Msg, srv string) (*dns.Msg, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	begin := int64(0)
-	if GetConfig().IsDebug() {
-		begin = time.Now().UnixNano()
-	}
-
 	question := GetDNSQuestions(query)
 	if GetConfig().IsCacheOn() {
 		if ele, err := this.clientCache.Get(question); err == nil {
 			if localRecord, ok := ele.(*LocalRecord); ok {
-				if GetConfig().IsDebug() {
-					fmt.Printf("resolve\t%-50s success %10dms upper:%s\n", GetDNSQuestions(query), (time.Now().UnixNano()-begin)/1000/1000, "local cache")
-				}
 				// 校验TTL值
 				if !localRecord.Expired() {
 					response := query.Copy()
@@ -76,14 +67,7 @@ func (this *Resolver) Resolve(query *dns.Msg, srv string) (*dns.Msg, error) {
 
 	response, err := this.resolve(query, conn)
 	if err != nil {
-		if GetConfig().IsDebug() {
-			fmt.Printf("resolve\t%-50s fail %10dms upper:%s\n", question, (time.Now().UnixNano()-begin)/1000/1000, conn.RemoteAddr().String())
-		}
 		return nil, err
-	}
-
-	if GetConfig().IsDebug() {
-		fmt.Printf("resolve\t%-50s success %10dms upper:%s\n", question, (time.Now().UnixNano()-begin)/1000/1000, conn.RemoteAddr().String())
 	}
 
 	if GetConfig().IsCacheOn() {

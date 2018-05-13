@@ -49,6 +49,7 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/plugins/dns"
 	"github.com/songgao/water"
 )
 
@@ -61,6 +62,8 @@ var (
 
 func main() {
 	flag.Parse()
+
+	dns.Run("./dns.json")
 
 	if *pdebug {
 		glog.Init("gtun", glog.PRIORITY_DEBUG, "./", glog.OPT_DATE, 1024*10)

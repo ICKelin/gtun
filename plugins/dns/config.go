@@ -40,12 +40,12 @@ func LoadConfig(fpath string) (*Config, error) {
 
 	upper, err := LoadResolveFile(conf.ResolveFile)
 	if err == nil {
-		conf.Upper = upper
+		conf.Upper = append(conf.Upper, upper)
 	}
 
 	gConfig = conf
 
-	return conf, err
+	return conf, nil
 }
 
 // 兼容dnsmasq，从指定路径加载上游dns地址

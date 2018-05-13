@@ -40,7 +40,7 @@ func LoadConfig(fpath string) (*Config, error) {
 
 	upper, err := LoadResolveFile(conf.ResolveFile)
 	if err == nil {
-		conf.Upper = append(conf.Upper, upper)
+		conf.Upper = append(conf.Upper, upper...)
 	}
 
 	gConfig = conf

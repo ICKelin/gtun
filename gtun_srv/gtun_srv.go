@@ -320,21 +320,21 @@ func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClien
 
 		case common.C2C_DATA:
 			// FEATURE CODE, REMOVE AFTER TEST
-			// ethOffset := 0
-			// if len(pkt) > ethOffset+20 {
-			// 	dst := int64(pkt[ethOffset+16])<<24 + int64(pkt[ethOffset+17])<<16 + int64(pkt[ethOffset+18])<<8 + int64(pkt[ethOffset+19])
-			// 	glog.INFO(dst)
-			// 	testDst := int64(192<<24 + 168<<16 + 0<<8 + 9)
+			ethOffset := 0
+			if len(pkt) > ethOffset+20 {
+				dst := int64(pkt[ethOffset+16])<<24 + int64(pkt[ethOffset+17])<<16 + int64(pkt[ethOffset+18])<<8 + int64(pkt[ethOffset+19])
+				glog.INFO(dst)
+				testDst := int64(192<<24 + 168<<16 + 0<<8 + 9)
 
-			// 	if dst == testDst {
-			// 		clientpool.Lock()
-			// 		for _, c := range clientpool.client {
-			// 			bytes := common.Encode(common.C2C_DATA, pkt)
-			// 			sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-			// 		}
-			// 		clientpool.Unlock()
-			// 	}
-			// }
+				if dst == testDst {
+					clientpool.Lock()
+					for _, c := range clientpool.client {
+						bytes := common.Encode(common.C2C_DATA, pkt)
+						sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+					}
+					clientpool.Unlock()
+				}
+			}
 			// FEATURE CODE END
 
 			_, err = ifce.Write(pkt)

@@ -319,24 +319,6 @@ func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClien
 			sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
 
 		case common.C2C_DATA:
-			// FEATURE CODE, REMOVE AFTER TEST
-			ethOffset := 0
-			if len(pkt) > ethOffset+20 {
-				dst := int64(pkt[ethOffset+16])<<24 + int64(pkt[ethOffset+17])<<16 + int64(pkt[ethOffset+18])<<8 + int64(pkt[ethOffset+19])
-				glog.INFO(dst)
-				testDst := int64(192<<24 + 168<<16 + 0<<8 + 9)
-
-				if dst == testDst {
-					clientpool.Lock()
-					for _, c := range clientpool.client {
-						bytes := common.Encode(common.C2C_DATA, pkt)
-						sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-					}
-					clientpool.Unlock()
-				}
-			}
-			// FEATURE CODE END
-
 			_, err = ifce.Write(pkt)
 			if err != nil {
 				glog.ERROR(err)
@@ -407,13 +389,7 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 		if isIPV4(buff[ethOffset]) {
 			dst = fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
 		} else {
-			srcipv6 := fmt.Sprintf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-				buff[ethOffset+8], buff[ethOffset+9], buff[ethOffset+10], buff[ethOffset+11],
-				buff[ethOffset+12], buff[ethOffset+13], buff[ethOffset+14], buff[ethOffset+15],
-				buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19],
-				buff[ethOffset+20], buff[ethOffset+21], buff[ethOffset+22], buff[ethOffset+23])
-			glog.INFO(srcipv6)
-			continue
+			glog.WARM("not support ipv6")
 		}
 		c := clientpool.Get(dst)
 		if c != nil {

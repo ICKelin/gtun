@@ -117,7 +117,7 @@ func main() {
 			glog.WARM("load reverse policy fail:", err)
 		} else {
 			for _, r := range gReversePolicy {
-				go reverse.Proxy(r.From, r.To)
+				go reverse.Proxy(r.Proto, r.From, r.To)
 			}
 		}
 	}
@@ -131,8 +131,9 @@ type GtunClientContext struct {
 }
 
 type ReversePolicy struct {
-	From string `json:"from"`
-	To   string `to:"json"`
+	Proto string `json:"proto"`
+	From  string `json:"from"`
+	To    string `to:"json"`
 }
 
 func ShowUsage() {
@@ -202,6 +203,11 @@ func LoadRules(rfile string) error {
 //			Loading reverse policy from path
 //			The format of policy is from->to (example: :58422->192.168.8.10:8000)
 //
+// 2018.05.20
+//			The format of policy change to: proto from->to to support udp reverse proxy
+//			(example: tcp :58422->192.168.8.10:8000)
+//			(example: udp :53->192.168.8.10:53)
+//
 func LoadReversePolicy(path string) error {
 	fp, err := os.Open(path)
 	if err != nil {
@@ -224,13 +230,14 @@ func LoadReversePolicy(path string) error {
 		}
 
 		sp := strings.Split(line, "->")
-		if len(sp) != 2 {
+		if len(sp) != 3 {
 			continue
 		}
 
 		reversePolicy := &ReversePolicy{
-			From: sp[0],
-			To:   sp[1],
+			Proto: sp[0],
+			From:  sp[1],
+			To:    sp[2],
 		}
 
 		gReversePolicy = append(gReversePolicy, reversePolicy)

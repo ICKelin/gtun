@@ -2,12 +2,23 @@ package reverse
 
 import (
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/ICKelin/glog"
 )
 
-func Proxy(from, to string) {
+func Proxy(prot string, from, to string) {
+	if strings.ToLower(prot) == "tcp" {
+		ProxyTCP(from, to)
+	}
+
+	if strings.ToLower(prot) == "udp" {
+		ProxyUDP(from, to)
+	}
+}
+
+func ProxyTCP(from, to string) {
 	listener, err := net.Listen("tcp", from)
 	if err != nil {
 		glog.ERROR(err)
@@ -21,13 +32,29 @@ func Proxy(from, to string) {
 			break
 		}
 
-		go reverse(conn, to)
+		go reverse("tcp", conn, to)
 	}
 }
 
-func reverse(clientconn net.Conn, to string) {
+func ProxyUDP(from, to string) {
+	laddr, err := net.ResolveUDPAddr("udp", from)
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
+
+	lconn, err := net.ListenUDP("udp", laddr)
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
+
+	reverse("udp", lconn, to)
+}
+
+func reverse(proto string, clientconn net.Conn, to string) {
 	defer clientconn.Close()
-	rconn, err := net.Dial("tcp", to)
+	rconn, err := net.Dial(proto, to)
 	if err != nil {
 		glog.ERROR(err)
 		return

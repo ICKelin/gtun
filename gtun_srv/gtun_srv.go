@@ -73,17 +73,6 @@ var (
 func main() {
 	flag.Parse()
 
-	if *phelp {
-		ShowUsage()
-		return
-	}
-
-	// TODO register
-	if err := Register(*pcenter); err != nil {
-		glog.ERROR(err)
-		return
-	}
-
 	if *proute != "" {
 		err := LoadRules(*proute)
 		if err != nil {
@@ -134,14 +123,6 @@ type ReversePolicy struct {
 	Proto string `json:"proto"`
 	From  string `json:"from"`
 	To    string `to:"json"`
-}
-
-func ShowUsage() {
-	flag.Usage()
-}
-
-func Register(center string) error {
-	return nil
 }
 
 // Purpose:

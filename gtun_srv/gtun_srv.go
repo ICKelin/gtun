@@ -302,7 +302,12 @@ func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClien
 
 		switch cmd {
 		case common.C2S_HEARTBEAT:
-			bytes := common.Encode(common.S2C_HEARTBEAT, nil)
+			bytes, err := common.Encode(common.S2C_HEARTBEAT, nil)
+			if err != nil {
+				glog.ERROR(err)
+				continue
+			}
+
 			sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
 
 		case common.C2C_DATA:
@@ -349,7 +354,8 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 			if WhichProtocol(buff) != syscall.IPPROTO_IP {
 				clientpool.Lock()
 				for _, c := range clientpool.client {
-					bytes := common.Encode(common.C2C_DATA, buff[:nr])
+					bytes, _ := common.Encode(common.C2C_DATA, buff[:nr])
+
 					sndqueue <- &GtunClientContext{conn: c, payload: bytes}
 				}
 				clientpool.Unlock()
@@ -380,7 +386,12 @@ func IfceRead(ifce *water.Interface, sndqueue chan *GtunClientContext) {
 		}
 		c := clientpool.Get(dst)
 		if c != nil {
-			bytes := common.Encode(common.C2C_DATA, buff[:nr])
+			bytes, err := common.Encode(common.C2C_DATA, buff[:nr])
+			if err != nil {
+				glog.ERROR(err)
+				continue
+			}
+
 			sndqueue <- &GtunClientContext{conn: c, payload: bytes}
 		} else {
 			glog.ERROR(dst, "offline")
@@ -471,7 +482,7 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		return "", err
 	}
 
-	buff := common.Encode(common.S2C_AUTHORIZE, resp)
+	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
 	_, err = conn.Write(buff)
 	if err != nil {
 		return "", err

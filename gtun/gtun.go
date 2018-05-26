@@ -216,7 +216,7 @@ func Heartbeat(gtun *GtunContext) {
 	for {
 		select {
 		case <-time.After(time.Second * 3):
-			bytes := common.Encode(common.C2S_HEARTBEAT, nil)
+			bytes, _ := common.Encode(common.C2S_HEARTBEAT, nil)
 			gtun.sndqueue <- bytes
 		}
 	}
@@ -231,7 +231,7 @@ func IfaceRead(ifce *water.Interface, gtun *GtunContext) {
 			break
 		}
 
-		bytes := common.Encode(common.C2C_DATA, packet[:n])
+		bytes, _ := common.Encode(common.C2C_DATA, packet[:n])
 		gtun.sndqueue <- bytes
 	}
 }
@@ -309,7 +309,7 @@ func Authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAut
 		return nil, err
 	}
 
-	buff := common.Encode(common.C2S_AUTHORIZE, payload)
+	buff, _ := common.Encode(common.C2S_AUTHORIZE, payload)
 
 	_, err = conn.Write(buff)
 	if err != nil {

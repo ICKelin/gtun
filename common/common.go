@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	MAX_PAYLOAD = 1<<16 - 1
+)
+
 type C2SAuthorize struct {
 	AccessIP string `json:"access_ip"`
 	Key      string `json:"key"`
@@ -22,8 +26,12 @@ type S2CAuthorize struct {
 	RouteScriptUrl string   `json:"route_script_url"`
 }
 
-func Encode(cmd byte, payload []byte) []byte {
+func Encode(cmd byte, payload []byte) ([]byte, error) {
 	buff := make([]byte, 0)
+
+	if len(payload) > MAX_PAYLOAD {
+		return nil, fmt.Errorf("too big payload")
+	}
 
 	plen := make([]byte, 2)
 	binary.BigEndian.PutUint16(plen, uint16(len(payload))+1)
@@ -31,7 +39,7 @@ func Encode(cmd byte, payload []byte) []byte {
 	buff = append(buff, cmd)
 	buff = append(buff, payload...)
 
-	return buff
+	return buff, nil
 }
 
 func Decode(conn net.Conn) (byte, []byte, error) {

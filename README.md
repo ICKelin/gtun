@@ -33,11 +33,14 @@ go get github.com/ICKelin/gtun
 在bin目录下会生成gtun的服务端二进制文件gtun_srv，gtun_srv大部分情况下都是部署在云服务器上，所以之编译了Linux版本，除了gtun_srv之外，还会生成各个系统的gtun_cli文件。
 
 **gtun_srv部署**
+
+gtun_cli需要使用root权限执行
+
 需要将gtun_srv部署到云服务器当中，gtun_srv，同时需要开启系统的ipv4转发功能
 
 vi /etc/sysctl.conf
 ```
-net.ipv4.ip_forward
+net.ipv4.ip_forward=1
 ```
 
 给iptables添加规则做SNAT
@@ -70,6 +73,8 @@ Usage of ./gtun_srv:
 
 **gtun_cli部署**
 
+gtun_cli需要使用root权限执行
+
 ```
 ./gtun_linux_arm_0.0.2 -h
 Usage of ./gtun_linux_arm_0.0.2:
@@ -86,6 +91,20 @@ Usage of ./gtun_linux_arm_0.0.2:
 
 ping 192.168.253.1测试连通性。
 
+### 反向代理配置
+
+反向代理需要再version-0.0.3版本及以上才支持
+
+希望启动反向代理功能，需要再gtun_srv启动时指定-p参数来指定反向代理配置规则，比如
+
+reverse.policy:
+
+```
+api.gc.com:58496->192.168.253.36:8502
+```
+
+将api.gc.com:58496端口映射到gtun客户端地址为192.168.253.36:8502之上
+
 ### tips
 gtun_srv与gtun_cli运行起来之后，虚拟局域网就已经存在了，任何使用同一个gtun_srv的gtun_cli在知道对方ip地址的前提下，均能进行通信。
 
@@ -100,13 +119,11 @@ gtun_srv与gtun_cli运行起来之后，虚拟局域网就已经存在了，任�
     树莓派的Wi-Fi性能差？可以尝试在树莓派同级网络接入路由器，在路由器配置页面将下一跳网关指向树莓派，同样能够使用树莓派上的ip加速功能。
 
 **tips3**
-    在虚拟局域网搭建一些自己的应用，比如说用树莓派搭建网盘，局限是需要使用客户端接入网络，这一问题将考虑在下一版本中解决，通过公网ip+端口访问内网树莓派。
-
+    在虚拟局域网搭建一些自己的应用，比如说用树莓派搭建网盘
 
 ### TODO
+
 - 二层设备虚拟局域网
-- IPV6支持
-- 内网穿透
 
 ### thanks
 [songgao/water](https://github.com/songgao/water)

@@ -61,7 +61,6 @@ var (
 	preverse    = flag.String("p", "./reverse", "reverse proxy policy path")
 	phelp       = flag.Bool("h", false, "print usage")
 	ptap        = flag.Bool("t", false, "tap device")
-	pcenter     = flag.String("c", "", "center server")
 
 	dhcppool       *DHCPPool
 	clientpool     = NewClientPool()

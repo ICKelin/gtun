@@ -1,0 +1,5 @@
+- Plugins System
+ Writting plugin extention such as dns plugin
+
+- Manager application
+ To controller ip, domain and reverse configuration

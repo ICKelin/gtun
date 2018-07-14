@@ -282,6 +282,9 @@ func SetDeviceIP(gtun *GtunContext) (err error) {
 	case "windows":
 		args := strings.Split(fmt.Sprintf("interface ip set address name=\"%s\" addr=%s source=static mask=255.255.255.0 gateway=%s", gtun.ldev, gtun.dhcpip, gtun.gateway), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "netsh", args: args})
+
+		args = strings.Split(fmt.Sprintf("delete 0.0.0.0 %s", gtun.gateway), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
 	}
 
 	for _, c := range cmdlist {

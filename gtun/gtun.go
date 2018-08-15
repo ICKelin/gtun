@@ -68,11 +68,6 @@ func main() {
 		glog.Init("gtun", glog.PRIORITY_INFO, "./", glog.OPT_DATE, 1024*10)
 	}
 
-	if err := Login(); err != nil {
-		glog.ERROR("Login fail")
-		return
-	}
-
 	// 2018.04.25
 	// Force using tun in !windows
 	// Force using tap in windows
@@ -294,10 +289,6 @@ func SetDeviceIP(gtun *GtunContext) (err error) {
 		}
 	}
 
-	return nil
-}
-
-func Login() error {
 	return nil
 }
 

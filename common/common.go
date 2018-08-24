@@ -10,6 +10,17 @@ import (
 
 const (
 	MAX_PAYLOAD = 1<<16 - 1
+
+	C2C_DATA = byte(0x00)
+
+	C2S_DATA = byte(0x01)
+	S2C_DATA = byte(0x02)
+
+	C2S_HEARTBEAT = byte(0x03)
+	S2C_HEARTBEAT = byte(0x04)
+
+	C2S_AUTHORIZE = byte(0x05)
+	S2C_AUTHORIZE = byte(0x06)
 )
 
 type C2SAuthorize struct {
@@ -72,16 +83,3 @@ func Decode(conn net.Conn) (byte, []byte, error) {
 
 	return resp[0], resp[1:nr], nil
 }
-
-const (
-	C2C_DATA = byte(0x00)
-
-	C2S_DATA = byte(0x01)
-	S2C_DATA = byte(0x02)
-
-	C2S_HEARTBEAT = byte(0x03)
-	S2C_HEARTBEAT = byte(0x04)
-
-	C2S_AUTHORIZE = byte(0x05)
-	S2C_AUTHORIZE = byte(0x06)
-)

@@ -1,6 +1,6 @@
 // +build linux darwin
 
-package main
+package gtun
 
 import (
 	"github.com/songgao/water"

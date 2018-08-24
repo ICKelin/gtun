@@ -1,6 +1,6 @@
 // +build windows
 
-package main
+package gtun
 
 import (
 	"github.com/songgao/water"

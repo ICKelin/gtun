@@ -1,4 +1,4 @@
-package main
+package gtun
 
 import (
 	"encoding/json"
@@ -90,6 +90,52 @@ func (client *Client) first() bool {
 	return client.myip == ""
 }
 
+func conServer(srv string) (conn net.Conn, err error) {
+	tcp, err := net.DialTimeout("tcp", srv, time.Second*10)
+	if err != nil {
+		return nil, err
+	}
+
+	return tcp, nil
+}
+
+func authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAuthorize, err error) {
+	c2sauthorize := &common.C2SAuthorize{
+		AccessIP: accessIP,
+		Key:      key,
+	}
+
+	payload, err := json.Marshal(c2sauthorize)
+	if err != nil {
+		return nil, err
+	}
+
+	buff, _ := common.Encode(common.C2S_AUTHORIZE, payload)
+
+	_, err = conn.Write(buff)
+	if err != nil {
+		return nil, err
+	}
+
+	cmd, resp, err := common.Decode(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	if cmd != common.S2C_AUTHORIZE {
+		err = fmt.Errorf("invalid authorize cmd %d", cmd)
+		return nil, err
+	}
+
+	s2cauthorize = &common.S2CAuthorize{}
+	err = json.Unmarshal(resp, s2cauthorize)
+	if err != nil {
+		return nil, err
+	}
+
+	return s2cauthorize, nil
+}
+
 func rcv(conn net.Conn, ifce *water.Interface, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer conn.Close()
@@ -162,15 +208,6 @@ func ifaceRead(ifce *water.Interface, sndqueue chan []byte) {
 	}
 }
 
-func conServer(srv string) (conn net.Conn, err error) {
-	tcp, err := net.DialTimeout("tcp", srv, time.Second*10)
-	if err != nil {
-		return nil, err
-	}
-
-	return tcp, nil
-}
-
 func setupIface(ifce *water.Interface, ip string, gw string) (err error) {
 	type CMD struct {
 		cmd  string
@@ -212,43 +249,6 @@ func setupIface(ifce *water.Interface, ip string, gw string) (err error) {
 	return nil
 }
 
-func authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAuthorize, err error) {
-	c2sauthorize := &common.C2SAuthorize{
-		AccessIP: accessIP,
-		Key:      key,
-	}
-
-	payload, err := json.Marshal(c2sauthorize)
-	if err != nil {
-		return nil, err
-	}
-
-	buff, _ := common.Encode(common.C2S_AUTHORIZE, payload)
-
-	_, err = conn.Write(buff)
-	if err != nil {
-		return nil, err
-	}
-
-	cmd, resp, err := common.Decode(conn)
-	if err != nil {
-		return nil, err
-	}
-
-	if cmd != common.S2C_AUTHORIZE {
-		err = fmt.Errorf("invalid authorize cmd %d", cmd)
-		return nil, err
-	}
-
-	s2cauthorize = &common.S2CAuthorize{}
-	err = json.Unmarshal(resp, s2cauthorize)
-	if err != nil {
-		return nil, err
-	}
-
-	return s2cauthorize, nil
-}
-
 func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 	// Windows platform route add need iface index args.
 	ifceIndex := -1
@@ -265,12 +265,12 @@ func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 	}
 }
 
-func execRoute(address, device, tunip, gateway string, ifceIndex int) {
-	type CMD struct {
-		cmd  string
-		args []string
-	}
+type CMD struct {
+	cmd  string
+	args []string
+}
 
+func execRoute(address, device, tunip, gateway string, ifceIndex int) {
 	cmd := &CMD{}
 
 	switch runtime.GOOS {

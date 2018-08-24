@@ -1,4 +1,4 @@
-package main
+package gtun
 
 import (
 	"flag"
@@ -48,7 +48,7 @@ func ParseArgs() (*Options, error) {
 	ptap := flag.Bool(
 		"tap",
 		false,
-		"tap mode, tap mode for layer2 tunnel, default is first")
+		"tap mode, tap mode for layer2 tunnel, default is false")
 
 	flag.Parse()
 

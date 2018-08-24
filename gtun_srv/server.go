@@ -1,42 +1,8 @@
-/*
-
-MIT License
-
-Copyright (c) 2018 ICKelin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-*/
-
-/*
-	DESCRIPTION:
-				This program is a gtun server for game/ip accelator.
-
-	Author: ICKelin
-*/
-
 package main
 
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -48,70 +14,16 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
-	"github.com/ICKelin/gtun/reverse"
 	"github.com/songgao/water"
 )
 
 var (
-	pkey        = flag.String("k", "gtun_authorize", "client authorize key")
-	pgateway    = flag.String("g", "192.168.253.1", "local tun device ip")
-	pladdr      = flag.String("l", ":9621", "local listen address")
-	proute      = flag.String("r", "", "router rules url")
-	pnameserver = flag.String("n", "", "nameservers for gtun_cli")
-	preverse    = flag.String("p", "./reverse", "reverse proxy policy path")
-	phelp       = flag.Bool("h", false, "print usage")
-	ptap        = flag.Bool("t", false, "tap device")
-
 	dhcppool       *DHCPPool
 	clientpool     = NewClientPool()
 	gRoute         = make([]string, 0)
 	gNameserver    = make([]string, 0)
 	gReversePolicy = make([]*ReversePolicy, 0)
 )
-
-func main() {
-	flag.Parse()
-
-	if *proute != "" {
-		err := LoadRules(*proute)
-		if err != nil {
-			glog.WARM("load rules fail: ", err)
-		}
-	}
-
-	if *pnameserver != "" {
-		gNameserver = strings.Split(*pnameserver, ",")
-	}
-
-	if *pgateway == "" {
-		glog.ERROR("gateway MUST NOT be empty")
-		return
-	}
-
-	sp := strings.Split(*pgateway, ".")
-	if len(sp) != 4 {
-		glog.ERROR("ip address format fail", *pgateway)
-		return
-	}
-
-	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
-	dhcppool = NewDHCPPool(prefix)
-
-	// 2018.05.03
-	// Support for reverse proxy
-	if *preverse != "" {
-		err := LoadReversePolicy(*preverse)
-		if err != nil {
-			glog.WARM("load reverse policy fail:", err)
-		} else {
-			for _, r := range gReversePolicy {
-				go reverse.Proxy(r.Proto, r.From, r.To)
-			}
-		}
-	}
-
-	GtunServe(*pgateway, *pladdr)
-}
 
 type GtunClientContext struct {
 	conn    net.Conn
@@ -226,10 +138,10 @@ func LoadReversePolicy(path string) error {
 	return nil
 }
 
-func GtunServe(lip, listenAddr string) {
+func GtunServe(opts *Options) {
 	cfg := water.Config{}
 
-	if *ptap {
+	if opts.tapMode {
 		cfg.DeviceType = water.TAP
 	} else {
 		cfg.DeviceType = water.TUN
@@ -241,13 +153,13 @@ func GtunServe(lip, listenAddr string) {
 		return
 	}
 
-	err = SetDeviceIP(ifce.Name(), lip)
+	err = SetDeviceIP(ifce.Name(), opts.gateway)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	laddr, err := net.ResolveTCPAddr("tcp", listenAddr)
+	laddr, err := net.ResolveTCPAddr("tcp", opts.listenAddr)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -272,14 +184,14 @@ func GtunServe(lip, listenAddr string) {
 
 		conn.SetKeepAlive(true)
 		conn.SetKeepAlivePeriod(time.Second * 30)
-		go HandleClient(ifce, conn, sndqueue)
+		go HandleClient(ifce, conn, sndqueue, opts)
 	}
 }
 
-func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClientContext) {
+func HandleClient(ifce *water.Interface, conn net.Conn, sndqueue chan *GtunClientContext, opts *Options) {
 	defer conn.Close()
 
-	accessip, err := Authorize(conn)
+	accessip, err := Authorize(conn, opts.gateway, opts.authKey)
 	if err != nil {
 		glog.ERROR(err)
 		return
@@ -438,7 +350,7 @@ func SetDeviceIP(dev, tunip string) (err error) {
 	return nil
 }
 
-func Authorize(conn net.Conn) (accessip string, err error) {
+func Authorize(conn net.Conn, gateway, authkey string) (accessip string, err error) {
 	cmd, payload, err := common.Decode(conn)
 	if err != nil {
 		return "", err
@@ -461,10 +373,10 @@ func Authorize(conn net.Conn) (accessip string, err error) {
 		Status:      "authorize fail",
 		RouteRule:   make([]string, 0),
 		Nameservers: make([]string, 0),
-		Gateway:     *pgateway,
+		Gateway:     gateway,
 	}
 
-	if auth.Key == *pkey {
+	if auth.Key == authkey {
 		s2cauthorize.Status = "authorize success"
 		if accessip == "" {
 			accessip, err = dhcppool.SelectIP()

@@ -35,7 +35,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -52,17 +51,14 @@ import (
 	"github.com/songgao/water"
 )
 
-var (
-	psrv   = flag.String("s", "120.25.214.63:9621", "srv address")
-	pkey   = flag.String("key", "gtun_authorize", "client authorize key")
-	pdebug = flag.Bool("debug", false, "debug mode")
-	ptap   = flag.Bool("tap", false, "tap mode")
-)
-
 func main() {
-	flag.Parse()
+	opts, err := ParseArgs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "parse args fail: %v\n", err)
+		return
+	}
 
-	if *pdebug {
+	if opts.debug {
 		glog.Init("gtun", glog.PRIORITY_DEBUG, "./", glog.OPT_DATE, 1024*10)
 	} else {
 		glog.Init("gtun", glog.PRIORITY_INFO, "./", glog.OPT_DATE, 1024*10)
@@ -71,15 +67,15 @@ func main() {
 	// 2018.04.25
 	// Force using tun in !windows
 	// Force using tap in windows
-	ifce, err := NewIfce(*ptap)
+	ifce, err := NewIfce(opts.tap)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
 	gtun := &GtunContext{
-		srv:      *psrv,
-		key:      *pkey,
+		srv:      opts.srv,
+		key:      opts.authkey,
 		ldev:     ifce.Name(),
 		sndqueue: make(chan []byte),
 		rcvqueue: make(chan []byte),

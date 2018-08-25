@@ -3,6 +3,7 @@ package gtund
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -35,7 +36,7 @@ type Server struct {
 
 	iface       *Interface
 	reverse     *Reverse
-	dhcps       *DHCPPool
+	dhcp        *DHCP
 	clients     *ClientPool
 	routes      []string
 	nameservers []string
@@ -76,6 +77,16 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}
 	server.iface = ifce
 
+	// init dhcp pool
+	dhcpCfg := &DHCPConfig{
+		gateway: cfg.gateway,
+	}
+	dhcp, err := NewDHCP(dhcpCfg)
+	if err != nil {
+		return nil, err
+	}
+	server.dhcp = dhcp
+
 	// init reverse
 	if cfg.reverseFile != "" {
 		reverseCfg := &ReverseConfig{
@@ -88,15 +99,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		server.reverse = r
 	}
 
-	// init dhcp pool
-	sp := strings.Split(cfg.gateway, ".")
-	if len(sp) != 4 {
-		return nil, fmt.Errorf("invalid gateway address %s", cfg.gateway)
-	}
-
-	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
-	server.dhcps = NewDHCPPool(prefix)
-
+	// init routes deploy
 	if cfg.routeFile != "" {
 		routes, err := LoadRules(cfg.routeFile)
 		if err != nil {
@@ -139,7 +142,7 @@ func (server *Server) onConn(conn net.Conn) {
 
 	server.clients.Add(accessip, conn)
 	defer server.clients.Del(accessip)
-	defer server.dhcps.RecycleIP(accessip)
+	defer server.dhcp.RecycleIP(accessip)
 	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", accessip)
 
 	for {
@@ -295,9 +298,9 @@ func (server *Server) auth(conn net.Conn) (accessip string, err error) {
 	if auth.Key == server.authKey {
 		s2cauthorize.Status = "authorize success"
 		if accessip == "" {
-			accessip, err = server.dhcps.SelectIP()
-			if err != nil {
-				return "", err
+			accessip = server.dhcp.SelectIP()
+			if accessip == "" {
+				return "", errors.New("not enough ip in dhcp pool")
 			}
 			s2cauthorize.AccessIP = accessip
 		}

@@ -1,4 +1,4 @@
-package main
+package gtund
 
 import (
 	"fmt"

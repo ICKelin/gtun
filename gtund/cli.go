@@ -1,6 +1,9 @@
-package main
+package gtund
 
-import "flag"
+import (
+	"errors"
+	"flag"
+)
 
 type Options struct {
 	authKey     string
@@ -60,6 +63,10 @@ func ParseArgs() (*Options, error) {
 		"debug mode")
 
 	flag.Parse()
+
+	if *pgateway == "" {
+		return nil, errors.New("gateway MUST SET")
+	}
 
 	opts := &Options{
 		authKey:     *pkey,

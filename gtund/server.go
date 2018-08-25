@@ -13,7 +13,6 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
-	"github.com/ICKelin/gtun/reverse"
 )
 
 type ServerConfig struct {
@@ -34,12 +33,12 @@ type Server struct {
 	sndqueue   chan *GtunClientContext
 	stop       chan struct{}
 
-	iface         *Interface
-	dhcps         *DHCPPool
-	clients       *ClientPool
-	routes        []string
-	nameservers   []string
-	reversePolicy []*ReversePolicy
+	iface       *Interface
+	reverse     *Reverse
+	dhcps       *DHCPPool
+	clients     *ClientPool
+	routes      []string
+	nameservers []string
 }
 
 type GtunClientContext struct {
@@ -49,19 +48,23 @@ type GtunClientContext struct {
 
 func NewServer(cfg *ServerConfig) (*Server, error) {
 	server := &Server{
-		listenAddr: cfg.listenAddr,
-		authKey:    cfg.authKey,
-		gateway:    cfg.gateway,
-		sndqueue:   make(chan *GtunClientContext),
-		stop:       make(chan struct{}),
+		listenAddr:  cfg.listenAddr,
+		authKey:     cfg.authKey,
+		gateway:     cfg.gateway,
+		nameservers: strings.Split(cfg.nameservers, ","),
+		clients:     NewClientPool(),
+		sndqueue:    make(chan *GtunClientContext),
+		stop:        make(chan struct{}),
 	}
 
+	// init server listener
 	listener, err := net.Listen("tcp", cfg.listenAddr)
 	if err != nil {
 		return nil, err
 	}
 	server.listener = listener
 
+	// init virtual device
 	devConfig := &InterfaceConfig{
 		ip:     cfg.gateway,
 		gw:     cfg.gateway,
@@ -73,6 +76,19 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}
 	server.iface = ifce
 
+	// init reverse
+	if cfg.reverseFile != "" {
+		reverseCfg := &ReverseConfig{
+			ruleFile: cfg.reverseFile,
+		}
+		r, err := NewReverse(reverseCfg)
+		if err != nil {
+			return nil, err
+		}
+		server.reverse = r
+	}
+
+	// init dhcp pool
 	sp := strings.Split(cfg.gateway, ".")
 	if len(sp) != 4 {
 		return nil, fmt.Errorf("invalid gateway address %s", cfg.gateway)
@@ -80,7 +96,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
 	server.dhcps = NewDHCPPool(prefix)
-	server.clients = NewClientPool()
 
 	if cfg.routeFile != "" {
 		routes, err := LoadRules(cfg.routeFile)
@@ -89,19 +104,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		}
 		server.routes = routes
 	}
-
-	if cfg.reverseFile != "" {
-		policy, err := LoadReversePolicy(cfg.reverseFile)
-		if err != nil {
-			return nil, err
-		}
-		server.reversePolicy = policy
-		for _, r := range server.reversePolicy {
-			go reverse.Proxy(r.Proto, r.From, r.To)
-		}
-	}
-
-	server.nameservers = strings.Split(cfg.nameservers, ",")
 
 	return server, nil
 }
@@ -331,12 +333,6 @@ func isIPV4(vhl byte) bool {
 	return false
 }
 
-type ReversePolicy struct {
-	Proto string `json:"proto"`
-	From  string `json:"from"`
-	To    string `to:"json"`
-}
-
 // Purpose:
 //			Loading ip/cidr from file and deploy to gtun_cli
 //			It seems like deploy router table to client, tell
@@ -389,54 +385,4 @@ func LoadRules(rfile string) ([]string, error) {
 	}
 
 	return routes, nil
-}
-
-// 2018.05.03
-// Purpose:
-//			Loading reverse policy from path
-//			The format of policy is from->to (example: :58422->192.168.8.10:8000)
-//
-// 2018.05.20
-//			The format of policy change to: proto from->to to support udp reverse proxy
-//			(example: tcp :58422->192.168.8.10:8000)
-//			(example: udp :53->192.168.8.10:53)
-//
-func LoadReversePolicy(path string) ([]*ReversePolicy, error) {
-	fp, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	reverse := make([]*ReversePolicy, 0)
-
-	reader := bufio.NewReader(fp)
-	for {
-		bline, _, err := reader.ReadLine()
-		if err != nil {
-			if err != io.EOF {
-				return nil, err
-			}
-			break
-		}
-
-		line := string(bline)
-		if len(line) > 0 && line[0] == '#' {
-			continue
-		}
-
-		sp := strings.Split(line, "->")
-		if len(sp) != 3 {
-			continue
-		}
-
-		reversePolicy := &ReversePolicy{
-			Proto: sp[0],
-			From:  sp[1],
-			To:    sp[2],
-		}
-
-		reverse = append(reverse, reversePolicy)
-	}
-
-	return reverse, nil
 }

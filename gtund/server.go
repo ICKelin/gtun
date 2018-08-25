@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"syscall"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
 	"github.com/ICKelin/gtun/reverse"
-	"github.com/songgao/water"
 )
 
 type ServerConfig struct {
@@ -36,7 +34,7 @@ type Server struct {
 	sndqueue   chan *GtunClientContext
 	stop       chan struct{}
 
-	iface         *water.Interface
+	iface         *Interface
 	dhcps         *DHCPPool
 	clients       *ClientPool
 	routes        []string
@@ -64,24 +62,15 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	}
 	server.listener = listener
 
-	ifconfig := water.Config{}
-
-	if cfg.tapMode {
-		ifconfig.DeviceType = water.TAP
-	} else {
-		ifconfig.DeviceType = water.TUN
+	devConfig := &InterfaceConfig{
+		ip:     cfg.gateway,
+		gw:     cfg.gateway,
+		tapDev: cfg.tapMode,
 	}
-
-	ifce, err := water.New(ifconfig)
+	ifce, err := NewInterface(devConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	err = setupDevice(ifce.Name(), cfg.gateway)
-	if err != nil {
-		return nil, err
-	}
-
 	server.iface = ifce
 
 	sp := strings.Split(cfg.gateway, ".")
@@ -326,29 +315,6 @@ func (server *Server) auth(conn net.Conn) (accessip string, err error) {
 	}
 
 	return accessip, nil
-}
-
-func setupDevice(dev, tunip string) (err error) {
-	type CMD struct {
-		cmd  string
-		args []string
-	}
-
-	cmdlist := make([]*CMD, 0)
-
-	cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
-
-	args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", tunip, dev), " ")
-	cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
-
-	for _, c := range cmdlist {
-		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("run %s error %s", c, string(output))
-		}
-	}
-
-	return nil
 }
 
 func WhichProtocol(frame []byte) int {

@@ -37,7 +37,7 @@ type Server struct {
 	iface       *Interface
 	reverse     *Reverse
 	dhcp        *DHCP
-	clients     *ClientPool
+	forward     *Forward
 	routes      []string
 	nameservers []string
 }
@@ -53,7 +53,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		authKey:     cfg.authKey,
 		gateway:     cfg.gateway,
 		nameservers: strings.Split(cfg.nameservers, ","),
-		clients:     NewClientPool(),
+		forward:     NewForward(),
 		sndqueue:    make(chan *GtunClientContext),
 		stop:        make(chan struct{}),
 	}
@@ -101,7 +101,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 	// init routes deploy
 	if cfg.routeFile != "" {
-		routes, err := LoadRules(cfg.routeFile)
+		routes, err := logdRouteRules(cfg.routeFile)
 		if err != nil {
 			return nil, err
 		}
@@ -140,8 +140,8 @@ func (server *Server) onConn(conn net.Conn) {
 		return
 	}
 
-	server.clients.Add(accessip, conn)
-	defer server.clients.Del(accessip)
+	server.forward.Add(accessip, conn)
+	defer server.forward.Del(accessip)
 	defer server.dhcp.RecycleIP(accessip)
 	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", accessip)
 
@@ -206,14 +206,14 @@ func (server *Server) readDevice() {
 			// Not eq ip pkt, just broadcast it
 			// This handle maybe dangerous
 			if WhichProtocol(buff) != syscall.IPPROTO_IP {
-				server.clients.Lock()
-				for _, c := range server.clients.client {
-					bytes, _ := common.Encode(common.C2C_DATA, buff[:nr])
-
-					server.sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-				}
-				server.clients.Unlock()
-				continue
+				server.forward.table.Range(func(key, val interface{}) bool {
+					conn, ok := val.(net.Conn)
+					if ok {
+						bytes, _ := common.Encode(common.C2C_DATA, buff[:nr])
+						server.sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
+					}
+					return true
+				})
 			}
 
 			ethOffset = 14
@@ -238,7 +238,7 @@ func (server *Server) readDevice() {
 		} else {
 			glog.WARM("not support ipv6")
 		}
-		c := server.clients.Get(dst)
+		c := server.forward.Get(dst)
 		if c != nil {
 			bytes, err := common.Encode(common.C2C_DATA, buff[:nr])
 			if err != nil {
@@ -341,7 +341,7 @@ func isIPV4(vhl byte) bool {
 //			It seems like deploy router table to client, tell
 //			the client to route these ips/cidrs
 //			THERE IS NOT IP VALIDATE
-func LoadRules(rfile string) ([]string, error) {
+func logdRouteRules(rfile string) ([]string, error) {
 	fp, err := os.Open(rfile)
 	if err != nil {
 		return nil, err

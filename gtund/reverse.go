@@ -43,16 +43,6 @@ type ReversePolicy struct {
 	To    string `to:"json"`
 }
 
-// 2018.05.03
-// Purpose:
-//			Loading reverse policy from path
-//			The format of policy is from->to (example: :58422->192.168.8.10:8000)
-//
-// 2018.05.20
-//			The format of policy change to: proto from->to to support udp reverse proxy
-//			(example: tcp :58422->192.168.8.10:8000)
-//			(example: udp :53->192.168.8.10:53)
-//
 func LoadReversePolicy(path string) ([]*ReversePolicy, error) {
 	fp, err := os.Open(path)
 	if err != nil {

@@ -101,7 +101,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 	// init routes deploy
 	if cfg.routeFile != "" {
-		routes, err := logdRouteRules(cfg.routeFile)
+		routes, err := loadRouteRules(cfg.routeFile)
 		if err != nil {
 			return nil, err
 		}
@@ -112,8 +112,8 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 }
 
 func (server *Server) Run() {
-	go server.readDevice()
-	go server.pickAndSend()
+	go server.readIface()
+	go server.snd()
 
 	for {
 		conn, err := server.listener.Accept()
@@ -134,17 +134,54 @@ func (server *Server) Stop() {
 func (server *Server) onConn(conn net.Conn) {
 	defer conn.Close()
 
-	accessip, err := server.auth(conn)
+	cmd, payload, err := common.Decode(conn)
+	if err != nil {
+		glog.ERROR("decode auth msg fail:", err)
+		return
+	}
+
+	if cmd != common.C2S_AUTHORIZE {
+		glog.ERROR("invalid authhorize cmd", cmd)
+		return
+	}
+
+	authMsg := &common.C2SAuthorize{}
+	err = json.Unmarshal(payload, &authMsg)
+	if err != nil {
+		glog.ERROR("invalid auth msg", err)
+		return
+	}
+
+	s2c, err := server.auth(authMsg)
 	if err != nil {
 		glog.ERROR(err)
 		return
 	}
 
-	server.forward.Add(accessip, conn)
-	defer server.forward.Del(accessip)
-	defer server.dhcp.RecycleIP(accessip)
-	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", accessip)
+	defer server.dhcp.RecycleIP(s2c.AccessIP)
 
+	resp, err := json.Marshal(s2c)
+	if err != nil {
+		glog.ERROR("marshal aut reply fail:", err)
+		return
+	}
+
+	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
+	_, err = conn.Write(buff)
+	if err != nil {
+		glog.ERROR("send auth reply fail:", err)
+		return
+	}
+
+	server.forward.Add(s2c.AccessIP, conn)
+	defer server.forward.Del(s2c.AccessIP)
+	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", s2c.AccessIP)
+
+	server.rcv(conn)
+}
+
+func (server *Server) rcv(conn net.Conn) {
+	defer conn.Close()
 	for {
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
@@ -176,17 +213,37 @@ func (server *Server) onConn(conn net.Conn) {
 	}
 }
 
-// Purpose:
-//			Read pkt/frame from tun/tap device and send back to gtun_cli
-//			For tap device, I do not record MAC address table, STILL USE
-//			IP ADDRESS AS SESSION KEY.
-// Parameters:
-//			ifce => device to read
-//			sndqueue => send back queue
-//
-func (server *Server) readDevice() {
+func (server *Server) snd() {
+	for {
+		select {
+		case <-server.stop:
+			return
+		default:
+		}
+
+		ctx := <-server.sndqueue
+		ctx.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
+		nw, err := ctx.conn.Write(ctx.payload)
+		ctx.conn.SetWriteDeadline(time.Time{})
+		if err != nil {
+			glog.ERROR(err)
+		}
+
+		if nw != len(ctx.payload) {
+			glog.ERROR("write not full", nw, len(ctx.payload))
+		}
+	}
+}
+
+func (server *Server) readIface() {
 	buff := make([]byte, 65536)
 	for {
+		select {
+		case <-server.stop:
+			return
+		default:
+		}
+
 		nr, err := server.iface.Read(buff)
 		if err != nil {
 			if err != io.EOF {
@@ -205,7 +262,7 @@ func (server *Server) readDevice() {
 
 			// Not eq ip pkt, just broadcast it
 			// This handle maybe dangerous
-			if WhichProtocol(buff) != syscall.IPPROTO_IP {
+			if whichProtocol(buff) != syscall.IPPROTO_IP {
 				server.forward.table.Range(func(key, val interface{}) bool {
 					conn, ok := val.(net.Conn)
 					if ok {
@@ -253,39 +310,8 @@ func (server *Server) readDevice() {
 	}
 }
 
-func (server *Server) pickAndSend() {
-	for {
-		ctx := <-server.sndqueue
-		ctx.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
-		nw, err := ctx.conn.Write(ctx.payload)
-		ctx.conn.SetWriteDeadline(time.Time{})
-		if err != nil {
-			glog.ERROR(err)
-		}
-
-		if nw != len(ctx.payload) {
-			glog.ERROR("write not full", nw, len(ctx.payload))
-		}
-	}
-}
-
-func (server *Server) auth(conn net.Conn) (accessip string, err error) {
-	cmd, payload, err := common.Decode(conn)
-	if err != nil {
-		return "", err
-	}
-
-	if cmd != common.C2S_AUTHORIZE {
-		return "", fmt.Errorf("invalid authhorize cmd %d", cmd)
-	}
-
-	auth := &common.C2SAuthorize{}
-	err = json.Unmarshal(payload, &auth)
-	if err != nil {
-		return "", err
-	}
-
-	accessip = auth.AccessIP
+func (server *Server) auth(auth *common.C2SAuthorize) (*common.S2CAuthorize, error) {
+	accessip := auth.AccessIP
 
 	s2cauthorize := &common.S2CAuthorize{
 		AccessIP:    accessip,
@@ -300,7 +326,7 @@ func (server *Server) auth(conn net.Conn) (accessip string, err error) {
 		if accessip == "" {
 			accessip = server.dhcp.SelectIP()
 			if accessip == "" {
-				return "", errors.New("not enough ip in dhcp pool")
+				return nil, errors.New("not enough ip in dhcp pool")
 			}
 			s2cauthorize.AccessIP = accessip
 		}
@@ -308,21 +334,10 @@ func (server *Server) auth(conn net.Conn) (accessip string, err error) {
 		s2cauthorize.Nameservers = server.nameservers
 	}
 
-	resp, err := json.Marshal(s2cauthorize)
-	if err != nil {
-		return "", err
-	}
-
-	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
-	_, err = conn.Write(buff)
-	if err != nil {
-		return "", err
-	}
-
-	return accessip, nil
+	return s2cauthorize, nil
 }
 
-func WhichProtocol(frame []byte) int {
+func whichProtocol(frame []byte) int {
 	if len(frame) > 14 {
 		return int(frame[12])<<8 + int(frame[13])
 	}
@@ -336,12 +351,7 @@ func isIPV4(vhl byte) bool {
 	return false
 }
 
-// Purpose:
-//			Loading ip/cidr from file and deploy to gtun_cli
-//			It seems like deploy router table to client, tell
-//			the client to route these ips/cidrs
-//			THERE IS NOT IP VALIDATE
-func logdRouteRules(rfile string) ([]string, error) {
+func loadRouteRules(rfile string) ([]string, error) {
 	fp, err := os.Open(rfile)
 	if err != nil {
 		return nil, err

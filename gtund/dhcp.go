@@ -1,6 +1,7 @@
 package gtund
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -38,7 +39,7 @@ func NewDHCP(cfg *DHCPConfig) (*DHCP, error) {
 	return dhcp, nil
 }
 
-func (dhcp *DHCP) SelectIP() string {
+func (dhcp *DHCP) SelectIP() (string, error) {
 	ip := ""
 	dhcp.table.Range(func(key, value interface{}) bool {
 		if value.(bool) == false {
@@ -49,7 +50,10 @@ func (dhcp *DHCP) SelectIP() string {
 		return true
 	})
 
-	return ip
+	if ip == "" {
+		return "", errors.New("not avaliable ip in pool")
+	}
+	return ip, nil
 }
 
 func (dhcp *DHCP) RecycleIP(ip string) {

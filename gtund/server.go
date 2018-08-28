@@ -3,7 +3,6 @@ package gtund
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +13,11 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+)
+
+var (
+	authFailMsg    = "authorize fail"
+	authSuccessMsg = "authorize success"
 )
 
 type ServerConfig struct {
@@ -152,29 +156,38 @@ func (server *Server) onConn(conn net.Conn) {
 		return
 	}
 
-	s2c, err := server.auth(authMsg)
-	if err != nil {
-		glog.ERROR(err)
+	s2c := &common.S2CAuthorize{}
+
+	if !server.checkAuth(authMsg) {
+		s2c.Status = authFailMsg
+		server.authResp(conn, s2c)
 		return
+	}
+
+	if server.isNewConnect(authMsg) {
+		s2c.AccessIP, err = server.dhcp.SelectIP()
+		if err != nil {
+			s2c.Status = err.Error()
+			server.authResp(conn, s2c)
+			return
+		}
+	} else {
+		// TODO: may cause bug.
+		// we need to mark the ip in dhcp pool as in used so that other client not use the same address
+		s2c.AccessIP = authMsg.AccessIP
 	}
 
 	defer server.dhcp.RecycleIP(s2c.AccessIP)
 
-	resp, err := json.Marshal(s2c)
-	if err != nil {
-		glog.ERROR("marshal aut reply fail:", err)
-		return
-	}
-
-	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
-	_, err = conn.Write(buff)
-	if err != nil {
-		glog.ERROR("send auth reply fail:", err)
-		return
-	}
+	s2c.Status = authSuccessMsg
+	s2c.Gateway = server.gateway
+	s2c.RouteRule = server.routes
+	s2c.Nameservers = server.nameservers
+	server.authResp(conn, s2c)
 
 	server.forward.Add(s2c.AccessIP, conn)
 	defer server.forward.Del(s2c.AccessIP)
+
 	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", s2c.AccessIP)
 
 	server.rcv(conn)
@@ -310,31 +323,26 @@ func (server *Server) readIface() {
 	}
 }
 
-func (server *Server) auth(auth *common.C2SAuthorize) (*common.S2CAuthorize, error) {
-	accessip := auth.AccessIP
-
-	s2cauthorize := &common.S2CAuthorize{
-		AccessIP:    accessip,
-		Status:      "authorize fail",
-		RouteRule:   make([]string, 0),
-		Nameservers: make([]string, 0),
-		Gateway:     server.gateway,
+func (server *Server) authResp(conn net.Conn, s2c *common.S2CAuthorize) {
+	resp, err := json.Marshal(s2c)
+	if err != nil {
+		glog.ERROR("marshal aut reply fail:", err)
+		return
 	}
 
-	if auth.Key == server.authKey {
-		s2cauthorize.Status = "authorize success"
-		if accessip == "" {
-			accessip = server.dhcp.SelectIP()
-			if accessip == "" {
-				return nil, errors.New("not enough ip in dhcp pool")
-			}
-			s2cauthorize.AccessIP = accessip
-		}
-		s2cauthorize.RouteRule = server.routes
-		s2cauthorize.Nameservers = server.nameservers
+	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
+	_, err = conn.Write(buff)
+	if err != nil {
+		glog.ERROR("send auth reply fail:", err)
+		return
 	}
+}
 
-	return s2cauthorize, nil
+func (server *Server) checkAuth(authMsg *common.C2SAuthorize) bool {
+	return authMsg.Key == server.authKey
+}
+func (server *Server) isNewConnect(authMsg *common.C2SAuthorize) bool {
+	return authMsg.AccessIP == ""
 }
 
 func whichProtocol(frame []byte) int {

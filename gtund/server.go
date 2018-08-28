@@ -164,17 +164,11 @@ func (server *Server) onConn(conn net.Conn) {
 		return
 	}
 
-	if server.isNewConnect(authMsg) {
-		s2c.AccessIP, err = server.dhcp.SelectIP()
-		if err != nil {
-			s2c.Status = err.Error()
-			server.authResp(conn, s2c)
-			return
-		}
-	} else {
-		// TODO: may cause bug.
-		// we need to mark the ip in dhcp pool as in used so that other client not use the same address
-		s2c.AccessIP = authMsg.AccessIP
+	s2c.AccessIP, err = server.dhcp.SelectIP(authMsg.AccessIP)
+	if err != nil {
+		s2c.Status = err.Error()
+		server.authResp(conn, s2c)
+		return
 	}
 
 	defer server.dhcp.RecycleIP(s2c.AccessIP)

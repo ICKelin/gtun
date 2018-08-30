@@ -13,4 +13,5 @@
             Reverse proxy is supported!!!! using reverse to proxy your public ip:port to gtun_cli_ip:port
             In this case, you can use your local raspberry pi/vm as a public service.
 
-            
+2018.08.30
+            Refactor code.

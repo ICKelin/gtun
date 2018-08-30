@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/ICKelin/glog"
@@ -190,6 +189,12 @@ func (server *Server) onConn(conn net.Conn) {
 func (server *Server) rcv(conn net.Conn) {
 	defer conn.Close()
 	for {
+		select {
+		case <-server.stop:
+			return
+		default:
+
+		}
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
 			if err != io.EOF {
@@ -262,57 +267,35 @@ func (server *Server) readIface() {
 		ethOffset := 0
 
 		if server.iface.IsTAP() {
-			if nr < 14 {
-				glog.WARM("too short ethernet frame", nr)
+			f := Frame(buff[:nr])
+			if f.Invalid() {
 				continue
 			}
 
-			// Not eq ip pkt, just broadcast it
-			// This handle maybe dangerous
-			if whichProtocol(buff) != syscall.IPPROTO_IP {
-				server.forward.table.Range(func(key, val interface{}) bool {
-					conn, ok := val.(net.Conn)
-					if ok {
-						bytes, _ := common.Encode(common.C2C_DATA, buff[:nr])
-						server.sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
-					}
-					return true
-				})
+			if !f.IsIPV4() {
+				// broadcast
+				server.forward.Broadcast(server.sndqueue, buff[:nr])
+				return
 			}
 
 			ethOffset = 14
 		}
 
-		if server.iface.IsTUN() {
-			if nr < 20 {
-				glog.WARM("too short ippkt", nr)
-				continue
-			}
-		}
+		p := Packet(buff[ethOffset:nr])
 
-		if nr < ethOffset+20 {
-			glog.WARM("to short ippkt", nr, ethOffset+20)
+		if p.Invalid() {
 			continue
 		}
 
-		// TODO ip version
-		dst := ""
-		if isIPV4(buff[ethOffset]) {
-			dst = fmt.Sprintf("%d.%d.%d.%d", buff[ethOffset+16], buff[ethOffset+17], buff[ethOffset+18], buff[ethOffset+19])
-		} else {
-			glog.WARM("not support ipv6")
+		if p.Version() != 4 {
+			continue
 		}
-		c := server.forward.Get(dst)
-		if c != nil {
-			bytes, err := common.Encode(common.C2C_DATA, buff[:nr])
-			if err != nil {
-				glog.ERROR(err)
-				continue
-			}
 
-			server.sndqueue <- &GtunClientContext{conn: c, payload: bytes}
-		} else {
-			glog.ERROR(dst, "offline")
+		peer := p.Dst()
+		err = server.forward.Peer(server.sndqueue, peer, buff[:nr])
+		if err != nil {
+			glog.ERROR("send to ", peer, err)
+			continue
 		}
 	}
 }
@@ -335,22 +318,9 @@ func (server *Server) authResp(conn net.Conn, s2c *common.S2CAuthorize) {
 func (server *Server) checkAuth(authMsg *common.C2SAuthorize) bool {
 	return authMsg.Key == server.authKey
 }
+
 func (server *Server) isNewConnect(authMsg *common.C2SAuthorize) bool {
 	return authMsg.AccessIP == ""
-}
-
-func whichProtocol(frame []byte) int {
-	if len(frame) > 14 {
-		return int(frame[12])<<8 + int(frame[13])
-	}
-	return -1
-}
-
-func isIPV4(vhl byte) bool {
-	if (vhl >> 4) == 4 {
-		return true
-	}
-	return false
 }
 
 func loadRouteRules(rfile string) ([]string, error) {
@@ -377,21 +347,15 @@ func loadRouteRules(rfile string) ([]string, error) {
 		line := string(bline)
 		linecount += 1
 
-		// 2018.04.20 rule store max 20 rule record
-		// There is no plan to fix this "feature"
 		if linecount > 20 {
 			return nil, fmt.Errorf("rules set max record set to 20, suggest using url instead of rule file")
 		}
 
-		// 2018.04.20 check max bytes
-		// since the protocol header set 2bytes for pkt header
-		// once overflow, cli json decode fail
 		curbytes += len(bline)
 		if curbytes > maxbytes {
 			return nil, fmt.Errorf("rule set max bytes 0xff00")
 		}
 
-		// ignore comment
 		if len(line) > 0 && line[0] == '#' {
 			continue
 		}

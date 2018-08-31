@@ -1,16 +1,9 @@
 *.log
 *.swp
 *.json
-gtun_arm
-gtun_darwin
-gtun_linux
-gtun_vpn*
 
 # ignore bin
 bin
-
-# ignore iplib
-iplib
 
 # ignore research file
 research

@@ -10,6 +10,9 @@ func (f Frame) Invalid() bool {
 }
 
 func (f Frame) IsIPV4() bool {
+	if f.Invalid() {
+		return false
+	}
 	proto := int(f[12])<<8 + int(f[13])
 	return proto == 0x0800
 }

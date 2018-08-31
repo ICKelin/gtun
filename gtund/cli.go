@@ -9,7 +9,7 @@ type Options struct {
 	authKey     string
 	gateway     string
 	listenAddr  string
-	routeFile   string
+	routeUrl    string
 	nameserver  string
 	reverseFile string
 	tapMode     bool
@@ -72,7 +72,7 @@ func ParseArgs() (*Options, error) {
 		authKey:     *pkey,
 		gateway:     *pgateway,
 		listenAddr:  *plisten,
-		routeFile:   *proute,
+		routeUrl:    *proute,
 		nameserver:  *pnameserver,
 		reverseFile: *preverse,
 		tapMode:     *ptap,

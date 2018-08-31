@@ -7,13 +7,13 @@ import (
 )
 
 var usage = `Usage: %s [OPTIONS]
-Options:
+OPTIONS:
 `
 
 var usage1 = `
 Examples:
-	gtun -s 12.13.14.15:443 -key "auth key" -debug true
-	gtun -s 12.13.14.15:443 -key "auth key" -debug true -tap true
+	./gtun -s 12.13.14.15:443 -key "auth key" -debug true
+	./gtun -s 12.13.14.15:443 -key "auth key" -debug true -tap true
 `
 
 type Options struct {

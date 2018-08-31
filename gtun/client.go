@@ -1,9 +1,11 @@
 package gtun
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -68,7 +70,11 @@ func (client *Client) Run(opts *Options) {
 				continue
 			}
 
-			insertRoute(s2c.RouteRule, s2c.AccessIP, s2c.Gateway, ifce.Name())
+			routes, err := downloadRoutes(s2c.RouteScriptUrl)
+			if err != nil {
+				glog.WARM(err)
+			}
+			go insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
 		}
 
 		client.myip = s2c.AccessIP
@@ -249,6 +255,29 @@ func setupIface(ifce *water.Interface, ip string, gw string) (err error) {
 	return nil
 }
 
+func downloadRoutes(url string) ([]string, error) {
+	routes := make([]string, 0)
+
+	glog.INFO("downloading route file from:", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	glog.INFO("downloaded route file from:", url)
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, _, err := reader.ReadLine()
+		if err != nil {
+			break
+		}
+		// may need to validate ip/cidr format
+		routes = append(routes, string(line))
+	}
+	return routes, nil
+}
+
 func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 	// Windows platform route add need iface index args.
 	ifceIndex := -1
@@ -260,9 +289,11 @@ func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 	} else {
 		ifceIndex = ifce.Index
 	}
+	glog.INFO("inserting routes")
 	for _, address := range routedIPS {
 		execRoute(address, devName, devIP, gw, ifceIndex)
 	}
+	glog.INFO("inserted routes, routes count:", len(routedIPS))
 }
 
 type CMD struct {
@@ -294,5 +325,5 @@ func execRoute(address, device, tunip, gateway string, ifceIndex int) {
 	if err != nil {
 		glog.DEBUG("add", address, "fail:", string(output))
 	}
-	glog.DEBUG(cmd, "output", string(output))
+	glog.DEBUG(string(output))
 }

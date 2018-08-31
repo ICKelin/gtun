@@ -23,7 +23,7 @@ func Main() {
 		listenAddr:  opts.listenAddr,
 		authKey:     opts.authKey,
 		gateway:     opts.gateway,
-		routeFile:   opts.routeFile,
+		routeUrl:    opts.routeUrl,
 		nameservers: opts.nameserver,
 		reverseFile: opts.reverseFile,
 	}

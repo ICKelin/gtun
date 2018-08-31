@@ -31,7 +31,6 @@ type C2SAuthorize struct {
 type S2CAuthorize struct {
 	Status         string   `json:"status"`
 	AccessIP       string   `json:"access_ip"`
-	RouteRule      []string `json:"route_rule"`
 	Nameservers    []string `json:"nameservers"`
 	Gateway        string   `json:"gateway"`
 	RouteScriptUrl string   `json:"route_script_url"`

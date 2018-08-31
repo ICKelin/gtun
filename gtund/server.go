@@ -1,12 +1,9 @@
 package gtund
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -23,7 +20,7 @@ type ServerConfig struct {
 	listenAddr  string
 	authKey     string
 	gateway     string
-	routeFile   string
+	routeUrl    string
 	nameservers string
 	reverseFile string
 	tapMode     bool
@@ -41,7 +38,7 @@ type Server struct {
 	reverse     *Reverse
 	dhcp        *DHCP
 	forward     *Forward
-	routes      []string
+	routeUrl    string
 	nameservers []string
 }
 
@@ -55,6 +52,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		listenAddr:  cfg.listenAddr,
 		authKey:     cfg.authKey,
 		gateway:     cfg.gateway,
+		routeUrl:    cfg.routeUrl,
 		nameservers: strings.Split(cfg.nameservers, ","),
 		forward:     NewForward(),
 		sndqueue:    make(chan *GtunClientContext),
@@ -100,15 +98,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 			return nil, err
 		}
 		server.reverse = r
-	}
-
-	// init routes deploy
-	if cfg.routeFile != "" {
-		routes, err := loadRouteRules(cfg.routeFile)
-		if err != nil {
-			return nil, err
-		}
-		server.routes = routes
 	}
 
 	return server, nil
@@ -174,7 +163,7 @@ func (server *Server) onConn(conn net.Conn) {
 
 	s2c.Status = authSuccessMsg
 	s2c.Gateway = server.gateway
-	s2c.RouteRule = server.routes
+	s2c.RouteScriptUrl = server.routeUrl
 	s2c.Nameservers = server.nameservers
 	server.authResp(conn, s2c)
 
@@ -321,47 +310,4 @@ func (server *Server) checkAuth(authMsg *common.C2SAuthorize) bool {
 
 func (server *Server) isNewConnect(authMsg *common.C2SAuthorize) bool {
 	return authMsg.AccessIP == ""
-}
-
-func loadRouteRules(rfile string) ([]string, error) {
-	fp, err := os.Open(rfile)
-	if err != nil {
-		return nil, err
-	}
-
-	routes := make([]string, 0)
-
-	linecount := 0
-	maxbytes := 0xff00
-	curbytes := 0
-	reader := bufio.NewReader(fp)
-	for {
-		bline, _, err := reader.ReadLine()
-		if err != nil {
-			if err != io.EOF {
-				return nil, err
-			}
-			break
-		}
-
-		line := string(bline)
-		linecount += 1
-
-		if linecount > 20 {
-			return nil, fmt.Errorf("rules set max record set to 20, suggest using url instead of rule file")
-		}
-
-		curbytes += len(bline)
-		if curbytes > maxbytes {
-			return nil, fmt.Errorf("rule set max bytes 0xff00")
-		}
-
-		if len(line) > 0 && line[0] == '#' {
-			continue
-		}
-
-		routes = append(routes, line)
-	}
-
-	return routes, nil
 }

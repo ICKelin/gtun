@@ -11,7 +11,6 @@ import (
 type ForwardConfig struct {
 }
 type Forward struct {
-	sync.Mutex
 	table *sync.Map
 }
 

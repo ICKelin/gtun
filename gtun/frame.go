@@ -57,35 +57,28 @@ func (p Packet) Dst() string {
 }
 
 func (p Packet) DNAT(toport uint16, toip uint32) Packet {
-	np := p.Copy()
-	np[dipoff] = byte(toip >> 24)
-	np[dipoff+1] = byte(toip >> 16)
-	np[dipoff+2] = byte(toip >> 8)
-	np[dipoff+3] = byte(toip)
-
-	// checksum
-	np.bzeroSum()
-	np.sum()
-
-	return np
+	p[dipoff] = byte(toip >> 24)
+	p[dipoff+1] = byte(toip >> 16)
+	p[dipoff+2] = byte(toip >> 8)
+	p[dipoff+3] = byte(toip)
+	p.nat()
+	return p
 }
 
 func (p Packet) SNAT(fromport uint16, fromip uint32) Packet {
-	np := p.Copy()
-	np[sipoff] = byte(fromip >> 24)
-	np[sipoff+1] = byte(fromip >> 16)
-	np[sipoff+2] = byte(fromip >> 8)
-	np[sipoff+3] = byte(fromip)
-	return np
+	p[sipoff] = byte(fromip >> 24)
+	p[sipoff+1] = byte(fromip >> 16)
+	p[sipoff+2] = byte(fromip >> 8)
+	p[sipoff+3] = byte(fromip)
+	p.nat()
+	return p
 }
 
-func (p Packet) bzeroSum() {
-	p[sumoff] = 0
-	p[sumoff+1] = 0
-}
+func (p Packet) nat() {
+	// checksum
+	p.bzeroSum()
+	sum := p.sum()
 
-func (p Packet) sum() {
-	sum := checksum(p[:20])
 	p[sumoff] = byte(sum >> 8)
 	p[sumoff+1] = byte(sum)
 
@@ -107,7 +100,6 @@ func (p Packet) sum() {
 		tsum := checksum(bb)
 		p[udpsumoff] = byte(tsum >> 8)
 		p[udpsumoff+1] = byte(tsum)
-		return
 	}
 
 	if p[protooff] == 6 {
@@ -117,8 +109,16 @@ func (p Packet) sum() {
 		tsum := checksum(bb)
 		p[tcpsumoff] = byte(tsum >> 8)
 		p[tcpsumoff+1] = byte(tsum)
-		return
 	}
+}
+
+func (p Packet) bzeroSum() {
+	p[sumoff] = 0
+	p[sumoff+1] = 0
+}
+
+func (p Packet) sum() uint16 {
+	return checksum(p[:20])
 }
 
 func (p Packet) sumvalue() uint16 {

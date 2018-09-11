@@ -91,10 +91,8 @@ func TestDNAT(t *testing.T) {
 		for {
 			nr, err := iface.Read(buff)
 			assert.Equal(t, nil, err)
-			// fmt.Println("before:", buff[:nr])
 			p := Packet(buff[:nr])
 			np := p.DNAT(80, parseip("100.64.240.10"))
-			// fmt.Println("after: ", np)
 			iface.Write(np)
 		}
 	}()

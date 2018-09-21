@@ -1,11 +1,11 @@
-package main
+package god
 
 import (
 	"github.com/ICKelin/glog"
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
+func Main() {
 	engine := gin.Default()
 	err := engine.Run(":9622")
 	if err != nil {

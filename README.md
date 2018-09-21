@@ -52,22 +52,24 @@ iptables -t nat -I POSTROUTING -j MASQUERADE
 
 启动gtun_srv
 ```
+./gtund -h
 
-./gtun_srv -h
-
-Usage of ./gtun_srv:
+ -debug
+        debug mode
   -g string
-    	local tun device ip (default "192.168.253.1")
-  -h	print usage
+        gateway address, local tun/tap device ip, dhcp pool set to $gateway/24
   -k string
-    	client authorize key (default "gtun_authorize")
+        auth key for client connect checking
   -l string
-    	local listen address (default ":9621")
+        gtun server listen address
   -n string
-    	nameservers for gtun_cli
+        nameserver deploy to gtun client. now it's NOT works
+  -p string
+        reverse proxy policy file path
   -r string
-    	router rules url
-  -t	tap device
+        route rules file path, gtun server deploy the file content for gtun client
+gtun client insert those ip into route table
+  -t    use tap device for layer2 forward
 ```
 
 -r 参数指定加速的ip文件列表。
@@ -77,17 +79,20 @@ Usage of ./gtun_srv:
 gtun_cli需要使用root权限执行
 
 ```
-./gtun_linux_arm_0.0.2 -h
-Usage of ./gtun_linux_arm_0.0.2:
+Usage: ./gtun [OPTIONS]
+OPTIONS:
   -debug
-    	debug mode
+        debug mode
   -key string
-    	client authorize key (default "gtun_authorize")
+        auth key with gtun server
   -s string
-    	srv address (default "")
+        gtun server address
   -tap
-    	tap mode
+        tap mode, tap mode for layer2 tunnel, default is false
 
+Examples:
+        ./gtun -s 12.13.14.15:443 -key "auth key" -debug true
+        ./gtun -s 12.13.14.15:443 -key "auth key" -debug true -tap true
 ```
 
 ping 192.168.253.1测试连通性。
@@ -101,20 +106,21 @@ ping 192.168.253.1测试连通性。
 reverse.policy:
 
 ```
-api.gc.com:58496->192.168.253.36:8502
+tcp www.notr.tech:58496->192.168.253.36:8502
+tcp www.notr.tech:53->192.168.253.36:53
 ```
 
-将api.gc.com:58496端口映射到gtun客户端地址为192.168.253.36:8502之上
+**bug: 当前反向代理需要先知道客户端分配的地址，没有实时配置更新接口**
 
 ### tips
 gtun_srv与gtun_cli运行起来之后，虚拟局域网就已经存在了，任何使用同一个gtun_srv的gtun_cli在知道对方ip地址的前提下，均能进行通信。
 
 **tips0**
-    gtun的分流依赖路由表，可以手动加入路由表实现分流,gtun_srv的 -r 基本形同虚设，
-    **这不是个bug，这是个福利**
+    gtun的分流依赖路由表，可以手动加入路由表实现分流, gtund的-r指定ip地址的url，客户端会从该url处下载ip库并加入到路由表当中比如:
+    ```./gtund -g 192.168.228.1 -l :9623 -k fucking -r http://ipdeny.com/ipblocks/data/countries/us.zone```
 
 **tips1**
-    可以将gtun部署在树莓派上，树莓派使用hostapd之类的软件释放AP，通过连接wifi即可使用gtun
+    可以将gtun部署在树莓派上，树莓派使用hostapd之类的软件，通过连接wifi即可使用gtun
 
 **tips2**
     树莓派的Wi-Fi性能差？可以尝试在树莓派同级网络接入路由器，在路由器配置页面将下一跳网关指向树莓派，同样能够使用树莓派上的ip加速功能。

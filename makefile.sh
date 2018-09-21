@@ -9,15 +9,15 @@ mkdir -p bin/gtund/log
 GOOS=linux go build -o bin/gtund/gtund main/gtund/*.go
 
 cd main/gtun
-
 echo "building gtun_cli_darwin...."
-GOOS=darwin go build -o ../bin/gtun_cli/gtun_cli_darwin 
+GOOS=darwin go build -o ../../bin/gtun/gtun-darwin_amd64 
 echo "builded gtun_cli_darwin...."
 
 echo "building gtun_cli_linux...."
-GOOS=linux go build -o ../bin/gtun_cli/gtun_cli_linux 
+GOOS=linux go build -o ../../bin/gtun/gtun-linux_amd64 
 echo "builded gtun_cli_linux...."
 
 echo "building gtun_cli_win...."
-GOOS=windows go build -o ../bin/gtun_cli/gtun_cli_win.exe 
+
+GOOS=windows go build -o ../../bin/gtun/gtun-windows_amd64.exe
 echo "builded gtun_cli_win...."

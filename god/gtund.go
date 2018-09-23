@@ -60,6 +60,9 @@ func (d *gtund) onConn(conn net.Conn) {
 		return
 	}
 
+	// TODO: store gtund register infos
+	// TODO: response register
+
 	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
 	for {
 		cmd, _, err := common.Decode(conn)

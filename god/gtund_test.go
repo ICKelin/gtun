@@ -43,6 +43,10 @@ func TestGtund(t *testing.T) {
 	}
 }
 
+func TestServer(t *testing.T) {
+	server(t)
+}
+
 func server(t *testing.T) {
 	d := NewGtund(&gtundConfig{Listener: "127.0.0.1:9876"})
 	d.Run()

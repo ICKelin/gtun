@@ -20,6 +20,7 @@ type GodConfig struct {
 	HeartbeatInterval time.Duration `json:"god_hb_interval"`
 	Timeout           time.Duration `json:"god_conn_timeout"`
 	GodAddr           string        `json:"god_addr"`
+	Must              bool          `json:"must"`
 }
 
 type God struct {

@@ -3,8 +3,10 @@ package gtund
 import (
 	"fmt"
 	"os/exec"
+	"runtime"
 	"strings"
 
+	"github.com/ICKelin/glog"
 	"github.com/songgao/water"
 )
 
@@ -67,11 +69,26 @@ func setupDevice(dev, ip string) (err error) {
 
 	cmdlist := make([]*CMD, 0)
 
-	cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
+	switch runtime.GOOS {
+	case "linux":
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
 
-	args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", ip, dev), " ")
-	cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
+		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", ip, dev), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
 
+	case "darwin":
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{dev, "up"}})
+
+		args := strings.Split(fmt.Sprintf("%s %s %s", dev, ip, ip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
+
+		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", ip, ip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
+
+	default:
+		glog.FATAL("unsupported: ", runtime.GOOS, runtime.GOARCH)
+
+	}
 	for _, c := range cmdlist {
 		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
 		if err != nil {

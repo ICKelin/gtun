@@ -2,6 +2,7 @@ package gtund
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/ICKelin/glog"
 )
@@ -30,7 +31,13 @@ func Main() {
 	if conf != nil && conf.GodCfg != nil {
 		go func() {
 			g := NewGod(conf.GodCfg)
-			glog.FATAL(g.Run())
+			err := g.Run()
+			glog.ERROR(err)
+
+			// whether we should exit
+			if conf.GodCfg.Must {
+				os.Exit(-1)
+			}
 		}()
 	}
 

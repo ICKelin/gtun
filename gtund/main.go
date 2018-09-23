@@ -19,6 +19,21 @@ func Main() {
 		glog.Init("gtund", glog.PRIORITY_WARN, "./", glog.OPT_DATE, 1024*10)
 	}
 
+	var conf *Config
+	if opts.confpath != "" {
+		conf, err = ParseConfig(opts.confpath)
+		if err != nil {
+			glog.FATAL("parse config file fail:", opts.confpath, err)
+		}
+	}
+
+	if conf != nil && conf.GodCfg != nil {
+		go func() {
+			g := NewGod(conf.GodCfg)
+			glog.FATAL(g.Run())
+		}()
+	}
+
 	serverCfg := &ServerConfig{
 		listenAddr:  opts.listenAddr,
 		authKey:     opts.authKey,

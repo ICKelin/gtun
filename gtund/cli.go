@@ -14,6 +14,7 @@ type Options struct {
 	reverseFile string
 	tapMode     bool
 	debug       bool
+	confpath    string
 }
 
 func ParseArgs() (*Options, error) {
@@ -62,6 +63,11 @@ func ParseArgs() (*Options, error) {
 		false,
 		"debug mode")
 
+	pconf := flag.String(
+		"conf",
+		"",
+		"config file path")
+
 	flag.Parse()
 
 	if *pgateway == "" {
@@ -77,6 +83,7 @@ func ParseArgs() (*Options, error) {
 		reverseFile: *preverse,
 		tapMode:     *ptap,
 		debug:       *pdebug,
+		confpath:    *pconf,
 	}
 
 	return opts, nil

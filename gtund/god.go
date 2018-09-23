@@ -13,22 +13,23 @@ import (
 var (
 	defaultHeartbeat = time.Second * 3
 	defaultTimeout   = time.Second * 5
+	defaultMaxErr    = 5 // defaultMaxErr disconnect with god
 )
 
-type godConfig struct {
-	HeartbeatInterval time.Duration
-	Timeout           time.Duration
-	GodAddr           string
+type GodConfig struct {
+	HeartbeatInterval time.Duration `json:"god_hb_interval"`
+	Timeout           time.Duration `json:"god_conn_timeout"`
+	GodAddr           string        `json:"god_addr"`
 }
 
-type god struct {
+type God struct {
 	heartbeatInterval time.Duration
 	timeout           time.Duration
 	godAddr           string
 	stop              chan struct{}
 }
 
-func NewGod(cfg godConfig) *god {
+func NewGod(cfg *GodConfig) *God {
 	heartbeatInterval := cfg.HeartbeatInterval
 	timeout := cfg.Timeout
 
@@ -39,7 +40,8 @@ func NewGod(cfg godConfig) *god {
 	if cfg.Timeout <= 0 {
 		timeout = defaultTimeout
 	}
-	g := &god{
+
+	g := &God{
 		heartbeatInterval: heartbeatInterval,
 		timeout:           timeout,
 		godAddr:           cfg.GodAddr,
@@ -48,7 +50,7 @@ func NewGod(cfg godConfig) *god {
 	return g
 }
 
-func (g *god) Run() error {
+func (g *God) Run() error {
 	conn, err := net.Dial("tcp", g.godAddr)
 	if err != nil {
 		return err
@@ -60,12 +62,19 @@ func (g *god) Run() error {
 		return err
 	}
 
+	errCount := 0
 	for {
 		select {
 		case <-time.After(g.heartbeatInterval):
 			err = g.heartbeat(conn)
 			if err != nil {
-				return err
+				errCount++
+				if errCount > defaultMaxErr {
+					return err
+				}
+			} else {
+				// reset errCount
+				errCount = 0
 			}
 
 		case <-g.stop:
@@ -74,7 +83,7 @@ func (g *god) Run() error {
 	}
 }
 
-func (g *god) register(conn net.Conn) (*common.G2SRegister, error) {
+func (g *God) register(conn net.Conn) (*common.G2SRegister, error) {
 	reg := &common.S2GRegister{}
 	bytes, err := json.Marshal(reg)
 	if err != nil {
@@ -97,7 +106,7 @@ func (g *god) register(conn net.Conn) (*common.G2SRegister, error) {
 	return nil, nil
 }
 
-func (g *god) heartbeat(conn net.Conn) error {
+func (g *God) heartbeat(conn net.Conn) error {
 	bytes, err := common.Encode(common.S2G_HEARTBEAT, nil)
 	if err != nil {
 		return err

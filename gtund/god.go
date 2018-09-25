@@ -17,10 +17,10 @@ var (
 )
 
 type GodConfig struct {
-	HeartbeatInterval time.Duration `json:"god_hb_interval"`
-	Timeout           time.Duration `json:"god_conn_timeout"`
-	GodAddr           string        `json:"god_addr"`
-	Must              bool          `json:"must"`
+	HeartbeatInterval int    `json:"god_hb_interval"`
+	Timeout           int    `json:"god_conn_timeout"`
+	GodAddr           string `json:"god_addr"`
+	Must              bool   `json:"must"`
 }
 
 type God struct {
@@ -31,8 +31,8 @@ type God struct {
 }
 
 func NewGod(cfg *GodConfig) *God {
-	heartbeatInterval := cfg.HeartbeatInterval
-	timeout := cfg.Timeout
+	heartbeatInterval := time.Duration(cfg.HeartbeatInterval) * time.Second
+	timeout := time.Duration(cfg.Timeout) * time.Second
 
 	if cfg.HeartbeatInterval <= 0 {
 		heartbeatInterval = defaultHeartbeat

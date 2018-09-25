@@ -107,6 +107,8 @@ func conServer(srv string) (conn net.Conn, err error) {
 
 func authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAuthorize, err error) {
 	c2sauthorize := &common.C2SAuthorize{
+		OS:       common.OSID(runtime.GOOS),
+		Version:  common.Version(),
 		AccessIP: accessIP,
 		Key:      key,
 	}

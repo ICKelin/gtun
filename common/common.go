@@ -12,6 +12,12 @@ const (
 	MAX_PAYLOAD = 1<<16 - 1
 )
 
+var version = "1.1.0"
+
+func Version() string {
+	return version
+}
+
 func Encode(cmd byte, payload []byte) ([]byte, error) {
 	buff := make([]byte, 0)
 

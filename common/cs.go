@@ -15,7 +15,19 @@ const (
 	S2C_AUTHORIZE = byte(0x06)
 )
 
+var os = map[string]int{
+	"linux":   1,
+	"darwin":  2,
+	"windows": 3,
+}
+
+func OSID(goos string) int {
+	return os[goos]
+}
+
 type C2SAuthorize struct {
+	Version  int    `json:"version"`
+	OS       int    `json:"os"`
 	AccessIP string `json:"access_ip"`
 	Key      string `json:"key"`
 }

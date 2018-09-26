@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ type Server struct {
 	reverse     *Reverse
 	dhcp        *DHCP
 	forward     *Forward
+	god         *God
 	routeUrl    string
 	nameservers []string
 }
@@ -99,6 +101,19 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		}
 		server.reverse = r
 	}
+
+	// init god module
+	g := NewGod(GetConfig().GodCfg)
+	server.god = g
+	go func() {
+		err := g.Run(server)
+		glog.ERROR(err)
+
+		// whether we should exit
+		if GetConfig().GodCfg.Must {
+			os.Exit(-1)
+		}
+	}()
 
 	return server, nil
 }

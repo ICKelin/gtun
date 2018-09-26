@@ -5,7 +5,10 @@ import (
 	"io/ioutil"
 )
 
+var config Config
+
 type Config struct {
+	Region string     `json:"region"`
 	GodCfg *GodConfig `json:"god_config"`
 }
 
@@ -21,10 +24,15 @@ func ParseConfig(path string) (*Config, error) {
 func parseConfig(content []byte) (*Config, error) {
 	var c Config
 	err := json.Unmarshal(content, &c)
+	config = c
 	return &c, err
 }
 
 func (c *Config) String() string {
 	cnt, _ := json.MarshalIndent(c, "", "\t")
 	return string(cnt)
+}
+
+func GetConfig() *Config {
+	return &config
 }

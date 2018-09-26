@@ -16,6 +16,7 @@ type ReverseConfig struct {
 }
 
 type Reverse struct {
+	sync.Mutex
 	ruleFile string
 	policy   []*ReversePolicy
 }

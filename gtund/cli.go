@@ -5,6 +5,8 @@ import (
 	"flag"
 )
 
+var option *Options
+
 type Options struct {
 	authKey     string
 	gateway     string
@@ -86,5 +88,10 @@ func ParseArgs() (*Options, error) {
 		confpath:    *pconf,
 	}
 
+	option = opts
 	return opts, nil
+}
+
+func GetOpts() *Options {
+	return option
 }

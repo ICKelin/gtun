@@ -51,7 +51,7 @@ func NewGod(cfg *GodConfig) *God {
 	return g
 }
 
-func (g *God) Run() error {
+func (g *God) Run(server *Server) error {
 	conn, err := net.Dial("tcp", g.godAddr)
 	if err != nil {
 		return err
@@ -85,7 +85,12 @@ func (g *God) Run() error {
 }
 
 func (g *God) register(conn net.Conn) (*common.G2SRegister, error) {
-	reg := &common.S2GRegister{}
+	reg := &common.S2GRegister{
+		PublicIP:   GetPublicIP(),
+		ListenAddr: GetOpts().listenAddr,
+		CIDR:       GetOpts().gateway,
+		Region:     GetConfig().Region,
+	}
 	bytes, err := json.Marshal(reg)
 	if err != nil {
 		return nil, err

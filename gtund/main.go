@@ -2,7 +2,9 @@ package gtund
 
 import (
 	"fmt"
-	"os"
+	"io/ioutil"
+	"net/http"
+	"strings"
 
 	"github.com/ICKelin/glog"
 )
@@ -20,25 +22,11 @@ func Main() {
 		glog.Init("gtund", glog.PRIORITY_WARN, "./", glog.OPT_DATE, 1024*10)
 	}
 
-	var conf *Config
 	if opts.confpath != "" {
-		conf, err = ParseConfig(opts.confpath)
+		_, err = ParseConfig(opts.confpath)
 		if err != nil {
 			glog.FATAL("parse config file fail:", opts.confpath, err)
 		}
-	}
-
-	if conf != nil && conf.GodCfg != nil {
-		go func() {
-			g := NewGod(conf.GodCfg)
-			err := g.Run()
-			glog.ERROR(err)
-
-			// whether we should exit
-			if conf.GodCfg.Must {
-				os.Exit(-1)
-			}
-		}()
 	}
 
 	serverCfg := &ServerConfig{
@@ -58,4 +46,21 @@ func Main() {
 
 	server.Run()
 	server.Stop()
+}
+
+func GetPublicIP() string {
+	resp, err := http.Get("http://ipv4.icanhazip.com")
+	if err != nil {
+		return ""
+	}
+
+	defer resp.Body.Close()
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return ""
+	}
+
+	str := string(content)
+	idx := strings.LastIndex(str, "\n")
+	return str[:idx]
 }

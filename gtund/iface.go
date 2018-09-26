@@ -89,6 +89,7 @@ func setupDevice(dev, ip string) (err error) {
 		glog.FATAL("unsupported: ", runtime.GOOS, runtime.GOARCH)
 
 	}
+
 	for _, c := range cmdlist {
 		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
 		if err != nil {

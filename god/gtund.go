@@ -2,7 +2,9 @@ package god
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ICKelin/glog"
@@ -11,15 +13,20 @@ import (
 
 type gtundConfig struct {
 	Listener string `json:"gtund_listener"`
+	Token    string `json:"token"`
 }
 
 type gtund struct {
 	listener string
+	token    string
+	db       *DB
 }
 
 func NewGtund(cfg *gtundConfig) *gtund {
 	return &gtund{
 		listener: cfg.Listener,
+		token:    cfg.Token,
+		db:       NewDB(),
 	}
 }
 
@@ -42,30 +49,33 @@ func (d *gtund) Run() error {
 
 func (d *gtund) onConn(conn net.Conn) {
 	defer conn.Close()
-	cmd, bytes, err := common.Decode(conn)
+
+	reg, err := d.onRegister(conn)
 	if err != nil {
-		glog.ERROR(err)
+		glog.ERROR("register fail: ", err)
 		return
 	}
 
-	if cmd != common.S2G_REGISTER {
-		glog.ERROR("invalid cmd", cmd)
-		return
-	}
-
-	reg := common.S2GRegister{}
-	err = json.Unmarshal(bytes, &reg)
-	if err != nil {
-		glog.ERROR(err)
-		return
-	}
-
-	// TODO: store gtund register infos
-	// TODO: response register
+	d.db.Set(conn.RemoteAddr().String(), reg)
+	defer d.db.Del(conn.RemoteAddr().String())
 
 	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
+
+	sndbuffer := make(chan []byte)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go d.recv(conn, wg, sndbuffer)
+	go d.send(conn, wg, sndbuffer)
+	wg.Wait()
+}
+
+func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte) {
+	defer conn.Close()
+	defer wg.Done()
+
 	for {
-		cmd, _, err := common.Decode(conn)
+		cmd, bytes, err := common.Decode(conn)
 		if err != nil {
 			glog.ERROR(err)
 			break
@@ -73,19 +83,113 @@ func (d *gtund) onConn(conn net.Conn) {
 
 		switch cmd {
 		case common.S2G_HEARTBEAT:
-			glog.DEBUG("heartbeat from gtund ", conn.RemoteAddr().String())
-			bytes, err := common.Encode(common.G2S_HEARTBEAT, nil)
-			if err != nil {
-				glog.ERROR(err)
-				continue
-			}
+			d.onHeartbeat(conn, bytes, sndbuffer)
 
-			conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
-			conn.Write(bytes)
-			conn.SetWriteDeadline(time.Time{})
+		case common.S2G_UPDATE_CLIENT_COUNT:
+			d.onUpdate(conn, bytes, sndbuffer)
+
 		default:
 			glog.WARM("unimplemented cmd", cmd)
 
 		}
 	}
+}
+
+func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte) {
+	defer conn.Close()
+	defer wg.Done()
+
+	for {
+		bytes := <-sndbuffer
+
+		conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+		_, err := conn.Write(bytes)
+		conn.SetWriteDeadline(time.Time{})
+		if err != nil {
+			glog.ERROR("write to client: ", err)
+			return
+		}
+	}
+
+}
+
+func (d *gtund) onRegister(conn net.Conn) (*common.S2GRegister, error) {
+	cmd, bytes, err := common.Decode(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	if cmd != common.S2G_REGISTER {
+		return nil, errors.New("invalid command")
+	}
+
+	reg := common.S2GRegister{}
+	err = json.Unmarshal(bytes, &reg)
+	if err != nil {
+		return nil, err
+	}
+
+	if reg.Token != d.token {
+		msg := common.Response(nil, errors.New("invalid token"))
+		resp, err := common.Encode(common.G2S_REGISTER, msg)
+		if err != nil {
+			return nil, err
+		}
+		conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+		conn.Write(resp)
+		conn.SetWriteDeadline(time.Time{})
+
+		return nil, errors.New("invalid token")
+	}
+
+	msg := common.Response(nil, nil)
+	resp, err := common.Encode(common.G2S_REGISTER, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+	conn.Write(resp)
+	conn.SetWriteDeadline(time.Time{})
+
+	return &reg, nil
+}
+
+func (d *gtund) onHeartbeat(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
+	glog.DEBUG("on S2G_HEARTBEAT: ", conn.RemoteAddr().String(), string(bytes))
+
+	bytes, err := common.Encode(common.G2S_HEARTBEAT, nil)
+	if err != nil {
+		glog.ERROR(err)
+		return
+	}
+	sndbuffer <- bytes
+}
+
+func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
+	glog.DEBUG("on S2G_UPDATE_CLIENT_COUNT: ", conn.RemoteAddr().String(), string(bytes))
+
+	obj := &common.S2GUpdate{}
+	err := json.Unmarshal(bytes, obj)
+	if err != nil {
+		d.response(nil, err, sndbuffer)
+		return
+	}
+
+	rec, ok := d.db.Get(conn.RemoteAddr().String())
+	if !ok {
+		d.response(rec, errors.New("not register yet!"), sndbuffer)
+		return
+	}
+
+	val := rec.(*common.S2GRegister)
+	val.Count += obj.Count
+	d.db.Set(conn.RemoteAddr().String(), val)
+	d.response(val, nil, sndbuffer)
+}
+
+func (d *gtund) response(data interface{}, err error, sndbuffer chan []byte) {
+	msg := common.Response(data, err)
+	resp, _ := common.Encode(common.G2S_UPDATE_CLIENT_COUNT, msg)
+	sndbuffer <- resp
 }

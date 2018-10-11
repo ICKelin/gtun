@@ -106,8 +106,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	g := NewGod(GetConfig().GodCfg)
 	server.god = g
 	go func() {
-		err := g.Run(server)
-		glog.ERROR(err)
+		g.Run()
 
 		// whether we should exit
 		if GetConfig().GodCfg.Must {
@@ -186,6 +185,9 @@ func (server *Server) onConn(conn net.Conn) {
 	defer server.forward.Del(s2c.AccessIP)
 
 	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", s2c.AccessIP)
+
+	server.god.UpdateClientCount(1)
+	defer server.god.UpdateClientCount(-1)
 
 	server.rcv(conn)
 }

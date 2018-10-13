@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -12,10 +13,39 @@ const (
 	MAX_PAYLOAD = 1<<16 - 1
 )
 
+const (
+	CODE_SUCCESS       = 10000
+	CODE_REGISTER_FAIL = 10001
+	CODE_FAIL          = 99999
+)
+
 var version = "1.1.0"
 
 func Version() string {
 	return version
+}
+
+type ResponseBody struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+func Response(data interface{}, err error) []byte {
+	g2s := &ResponseBody{}
+
+	if err != nil {
+		g2s.Code = CODE_FAIL
+		g2s.Message = err.Error()
+		g2s.Data = data
+	} else {
+		g2s.Code = CODE_SUCCESS
+		g2s.Message = "success"
+		g2s.Data = data
+	}
+
+	bytes, _ := json.Marshal(g2s)
+	return bytes
 }
 
 func Encode(cmd byte, payload []byte) ([]byte, error) {

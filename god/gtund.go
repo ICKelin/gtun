@@ -13,20 +13,18 @@ import (
 
 type gtundConfig struct {
 	Listener string `json:"gtund_listener"`
-	Token    string `json:"token"`
+	Token    string `json:"token"` // 内部系统鉴权token
 }
 
 type gtund struct {
 	listener string
 	token    string
-	db       *DB
 }
 
 func NewGtund(cfg *gtundConfig) *gtund {
 	return &gtund{
 		listener: cfg.Listener,
 		token:    cfg.Token,
-		db:       NewDB(),
 	}
 }
 
@@ -56,8 +54,8 @@ func (d *gtund) onConn(conn net.Conn) {
 		return
 	}
 
-	d.db.Set(conn.RemoteAddr().String(), reg)
-	defer d.db.Del(conn.RemoteAddr().String())
+	GetDB().Set(conn.RemoteAddr().String(), reg)
+	defer GetDB().Del(conn.RemoteAddr().String())
 
 	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
 
@@ -176,7 +174,7 @@ func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
 		return
 	}
 
-	rec, ok := d.db.Get(conn.RemoteAddr().String())
+	rec, ok := GetDB().Get(conn.RemoteAddr().String())
 	if !ok {
 		d.response(rec, errors.New("not register yet!"), sndbuffer)
 		return
@@ -184,7 +182,7 @@ func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
 
 	val := rec.(*common.S2GRegister)
 	val.Count += obj.Count
-	d.db.Set(conn.RemoteAddr().String(), val)
+	GetDB().Set(conn.RemoteAddr().String(), val)
 	d.response(val, nil, sndbuffer)
 }
 

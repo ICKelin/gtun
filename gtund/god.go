@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"runtime"
 	"sync"
 	"time"
 
@@ -122,6 +123,7 @@ func (g *God) register(conn net.Conn) (*common.G2SResponse, error) {
 		Region:         GetConfig().Region,
 		Token:          g.godToekn,
 		MaxClientCount: defaultClientSize,
+		IsWindows:      runtime.GOOS == "windows",
 	}
 	bytes, err := json.Marshal(reg)
 	if err != nil {

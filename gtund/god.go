@@ -116,11 +116,12 @@ func (g *God) run() error {
 
 func (g *God) register(conn net.Conn) (*common.G2SResponse, error) {
 	reg := &common.S2GRegister{
-		PublicIP:   GetPublicIP(),
-		ListenAddr: GetOpts().listenAddr,
-		CIDR:       GetOpts().gateway,
-		Region:     GetConfig().Region,
-		Token:      g.godToekn,
+		PublicIP:       GetPublicIP(),
+		ListenAddr:     GetOpts().listenAddr,
+		CIDR:           GetOpts().gateway,
+		Region:         GetConfig().Region,
+		Token:          g.godToekn,
+		MaxClientCount: defaultClientSize,
 	}
 	bytes, err := json.Marshal(reg)
 	if err != nil {

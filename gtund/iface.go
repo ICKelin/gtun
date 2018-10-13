@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	defaultMask = "255.255.255.0"
+	defaultMask       = "255.255.255.0"
+	defaultClientSize = 240
 )
 
 type InterfaceConfig struct {

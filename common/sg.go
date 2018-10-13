@@ -22,12 +22,13 @@ const (
 )
 
 type S2GRegister struct {
-	PublicIP   string `json:"public_ip"`
-	ListenAddr string `json:"listen_addr"`
-	CIDR       string `json:"cidr"`
-	Region     string `json:"region"`
-	Token      string `json:"token"`
-	Count      int    `json:"count"`
+	PublicIP       string `json:"public_ip"`
+	ListenAddr     string `json:"listen_addr"`
+	CIDR           string `json:"cidr"`
+	Region         string `json:"region"`
+	Token          string `json:"token"`
+	Count          int    `json:"count"`
+	MaxClientCount int    `json:"max_client_count"`
 }
 
 type S2GUpdate struct {

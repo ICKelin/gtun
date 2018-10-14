@@ -115,7 +115,7 @@ func (g *God) run() error {
 	return nil
 }
 
-func (g *God) register(conn net.Conn) (*common.G2SResponse, error) {
+func (g *God) register(conn net.Conn) (*common.ResponseBody, error) {
 	reg := &common.S2GRegister{
 		PublicIP:       GetPublicIP(),
 		ListenAddr:     GetOpts().listenAddr,
@@ -151,7 +151,7 @@ func (g *God) register(conn net.Conn) (*common.G2SResponse, error) {
 		return nil, errors.New("invalid cmd")
 	}
 
-	msg := &common.G2SResponse{}
+	msg := &common.ResponseBody{}
 	err = json.Unmarshal(resp, msg)
 	if err != nil {
 		return nil, err

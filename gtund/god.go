@@ -3,8 +3,11 @@ package gtund
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -116,9 +119,15 @@ func (g *God) run() error {
 }
 
 func (g *God) register(conn net.Conn) (*common.ResponseBody, error) {
+	ipport := strings.Split(GetOpts().listenAddr, ":")
+	if len(ipport) != 2 {
+		return nil, fmt.Errorf("invalid listen addr: %s", GetOpts().listenAddr)
+	}
+
+	port, _ := strconv.Atoi(ipport[1])
 	reg := &common.S2GRegister{
 		PublicIP:       GetPublicIP(),
-		ListenAddr:     GetOpts().listenAddr,
+		Port:           port,
 		CIDR:           GetOpts().gateway,
 		Region:         GetConfig().Region,
 		Token:          g.godToekn,

@@ -2,6 +2,8 @@ package god
 
 import (
 	"testing"
+
+	"time"
 )
 
 func TestGtunServer(t *testing.T) {
@@ -10,5 +12,7 @@ func TestGtunServer(t *testing.T) {
 		Tokens:   []string{"abcdefg"},
 	})
 
-	g.Run()
+	go g.Run()
+	time.Sleep(time.Second * 1)
+	server(t)
 }

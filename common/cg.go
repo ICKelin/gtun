@@ -8,3 +8,7 @@ type C2GRegister struct {
 type G2SRgister struct {
 	GtundAddress string `json:"gtund_addr"`
 }
+
+type G2CRegister struct {
+	ServerAddress string `json:"server_address"`
+}

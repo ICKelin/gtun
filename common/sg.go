@@ -15,7 +15,7 @@ const (
 
 type S2GRegister struct {
 	PublicIP       string `json:"public_ip"`
-	ListenAddr     string `json:"listen_addr"`
+	Port           int    `json:"listen_port"`
 	CIDR           string `json:"cidr"`
 	Region         string `json:"region"`
 	Token          string `json:"token"`

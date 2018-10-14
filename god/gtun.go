@@ -3,6 +3,7 @@ package god
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -28,11 +29,11 @@ func NewGtun(cfg *gtunConfig) *gtun {
 }
 
 func (g *gtun) Run() error {
-	http.HandleFunc("/gtun/register", g.onRegister)
+	http.HandleFunc("/gtun/access", g.onGtunAccess)
 	return http.ListenAndServe(g.listener, nil)
 }
 
-func (g *gtun) onRegister(w http.ResponseWriter, r *http.Request) {
+func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 	content, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		glog.ERROR("read body fail: ", err)
@@ -58,7 +59,12 @@ func (g *gtun) onRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Response(gtundInfo, nil)
+	respObj := &common.G2CRegister{
+		ServerAddress: fmt.Sprintf("%s:%d", gtundInfo.PublicIP, gtundInfo.Port),
+	}
+
+	bytes := common.Response(respObj, nil)
+	w.Write(bytes)
 	glog.INFO("register from ", r.RemoteAddr)
 }
 

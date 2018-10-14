@@ -46,6 +46,7 @@ func (client *Client) Run(opts *Options) {
 	sndqueue := make(chan []byte)
 	go ifaceRead(ifce, sndqueue)
 	for {
+
 		conn, err := conServer(client.serverAddr)
 		if err != nil {
 			glog.ERROR("connect to server fail: ", err)

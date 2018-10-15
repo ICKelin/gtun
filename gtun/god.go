@@ -81,6 +81,5 @@ func (g *God) Access() (string, error) {
 	if gtunInfo.ServerAddress == "" {
 		return "", fmt.Errorf("empty server address")
 	}
-	// return gtunInfo.ServerAddress, nil
-	return "127.0.0.1:9091", nil
+	return gtunInfo.ServerAddress, nil
 }

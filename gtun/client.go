@@ -58,6 +58,13 @@ func (client *Client) Run(opts *Options) {
 		if server == "" {
 			server = client.serverAddr
 		}
+
+		if server == "" {
+			glog.ERROR("empty server")
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
 		conn, err := conServer(server)
 		if err != nil {
 			glog.ERROR("connect to server fail: ", err)

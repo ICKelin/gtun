@@ -26,6 +26,7 @@ type Client struct {
 	serverAddr string
 	authKey    string
 	myip       string
+	god        *God
 }
 
 func NewClient(cfg *ClientConfig) *Client {
@@ -33,6 +34,7 @@ func NewClient(cfg *ClientConfig) *Client {
 		serverAddr: cfg.serverAddr,
 		authKey:    cfg.authKey,
 		myip:       "",
+		god:        NewGod(&GodConfig{}), // everything use default
 	}
 }
 
@@ -46,14 +48,23 @@ func (client *Client) Run(opts *Options) {
 	sndqueue := make(chan []byte)
 	go ifaceRead(ifce, sndqueue)
 	for {
+		server, err := client.god.Access()
+		if err != nil && client.god.must {
+			glog.ERROR("get server address fail: ", err)
+			time.Sleep(time.Second * 3)
+			continue
+		}
 
-		conn, err := conServer(client.serverAddr)
+		if server == "" {
+			server = client.serverAddr
+		}
+		conn, err := conServer(server)
 		if err != nil {
 			glog.ERROR("connect to server fail: ", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
-		glog.INFO("connect to", client.serverAddr, "success")
+		glog.INFO("connect to", server, "success")
 
 		s2c, err := authorize(conn, client.myip, client.authKey)
 		if err != nil {

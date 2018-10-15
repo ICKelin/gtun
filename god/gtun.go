@@ -44,18 +44,21 @@ func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 	regInfo := &common.C2GRegister{}
 	err = json.Unmarshal(content, &regInfo)
 	if err != nil {
-		common.Response(nil, err)
+		bytes := common.Response(nil, err)
+		w.Write(bytes)
 		return
 	}
 
 	if g.checkAuth(regInfo) == false {
-		common.Response(nil, errors.New("auth fail"))
+		bytes := common.Response(nil, errors.New("auth fail"))
+		w.Write(bytes)
 		return
 	}
 
 	gtundInfo, err := GetDB().GetAvailableGtund(regInfo.IsWindows)
 	if err != nil {
-		common.Response(nil, err)
+		bytes := common.Response(nil, err)
+		w.Write(bytes)
 		return
 	}
 

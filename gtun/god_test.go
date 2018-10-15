@@ -7,10 +7,10 @@ import (
 )
 
 func TestGod(t *testing.T) {
-	g := NewGod(&GodConfig{
-		GodAddr:  "http://127.0.0.1:2002",
-		GodToken: "abcdefg",
-	})
+	defaultGod = "http://127.0.0.1:2002"
+	defaultToken = "abcdefg"
+
+	g := NewGod(&GodConfig{})
 	body, err := g.Access()
 	assert.Equal(t, nil, err)
 	assert.NotEqual(t, nil, body)

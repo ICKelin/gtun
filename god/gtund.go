@@ -58,17 +58,21 @@ func (d *gtund) onConn(conn net.Conn) {
 	defer GetDB().Del(conn.RemoteAddr().String())
 
 	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
+	defer glog.INFO("disconnect from", conn.RemoteAddr().String())
 
 	sndbuffer := make(chan []byte)
 
+	stop := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
-	go d.recv(conn, wg, sndbuffer)
-	go d.send(conn, wg, sndbuffer)
+	go d.recv(conn, wg, sndbuffer, stop)
+	go d.send(conn, wg, sndbuffer, stop)
 	wg.Wait()
 }
 
-func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte) {
+func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
+	defer glog.INFO("close receive")
+	defer close(stop)
 	defer conn.Close()
 	defer wg.Done()
 
@@ -93,19 +97,24 @@ func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte) {
 	}
 }
 
-func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte) {
+func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
+	defer glog.INFO("close send")
 	defer conn.Close()
 	defer wg.Done()
 
 	for {
-		bytes := <-sndbuffer
-
-		conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
-		_, err := conn.Write(bytes)
-		conn.SetWriteDeadline(time.Time{})
-		if err != nil {
-			glog.ERROR("write to client: ", err)
+		select {
+		case <-stop:
 			return
+
+		case bytes := <-sndbuffer:
+			conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+			_, err := conn.Write(bytes)
+			conn.SetWriteDeadline(time.Time{})
+			if err != nil {
+				glog.ERROR("write to client: ", err)
+				return
+			}
 		}
 	}
 

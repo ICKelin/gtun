@@ -89,11 +89,13 @@ func (client *Client) Run(opts *Options) {
 				continue
 			}
 
-			routes, err := downloadRoutes(s2c.RouteScriptUrl)
-			if err != nil {
-				glog.WARM(err)
-			}
-			go insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
+			go func() {
+				routes, err := downloadRoutes(s2c.RouteScriptUrl)
+				if err != nil {
+					glog.WARM(err)
+				}
+				insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
+			}()
 		}
 
 		client.myip = s2c.AccessIP
@@ -285,7 +287,6 @@ func downloadRoutes(url string) ([]string, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	glog.INFO("downloaded route file from:", url)
 
 	reader := bufio.NewReader(resp.Body)
 	for {
@@ -296,6 +297,7 @@ func downloadRoutes(url string) ([]string, error) {
 		// may need to validate ip/cidr format
 		routes = append(routes, string(line))
 	}
+	glog.INFO("downloaded route file from:", url)
 	return routes, nil
 }
 

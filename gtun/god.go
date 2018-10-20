@@ -11,11 +11,6 @@ import (
 	"github.com/ICKelin/gone/net/ghttp"
 )
 
-var (
-	defaultGod   = "http://127.0.0.1:2002" // just hard code, rewrite with your god address
-	defaultToken = "gtun-cg-token"
-)
-
 type GodConfig struct {
 	GodAddr  string `json:"god_addr"`
 	GodToken string `json:"token"`
@@ -29,19 +24,9 @@ type God struct {
 }
 
 func NewGod(cfg *GodConfig) *God {
-	server := cfg.GodAddr
-	if server == "" {
-		server = defaultGod
-	}
-
-	token := cfg.GodToken
-	if token == "" {
-		token = defaultToken
-	}
-
 	return &God{
-		serverAddr: server,
-		token:      token,
+		serverAddr: cfg.GodAddr,
+		token:      cfg.GodToken,
 		must:       cfg.Must,
 	}
 }

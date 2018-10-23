@@ -1,4 +1,4 @@
-package god
+package controller
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"github.com/ICKelin/gtun/common"
 )
 
-type gtunConfig struct {
+type GtunConfig struct {
 	Listener string   `json:"gtun_listener"`
 	Tokens   []string `json:"tokens"` // 用户授权码
 }
@@ -21,7 +21,7 @@ type gtun struct {
 	tokens   []string
 }
 
-func NewGtun(cfg *gtunConfig) *gtun {
+func NewGtun(cfg *GtunConfig) *gtun {
 	return &gtun{
 		listener: cfg.Listener,
 		tokens:   cfg.Tokens,

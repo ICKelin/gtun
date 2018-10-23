@@ -211,6 +211,7 @@ func (server *Server) rcv(conn net.Conn) {
 
 		switch cmd {
 		case common.C2S_HEARTBEAT:
+			glog.DEBUG("on C2S_HEARTBEAT: ", conn.RemoteAddr().String())
 			bytes, err := common.Encode(common.S2C_HEARTBEAT, nil)
 			if err != nil {
 				glog.ERROR(err)

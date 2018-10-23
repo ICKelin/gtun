@@ -1,4 +1,4 @@
-package god
+package controller
 
 import (
 	"fmt"

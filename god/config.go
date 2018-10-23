@@ -3,12 +3,14 @@ package god
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"github.com/ICKelin/gtun/god/controller"
 )
 
 type Config struct {
-	Listener    string       `json:"listener"`
-	GtundConfig *gtundConfig `json:"gtund_config"`
-	GtunConfig  *gtunConfig  `json:"gtun_config"`
+	Listener    string                  `json:"listener"`
+	GtundConfig *controller.GtundConfig `json:"gtund_config"`
+	GtunConfig  *controller.GtunConfig  `json:"gtun_config"`
 }
 
 func ParseConfig(path string) (*Config, error) {

@@ -1,4 +1,4 @@
-package god
+package controller
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"github.com/ICKelin/gtun/common"
 )
 
-type gtundConfig struct {
+type GtundConfig struct {
 	Listener string `json:"gtund_listener"`
 	Token    string `json:"token"` // 内部系统鉴权token
 }
@@ -21,7 +21,7 @@ type gtund struct {
 	token    string
 }
 
-func NewGtund(cfg *gtundConfig) *gtund {
+func NewGtund(cfg *GtundConfig) *gtund {
 	return &gtund{
 		listener: cfg.Listener,
 		token:    cfg.Token,

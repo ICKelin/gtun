@@ -1,4 +1,4 @@
-package god
+package controller
 
 import (
 	"encoding/json"
@@ -48,6 +48,6 @@ func TestServer(t *testing.T) {
 }
 
 func server(t *testing.T) {
-	d := NewGtund(&gtundConfig{Listener: "127.0.0.1:9876", Token: "gtun-sg-token"})
+	d := NewGtund(&GtundConfig{Listener: "127.0.0.1:9876", Token: "gtun-sg-token"})
 	d.Run()
 }

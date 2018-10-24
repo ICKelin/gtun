@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/ICKelin/gtun/god/controller"
+	"github.com/ICKelin/gtun/god/registry"
 )
 
 type Config struct {
-	Listener    string                  `json:"listener"`
-	GtundConfig *controller.GtundConfig `json:"gtund_config"`
-	GtunConfig  *controller.GtunConfig  `json:"gtun_config"`
+	Listener    string                `json:"listener"`
+	GtundConfig *registry.GtundConfig `json:"gtund_config"`
+	GtunConfig  *registry.GtunConfig  `json:"gtun_config"`
 }
 
 func ParseConfig(path string) (*Config, error) {

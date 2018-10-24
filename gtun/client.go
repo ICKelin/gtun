@@ -81,6 +81,7 @@ func (client *Client) Run(opts *Options) {
 		}
 
 		// only setup iface for the first time
+		// may need to change
 		if client.first() {
 			err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
 			if err != nil {

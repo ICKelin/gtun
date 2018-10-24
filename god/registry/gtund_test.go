@@ -1,4 +1,4 @@
-package controller
+package registry
 
 import (
 	"encoding/json"

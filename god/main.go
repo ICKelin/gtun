@@ -2,7 +2,7 @@ package god
 
 import (
 	"github.com/ICKelin/glog"
-	"github.com/ICKelin/gtun/god/controller"
+	"github.com/ICKelin/gtun/god/registry"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,12 +18,12 @@ func Main() {
 	}
 
 	go func() {
-		d := controller.NewGtund(config.GtundConfig)
+		d := registry.NewGtund(config.GtundConfig)
 		glog.FATAL(d.Run())
 	}()
 
 	go func() {
-		c := controller.NewGtun(config.GtunConfig)
+		c := registry.NewGtun(config.GtunConfig)
 		glog.FATAL(c.Run())
 	}()
 

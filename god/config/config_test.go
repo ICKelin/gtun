@@ -1,4 +1,4 @@
-package god
+package config
 
 import (
 	"testing"
@@ -14,6 +14,10 @@ func TestParseConfig(t *testing.T) {
 			},
 			"gtun_config":{
 				"gtun_listener":":9875"
+			},
+			"database":{
+				"url":"mongodb://127.0.0.1:27017",
+				"dbname":"gtun"
 			}
 		}
 	`

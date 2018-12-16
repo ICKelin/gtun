@@ -8,7 +8,7 @@ import (
 var config Config
 
 type Config struct {
-	Region string     `json:"region"`
+	Name   string     `json:"name"`
 	GodCfg *GodConfig `json:"god_config"`
 }
 

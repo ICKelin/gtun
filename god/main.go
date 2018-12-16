@@ -1,7 +1,10 @@
 package god
 
 import (
+	"encoding/json"
+
 	"github.com/ICKelin/glog"
+	"github.com/ICKelin/gtun/god/config"
 	"github.com/ICKelin/gtun/god/registry"
 	"github.com/gin-gonic/gin"
 )
@@ -12,7 +15,7 @@ func Main() {
 		glog.FATAL(err)
 	}
 
-	config, err := ParseConfig(opts.confPath)
+	config, err := config.ParseConfig(opts.confPath)
 	if err != nil {
 		glog.FATAL(err)
 	}
@@ -28,8 +31,15 @@ func Main() {
 	}()
 
 	engine := gin.Default()
+	engine.GET("/status", status)
 	err = engine.Run(config.Listener)
 	if err != nil {
 		glog.ERROR(err)
 	}
+}
+
+func status(ctx *gin.Context) {
+	results := registry.GetDB().GtundList()
+	bytes, _ := json.Marshal(results)
+	ctx.Writer.Write(bytes)
 }

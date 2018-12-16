@@ -129,7 +129,7 @@ func (g *God) register(conn net.Conn) (*common.ResponseBody, error) {
 		PublicIP:       GetPublicIP(),
 		Port:           port,
 		CIDR:           GetOpts().gateway,
-		Region:         GetConfig().Region,
+		Name:           GetConfig().Name,
 		Token:          g.godToekn,
 		MaxClientCount: defaultClientSize,
 		IsWindows:      runtime.GOOS == "windows",

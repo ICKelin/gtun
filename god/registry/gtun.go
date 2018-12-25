@@ -9,19 +9,15 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/god/config"
 )
-
-type GtunConfig struct {
-	Listener string   `json:"gtun_listener"`
-	Tokens   []string `json:"tokens"` // 用户授权码
-}
 
 type gtun struct {
 	listener string
 	tokens   []string
 }
 
-func NewGtun(cfg *GtunConfig) *gtun {
+func NewGtun(cfg *config.GtunConfig) *gtun {
 	return &gtun{
 		listener: cfg.Listener,
 		tokens:   cfg.Tokens,

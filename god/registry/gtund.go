@@ -9,22 +9,21 @@ import (
 
 	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/god/config"
+	"github.com/ICKelin/gtun/god/models"
 )
 
-type GtundConfig struct {
-	Listener string `json:"gtund_listener"`
-	Token    string `json:"token"` // 内部系统鉴权token
-}
-
 type gtund struct {
-	listener string
-	token    string
+	listener     string
+	token        string
+	gtundManager *models.GtundManager
 }
 
-func NewGtund(cfg *GtundConfig) *gtund {
+func NewGtund(cfg *config.GtundConfig) *gtund {
 	return &gtund{
-		listener: cfg.Listener,
-		token:    cfg.Token,
+		listener:     cfg.Listener,
+		token:        cfg.Token,
+		gtundManager: models.GetGtundManager(),
 	}
 }
 
@@ -54,8 +53,13 @@ func (d *gtund) onConn(conn net.Conn) {
 		return
 	}
 
-	GetDB().Set(conn.RemoteAddr().String(), reg)
-	defer GetDB().Del(conn.RemoteAddr().String())
+	gtundInfo, err := d.gtundManager.NewGtund(reg)
+	if err != nil {
+		glog.ERROR("new gtund fail: ", err)
+		return
+	}
+
+	defer d.gtundManager.RemoveGtund(gtundInfo.Id)
 
 	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
 	defer glog.INFO("disconnect from", conn.RemoteAddr().String())
@@ -183,16 +187,13 @@ func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
 		return
 	}
 
-	rec, ok := GetDB().Get(conn.RemoteAddr().String())
-	if !ok {
-		d.response(rec, errors.New("not register yet!"), sndbuffer)
+	gtund, err := d.gtundManager.IncReferenceCount(obj.Count)
+	if err != nil {
+		d.response(nil, err, sndbuffer)
 		return
 	}
 
-	val := rec.(*common.S2GRegister)
-	val.Count += obj.Count
-	GetDB().Set(conn.RemoteAddr().String(), val)
-	d.response(val, nil, sndbuffer)
+	d.response(gtund, nil, sndbuffer)
 }
 
 func (d *gtund) response(data interface{}, err error, sndbuffer chan []byte) {

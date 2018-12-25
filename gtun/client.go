@@ -26,6 +26,7 @@ type Client struct {
 	serverAddr string
 	authKey    string
 	myip       string
+	gw         string
 	god        *God
 }
 
@@ -39,14 +40,6 @@ func NewClient(cfg *ClientConfig) *Client {
 }
 
 func (client *Client) Run(opts *Options) {
-	ifce, err := NewIfce(opts.tap)
-	if err != nil {
-		glog.ERROR(err)
-		return
-	}
-
-	sndqueue := make(chan []byte)
-	go ifaceRead(ifce, sndqueue)
 	for {
 		server, err := client.god.Access()
 		if err != nil && client.god.must {
@@ -71,51 +64,59 @@ func (client *Client) Run(opts *Options) {
 			time.Sleep(time.Second * 3)
 			continue
 		}
-		glog.INFO("connect to", server, "success")
 
-		s2c, err := authorize(conn, client.myip, client.authKey)
+		s2c, err := authorize(conn, client.authKey)
 		if err != nil {
 			glog.ERROR("auth fail: ", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
-		// only setup iface for the first time
-		// may need to change
-		if client.first() {
-			err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
-			if err != nil {
-				glog.ERROR(err)
-				time.Sleep(time.Second * 3)
-				continue
-			}
+		glog.INFO("connect to", server, "success", s2c.AccessIP)
 
-			go func() {
-				routes, err := downloadRoutes(s2c.RouteScriptUrl)
-				if err != nil {
-					glog.WARM(err)
-				}
-				insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
-			}()
+		ifce, err := NewIfce(opts.tap)
+		if err != nil {
+			glog.ERROR(err)
+			return
 		}
 
 		client.myip = s2c.AccessIP
+		client.gw = s2c.Gateway
 		wg := &sync.WaitGroup{}
 		wg.Add(3)
 
-		stop := make(chan struct{})
-		go heartbeat(sndqueue, stop, wg)
-		go snd(conn, sndqueue, stop, wg)
+		sndqueue := make(chan []byte)
+		go ifaceRead(ifce, sndqueue)
+
+		err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
+		if err != nil {
+			glog.ERROR(err)
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		go func() {
+			routes, err := downloadRoutes(s2c.RouteScriptUrl)
+			if err != nil {
+				glog.WARM(err)
+			}
+			insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
+		}()
+
+		done := make(chan struct{})
+		go heartbeat(sndqueue, done, wg)
+		go snd(conn, sndqueue, done, wg)
 		go rcv(conn, ifce, wg)
 
 		wg.Wait()
 
+		ifce.Close()
 		glog.INFO("reconnecting")
 	}
 }
 
-func (client *Client) first() bool {
-	return client.myip == ""
+func (client *Client) needreload(nip string) bool {
+	return client.myip == "" || client.myip != nip
 }
 
 func conServer(srv string) (conn net.Conn, err error) {
@@ -127,11 +128,11 @@ func conServer(srv string) (conn net.Conn, err error) {
 	return tcp, nil
 }
 
-func authorize(conn net.Conn, accessIP, key string) (s2cauthorize *common.S2CAuthorize, err error) {
+func authorize(conn net.Conn, key string) (s2cauthorize *common.S2CAuthorize, err error) {
 	c2sauthorize := &common.C2SAuthorize{
 		OS:       common.OSID(runtime.GOOS),
 		Version:  common.Version(),
-		AccessIP: accessIP,
+		AccessIP: "",
 		Key:      key,
 	}
 
@@ -192,10 +193,10 @@ func rcv(conn net.Conn, ifce *water.Interface, wg *sync.WaitGroup) {
 	}
 }
 
-func snd(conn net.Conn, sndqueue chan []byte, stop chan struct{}, wg *sync.WaitGroup) {
+func snd(conn net.Conn, sndqueue chan []byte, done chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	defer conn.Close()
-	defer close(stop)
+	defer close(done)
 
 	for {
 		pkt := <-sndqueue
@@ -209,12 +210,12 @@ func snd(conn net.Conn, sndqueue chan []byte, stop chan struct{}, wg *sync.WaitG
 	}
 }
 
-func heartbeat(sndqueue chan []byte, stop chan struct{}, wg *sync.WaitGroup) {
+func heartbeat(sndqueue chan []byte, done chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for {
 		select {
-		case <-stop:
+		case <-done:
 			return
 
 		case <-time.After(time.Second * 3):
@@ -235,6 +236,18 @@ func ifaceRead(ifce *water.Interface, sndqueue chan []byte) {
 
 		bytes, _ := common.Encode(common.C2C_DATA, packet[:n])
 		sndqueue <- bytes
+	}
+}
+
+func clearIfConfig(ifce *water.Interface, ip string, gw string) {
+	switch runtime.GOOS {
+	case "linux":
+		args := strings.Split(fmt.Sprintf("addr del %s/24 dev %s", ip, ifce.Name()), " ")
+		glog.DEBUG(exec.Command("ip", args...).CombinedOutput())
+
+	case "darwin":
+
+	case "windows":
 	}
 }
 
@@ -273,6 +286,42 @@ func setupIface(ifce *water.Interface, ip string, gw string) (err error) {
 		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("run %s error %s", c, string(output))
+		}
+	}
+
+	return nil
+}
+
+func releaseDevice(device, ip, gateway string) (err error) {
+	type CMD struct {
+		cmd  string
+		args []string
+	}
+
+	cmdlist := make([]*CMD, 0)
+
+	switch runtime.GOOS {
+	case "linux":
+		args := strings.Split(fmt.Sprintf("%s down", device), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
+
+	case "darwin":
+		gw := strings.Split(gateway, ".")
+		if len(gw) != 4 {
+			break
+		}
+
+		s := strings.Join(gw[:3], ".")
+		args := strings.Split(fmt.Sprintf("delete -net %s/24 %s", s, ip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
+		args = strings.Split(fmt.Sprintf("%s delete %s", device, ip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
+	}
+
+	for _, c := range cmdlist {
+		output, _ := exec.Command(c.cmd, c.args...).CombinedOutput()
+		if err != nil {
+			fmt.Printf("run %s error %s\n", c, string(output))
 		}
 	}
 

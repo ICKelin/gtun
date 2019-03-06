@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/ICKelin/glog"
+	"github.com/ICKelin/gtun/logs"
 	"gopkg.in/mgo.v2"
 )
 
@@ -31,7 +31,7 @@ func (this *MongoDB) MainSession() *mgo.Session {
 	if this.session == nil {
 		var session, err = mgo.Dial(this.dbURL)
 		if err != nil {
-			glog.FATAL("connect db fail: ", err)
+			logs.Fatal("connect db fail: ", err)
 			return nil
 		} else {
 			this.session = session

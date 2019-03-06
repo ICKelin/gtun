@@ -2,7 +2,6 @@ language: go
 go:
     - 1.9
 before_install:
-    - go get github.com/ICKelin/glog
     - go get github.com/songgao/water
 install:
     - go get github.com/ICKelin/gtun/gtun

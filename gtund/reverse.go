@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ICKelin/glog"
+	"github.com/ICKelin/gtun/logs"
 )
 
 type ReverseConfig struct {
@@ -31,6 +31,7 @@ func NewReverse(cfg *ReverseConfig) (*Reverse, error) {
 		return nil, err
 	}
 	reverse.policy = policy
+
 	for _, r := range reverse.policy {
 		go Proxy(r.Proto, r.From, r.To)
 	}
@@ -102,15 +103,15 @@ func Proxy(prot string, from, to string) {
 func ProxyTCP(from, to string) {
 	listener, err := net.Listen("tcp", from)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("listen fail: %v", err)
 		return
 	}
 
-	glog.INFO("proxy pass tcp", from, "=>", to)
+	logs.Info("proxy pass tcp %s => %s", from, to)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("accept: %v", err)
 			break
 		}
 
@@ -121,17 +122,17 @@ func ProxyTCP(from, to string) {
 func ProxyUDP(from, to string) {
 	laddr, err := net.ResolveUDPAddr("udp", from)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("resolve udp fail: %v", err)
 		return
 	}
 
 	lconn, err := net.ListenUDP("udp", laddr)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("listen udp fail: %v", err)
 		return
 	}
 
-	glog.INFO("proxy pass udp", from, "=>", to)
+	logs.Info("proxy pass udp %s => %s", from, to)
 	go reverse("udp", lconn, to)
 }
 
@@ -139,7 +140,7 @@ func reverse(proto string, clientconn net.Conn, to string) {
 	defer clientconn.Close()
 	rconn, err := net.Dial(proto, to)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("dial: %v", err)
 		return
 	}
 	defer rconn.Close()
@@ -168,14 +169,14 @@ func Copy(dst, src net.Conn) {
 		nr, err := src.Read(buffer)
 		if err != nil {
 			if err != io.EOF {
-				glog.ERROR(err)
+				logs.Error("read fail: %v", err)
 			}
 			break
 		}
 
 		_, err = dst.Write(buffer[:nr])
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("write to peer fail: %v", err)
 			break
 		}
 	}

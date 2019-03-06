@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/logs"
 	"github.com/songgao/water"
 )
 
@@ -43,7 +43,7 @@ func (client *Client) Run(opts *Options) {
 	for {
 		server, err := client.god.Access()
 		if err != nil && client.god.must {
-			glog.ERROR("get server address fail: ", err)
+			logs.Error("get server address fail: ", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -53,30 +53,30 @@ func (client *Client) Run(opts *Options) {
 		}
 
 		if server == "" {
-			glog.ERROR("empty server")
+			logs.Error("empty server")
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
 		conn, err := conServer(server)
 		if err != nil {
-			glog.ERROR("connect to server fail: ", err)
+			logs.Error("connect to server fail: ", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
 		s2c, err := authorize(conn, client.authKey)
 		if err != nil {
-			glog.ERROR("auth fail: ", err)
+			logs.Error("auth fail: ", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
-		glog.INFO("connect to", server, "success", s2c.AccessIP)
+		logs.Info("connect to %s success, assign ip %s", server, s2c.AccessIP)
 
 		ifce, err := NewIfce(opts.tap)
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("new interface fail: ", err)
 			return
 		}
 
@@ -90,7 +90,7 @@ func (client *Client) Run(opts *Options) {
 
 		err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("setup iface fail: %v", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -98,7 +98,7 @@ func (client *Client) Run(opts *Options) {
 		go func() {
 			routes, err := downloadRoutes(s2c.RouteScriptUrl)
 			if err != nil {
-				glog.WARM(err)
+				logs.Warn("download route from %s fail: %v", s2c.RouteScriptUrl, err)
 			}
 			insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
 		}()
@@ -111,7 +111,7 @@ func (client *Client) Run(opts *Options) {
 		wg.Wait()
 
 		ifce.Close()
-		glog.INFO("reconnecting")
+		logs.Info("reconnecting")
 	}
 }
 
@@ -174,21 +174,21 @@ func rcv(conn net.Conn, ifce *water.Interface, wg *sync.WaitGroup) {
 	for {
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
-			glog.INFO(err)
+			logs.Info("decode fail: %v", err)
 			break
 		}
 		switch cmd {
 		case common.S2C_HEARTBEAT:
-			glog.DEBUG("heartbeat from srv")
+			logs.Debug("heartbeat from srv")
 
 		case common.C2C_DATA:
 			_, err := ifce.Write(pkt)
 			if err != nil {
-				glog.ERROR(err)
+				logs.Error("read from iface fail: %v", err)
 			}
 
 		default:
-			glog.INFO("unimplement cmd", int(cmd), pkt)
+			logs.Info("unimplement cmd %d %v", int(cmd), pkt)
 		}
 	}
 }
@@ -204,7 +204,7 @@ func snd(conn net.Conn, sndqueue chan []byte, done chan struct{}, wg *sync.WaitG
 		_, err := conn.Write(pkt)
 		conn.SetWriteDeadline(time.Time{})
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("send packet fail: %v", err)
 			break
 		}
 	}
@@ -230,7 +230,7 @@ func ifaceRead(ifce *water.Interface, sndqueue chan []byte) {
 	for {
 		n, err := ifce.Read(packet)
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("read from iface fail: %v", err)
 			break
 		}
 
@@ -243,7 +243,7 @@ func clearIfConfig(ifce *water.Interface, ip string, gw string) {
 	switch runtime.GOOS {
 	case "linux":
 		args := strings.Split(fmt.Sprintf("addr del %s/24 dev %s", ip, ifce.Name()), " ")
-		glog.DEBUG(exec.Command("ip", args...).CombinedOutput())
+		exec.Command("ip", args...).CombinedOutput()
 
 	case "darwin":
 
@@ -331,7 +331,7 @@ func releaseDevice(device, ip, gateway string) (err error) {
 func downloadRoutes(url string) ([]string, error) {
 	routes := make([]string, 0)
 
-	glog.INFO("downloading route file from:", url)
+	logs.Info("downloading route file from: %s", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -347,7 +347,7 @@ func downloadRoutes(url string) ([]string, error) {
 		// may need to validate ip/cidr format
 		routes = append(routes, string(line))
 	}
-	glog.INFO("downloaded route file from:", url)
+	logs.Info("downloaded route file from: %s", url)
 	return routes, nil
 }
 
@@ -362,11 +362,13 @@ func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 	} else {
 		ifceIndex = ifce.Index
 	}
-	glog.INFO("inserting routes")
+
+	logs.Info("inserting routes")
 	for _, address := range routedIPS {
 		execRoute(address, devName, devIP, gw, ifceIndex)
 	}
-	glog.INFO("inserted routes, routes count:", len(routedIPS))
+
+	logs.Info("inserted routes, routes count: %d", len(routedIPS))
 }
 
 type CMD struct {
@@ -396,7 +398,8 @@ func execRoute(address, device, tunip, gateway string, ifceIndex int) {
 
 	output, err := exec.Command(cmd.cmd, cmd.args...).CombinedOutput()
 	if err != nil {
-		glog.DEBUG("add", address, "fail:", string(output))
+		logs.Debug("add %s fail %s", address, string(output))
 	}
-	glog.DEBUG(string(output))
+
+	logs.Debug(string(output))
 }

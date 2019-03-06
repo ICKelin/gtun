@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
 	"github.com/ICKelin/gtun/god/config"
 	"github.com/ICKelin/gtun/god/models"
+	"github.com/ICKelin/gtun/logs"
 )
 
 type gtund struct {
@@ -49,33 +49,35 @@ func (d *gtund) onConn(conn net.Conn) {
 
 	reg, err := d.onRegister(conn)
 	if err != nil {
-		glog.ERROR("register fail: ", err)
+		logs.Error("register fail: %v", err)
 		return
 	}
 
 	gtundInfo, err := d.gtundManager.NewGtund(reg)
 	if err != nil {
-		glog.ERROR("new gtund fail: ", err)
+		logs.Error("new gtund fail: ", err)
 		return
 	}
 
 	defer d.gtundManager.RemoveGtund(gtundInfo.Id)
 
-	glog.INFO("register gtund from ", conn.RemoteAddr().String(), reg)
-	defer glog.INFO("disconnect from", conn.RemoteAddr().String())
+	logs.Info("register gtund from %s %v", conn.RemoteAddr().String(), reg)
+	defer logs.Info("disconnect from %s", conn.RemoteAddr().String())
 
 	sndbuffer := make(chan []byte)
 
 	stop := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
+
 	go d.recv(conn, wg, sndbuffer, stop)
 	go d.send(conn, wg, sndbuffer, stop)
+
 	wg.Wait()
 }
 
 func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
-	defer glog.INFO("close receive")
+	defer logs.Info("close receive")
 	defer close(stop)
 	defer conn.Close()
 	defer wg.Done()
@@ -83,7 +85,7 @@ func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, s
 	for {
 		cmd, bytes, err := common.Decode(conn)
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("decode fail: %v", err)
 			break
 		}
 
@@ -95,14 +97,14 @@ func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, s
 			d.onUpdate(conn, bytes, sndbuffer)
 
 		default:
-			glog.WARM("unimplemented cmd", cmd)
+			logs.Warn("unimplemented cmd", cmd)
 
 		}
 	}
 }
 
 func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
-	defer glog.INFO("close send")
+	defer logs.Info("close send")
 	defer conn.Close()
 	defer wg.Done()
 
@@ -116,7 +118,7 @@ func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, s
 			_, err := conn.Write(bytes)
 			conn.SetWriteDeadline(time.Time{})
 			if err != nil {
-				glog.ERROR("write to client: ", err)
+				logs.Error("write to client: ", err)
 				return
 			}
 		}
@@ -167,18 +169,18 @@ func (d *gtund) onRegister(conn net.Conn) (*common.S2GRegister, error) {
 }
 
 func (d *gtund) onHeartbeat(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
-	glog.DEBUG("on S2G_HEARTBEAT: ", conn.RemoteAddr().String(), string(bytes))
+	logs.Debug("on S2G_HEARTBEAT: %s %s", conn.RemoteAddr().String(), string(bytes))
 
 	bytes, err := common.Encode(common.G2S_HEARTBEAT, nil)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("encode fail: %v", err)
 		return
 	}
 	sndbuffer <- bytes
 }
 
 func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
-	glog.DEBUG("on S2G_UPDATE_CLIENT_COUNT: ", conn.RemoteAddr().String(), string(bytes))
+	logs.Debug("on S2G_UPDATE_CLIENT_COUNT: %s %s", conn.RemoteAddr().String(), string(bytes))
 
 	obj := &common.S2GUpdate{}
 	err := json.Unmarshal(bytes, obj)

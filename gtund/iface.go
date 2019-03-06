@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ICKelin/glog"
 	"github.com/songgao/water"
 )
 
@@ -87,7 +86,7 @@ func setupDevice(dev, ip string) (err error) {
 		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
 
 	default:
-		glog.FATAL("unsupported: ", runtime.GOOS, runtime.GOARCH)
+		return fmt.Errorf("unsupported: %s %s", runtime.GOOS, runtime.GOARCH)
 
 	}
 

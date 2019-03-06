@@ -7,9 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
 	"github.com/ICKelin/gtun/god/config"
+	"github.com/ICKelin/gtun/god/models"
+	"github.com/ICKelin/gtun/logs"
 )
 
 type gtun struct {
@@ -32,7 +33,7 @@ func (g *gtun) Run() error {
 func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 	content, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		glog.ERROR("read body fail: ", err)
+		logs.Error("read body fail: %v", err)
 		return
 	}
 	defer r.Body.Close()
@@ -51,7 +52,7 @@ func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gtundInfo, err := GetDB().GetAvailableGtund(regInfo.IsWindows)
+	gtundInfo, err := models.GetGtundManager().GetAvailableGtund(regInfo.IsWindows)
 	if err != nil {
 		bytes := common.Response(nil, err)
 		w.Write(bytes)
@@ -64,7 +65,7 @@ func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 
 	bytes := common.Response(respObj, nil)
 	w.Write(bytes)
-	glog.INFO("register from ", r.RemoteAddr)
+	logs.Info("register from %s", r.RemoteAddr)
 }
 
 func (g *gtun) checkAuth(regInfo *common.C2GRegister) bool {

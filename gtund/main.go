@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ICKelin/glog"
+	"github.com/ICKelin/gtun/logs"
 )
 
 func Main() {
@@ -16,16 +16,11 @@ func Main() {
 		return
 	}
 
-	if opts.debug {
-		glog.Init("gtund", glog.PRIORITY_DEBUG, "./", glog.OPT_DATE, 1024*10)
-	} else {
-		glog.Init("gtund", glog.PRIORITY_WARN, "./", glog.OPT_DATE, 1024*10)
-	}
-
 	if opts.confpath != "" {
 		_, err = ParseConfig(opts.confpath)
 		if err != nil {
-			glog.FATAL("parse config file fail:", opts.confpath, err)
+			logs.Error("parse config file fail: %s %v", opts.confpath, err)
+			return
 		}
 	}
 
@@ -40,7 +35,7 @@ func Main() {
 
 	server, err := NewServer(serverCfg)
 	if err != nil {
-		glog.ERROR(err)
+		logs.Error("new server: %v", err)
 		return
 	}
 

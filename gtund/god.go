@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/logs"
 )
 
 var (
@@ -65,7 +65,7 @@ func NewGod(cfg *GodConfig) *God {
 func (g *God) Run() {
 	for {
 		err := g.run()
-		glog.ERROR("disconnect with god:", err)
+		logs.Error("disconnect with god: %v", err)
 		time.Sleep(time.Second * 3)
 	}
 }
@@ -101,7 +101,7 @@ func (g *God) run() error {
 		return err
 	}
 
-	glog.INFO("connect to ", g.godAddr, "success")
+	logs.Info("connect to ", g.godAddr, "success")
 
 	stop := make(chan struct{})
 	go g.heartbeat(conn, stop)
@@ -178,10 +178,11 @@ func (g *God) heartbeat(conn net.Conn, stop chan struct{}) {
 		select {
 		case <-stop:
 			return
+
 		case <-time.After(g.heartbeatInterval):
 			bytes, err := common.Encode(common.S2G_HEARTBEAT, nil)
 			if err != nil {
-				glog.ERROR("heartbear fail:", err)
+				logs.Error("heartbear fail:", err)
 				continue
 			}
 
@@ -200,7 +201,7 @@ func (g *God) send(conn net.Conn, wg *sync.WaitGroup) {
 		_, err := conn.Write(msg)
 		conn.SetWriteDeadline(time.Time{})
 		if err != nil {
-			glog.ERROR("send fail:", err)
+			logs.Error("send fail: %v", err)
 			return
 		}
 	}
@@ -213,19 +214,19 @@ func (g *God) recv(conn net.Conn, wg *sync.WaitGroup) {
 	for {
 		cmd, bytes, err := common.Decode(conn)
 		if err != nil {
-			glog.ERROR("recv fail: ", err)
+			logs.Error("recv fail: %v", err)
 			return
 		}
 
 		switch cmd {
 		case common.G2S_HEARTBEAT:
-			glog.DEBUG("on G2S_HEARTBEAT:", conn.RemoteAddr().String())
+			logs.Info("on G2S_HEARTBEAT: %s", conn.RemoteAddr().String())
 
 		case common.G2S_UPDATE_CLIENT_COUNT:
-			glog.DEBUG("on G2S_UPDATE_CLIENT_COUNT: ", conn.RemoteAddr().String(), string(bytes))
+			logs.Info("on G2S_UPDATE_CLIENT_COUNT: %s %s", conn.RemoteAddr().String(), string(bytes))
 
 		default:
-			glog.WARM("unimplemented cmd")
+			logs.Warn("unimplemented cmd")
 		}
 	}
 }

@@ -24,7 +24,6 @@ gtun自身使用了tun/tap虚拟网卡技术，tun/tap在各个系统对实现�
 ### 如何使用gtun
 **下载源码与依赖**
 ``` shell
-go get github.com/ICKelin/glog
 go get github.com/songgao/water
 go get github.com/ICKelin/gtun
 ```

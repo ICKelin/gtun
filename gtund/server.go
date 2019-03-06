@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ICKelin/glog"
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/logs"
 )
 
 var (
@@ -124,7 +124,7 @@ func (server *Server) Run() {
 	for {
 		conn, err := server.listener.Accept()
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("accept: %v", err)
 			break
 		}
 
@@ -142,19 +142,19 @@ func (server *Server) onConn(conn net.Conn) {
 
 	cmd, payload, err := common.Decode(conn)
 	if err != nil {
-		glog.ERROR("decode auth msg fail:", err)
+		logs.Error("decode auth msg fail: %v", err)
 		return
 	}
 
 	if cmd != common.C2S_AUTHORIZE {
-		glog.ERROR("invalid authhorize cmd", cmd)
+		logs.Error("invalid authhorize cmd: %d", cmd)
 		return
 	}
 
 	authMsg := &common.C2SAuthorize{}
 	err = json.Unmarshal(payload, &authMsg)
 	if err != nil {
-		glog.ERROR("invalid auth msg", err)
+		logs.Error("invalid auth msg: %v", err)
 		return
 	}
 
@@ -184,7 +184,7 @@ func (server *Server) onConn(conn net.Conn) {
 	server.forward.Add(s2c.AccessIP, conn)
 	defer server.forward.Del(s2c.AccessIP)
 
-	glog.INFO("accept cloud client from", conn.RemoteAddr().String(), "assign ip", s2c.AccessIP)
+	logs.Info("accept cloud client from %s assign ip ", conn.RemoteAddr().String(), s2c.AccessIP)
 
 	server.god.UpdateClientCount(1)
 	defer server.god.UpdateClientCount(-1)
@@ -204,17 +204,17 @@ func (server *Server) rcv(conn net.Conn) {
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
 			if err != io.EOF {
-				glog.ERROR(err)
+				logs.Error("decode fail: ", err)
 			}
 			break
 		}
 
 		switch cmd {
 		case common.C2S_HEARTBEAT:
-			glog.DEBUG("on C2S_HEARTBEAT: ", conn.RemoteAddr().String())
+			logs.Debug("on C2S_HEARTBEAT: %s", conn.RemoteAddr().String())
 			bytes, err := common.Encode(common.S2C_HEARTBEAT, nil)
 			if err != nil {
-				glog.ERROR(err)
+				logs.Error("encode fail: %v", err)
 				continue
 			}
 
@@ -223,11 +223,11 @@ func (server *Server) rcv(conn net.Conn) {
 		case common.C2C_DATA:
 			_, err = server.iface.Write(pkt)
 			if err != nil {
-				glog.ERROR(err)
+				logs.Error("read from iface: %v", err)
 			}
 
 		default:
-			glog.INFO("unimplement cmd", cmd, len(pkt))
+			logs.Info("unimplement cmd %d, size: %d", cmd, len(pkt))
 		}
 	}
 }
@@ -245,11 +245,11 @@ func (server *Server) snd() {
 		nw, err := ctx.conn.Write(ctx.payload)
 		ctx.conn.SetWriteDeadline(time.Time{})
 		if err != nil {
-			glog.ERROR(err)
+			logs.Error("write to peer fail: %v", err)
 		}
 
 		if nw != len(ctx.payload) {
-			glog.ERROR("write not full", nw, len(ctx.payload))
+			logs.Error("write not full %d %d", nw, len(ctx.payload))
 		}
 	}
 }
@@ -266,7 +266,7 @@ func (server *Server) readIface() {
 		nr, err := server.iface.Read(buff)
 		if err != nil {
 			if err != io.EOF {
-				glog.ERROR(err)
+				logs.Error("read from iface fail: %v", err)
 			}
 			continue
 		}
@@ -301,7 +301,7 @@ func (server *Server) readIface() {
 		peer := p.Dst()
 		err = server.forward.Peer(server.sndqueue, peer, buff[:nr])
 		if err != nil {
-			glog.ERROR("send to ", peer, err)
+			logs.Error("send to ", peer, err)
 			continue
 		}
 	}
@@ -310,14 +310,14 @@ func (server *Server) readIface() {
 func (server *Server) authResp(conn net.Conn, s2c *common.S2CAuthorize) {
 	resp, err := json.Marshal(s2c)
 	if err != nil {
-		glog.ERROR("marshal aut reply fail:", err)
+		logs.Error("marshal aut reply fail:", err)
 		return
 	}
 
 	buff, _ := common.Encode(common.S2C_AUTHORIZE, resp)
 	_, err = conn.Write(buff)
 	if err != nil {
-		glog.ERROR("send auth reply fail:", err)
+		logs.Error("send auth reply fail:", err)
 		return
 	}
 }

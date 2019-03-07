@@ -1,14 +1,16 @@
 package gtun
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/ICKelin/gtun/common"
-
-	"github.com/ICKelin/gone/net/ghttp"
 )
 
 type GodConfig struct {
@@ -37,7 +39,7 @@ func (g *God) Access() (string, error) {
 		IsWindows: runtime.GOOS == "windows",
 		AuthToken: g.token,
 	}
-	s, err := ghttp.PostJson(url, body, nil)
+	s, err := PostJson(url, body, nil)
 	if err != nil {
 		return "", err
 	}
@@ -67,4 +69,40 @@ func (g *God) Access() (string, error) {
 		return "", fmt.Errorf("empty server address")
 	}
 	return gtunInfo.ServerAddress, nil
+}
+
+func PostJson(uri string, jsonbody interface{}, header map[string]string) (data string, err error) {
+	tr := &http.Transport{
+		MaxIdleConns:    10,
+		IdleConnTimeout: 30 * time.Second,
+	}
+	client := &http.Client{Transport: tr}
+
+	params, err := json.Marshal(jsonbody)
+	if err != nil {
+		return "", err
+	}
+
+	request, err := http.NewRequest("POST", uri, bytes.NewReader(params))
+	if err != nil {
+		return "", err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	for key, value := range header {
+		request.Header.Add(key, value)
+	}
+
+	resp, err := client.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	bdata, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bdata), nil
 }

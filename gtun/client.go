@@ -43,7 +43,7 @@ func (client *Client) Run(opts *Options) {
 	for {
 		server, err := client.god.Access()
 		if err != nil && client.god.must {
-			logs.Error("get server address fail: ", err)
+			logs.Error("get server address fail: %v", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -60,7 +60,7 @@ func (client *Client) Run(opts *Options) {
 
 		conn, err := conServer(server)
 		if err != nil {
-			logs.Error("connect to server fail: ", err)
+			logs.Error("connect to server fail: %v", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -76,15 +76,12 @@ func (client *Client) Run(opts *Options) {
 
 		ifce, err := NewIfce(opts.tap)
 		if err != nil {
-			logs.Error("new interface fail: ", err)
+			logs.Error("new interface fail: %v", err)
 			return
 		}
 
 		client.myip = s2c.AccessIP
 		client.gw = s2c.Gateway
-		wg := &sync.WaitGroup{}
-		wg.Add(3)
-
 		sndqueue := make(chan []byte)
 		go ifaceRead(ifce, sndqueue)
 
@@ -104,6 +101,10 @@ func (client *Client) Run(opts *Options) {
 		}()
 
 		done := make(chan struct{})
+
+		wg := &sync.WaitGroup{}
+		wg.Add(3)
+
 		go heartbeat(sndqueue, done, wg)
 		go snd(conn, sndqueue, done, wg)
 		go rcv(conn, ifce, wg)
@@ -314,7 +315,11 @@ func releaseDevice(device, ip, gateway string) (err error) {
 		s := strings.Join(gw[:3], ".")
 		args := strings.Split(fmt.Sprintf("delete -net %s/24 %s", s, ip), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
+
 		args = strings.Split(fmt.Sprintf("%s delete %s", device, ip), " ")
+		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
+
+		args = strings.Split(fmt.Sprintf("%s down", device), " ")
 		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
 	}
 

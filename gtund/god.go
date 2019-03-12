@@ -66,7 +66,13 @@ func (g *God) Run() {
 	for {
 		err := g.run()
 		logs.Error("disconnect with god: %v", err)
-		time.Sleep(time.Second * 3)
+
+		// whether we should exit
+		if GetConfig().GodCfg.Must {
+			time.Sleep(time.Second * 3)
+			continue
+		}
+		break
 	}
 }
 

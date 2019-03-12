@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -108,10 +107,6 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 	go func() {
 		g.Run()
 
-		// whether we should exit
-		if GetConfig().GodCfg.Must {
-			os.Exit(-1)
-		}
 	}()
 
 	return server, nil
@@ -184,16 +179,19 @@ func (server *Server) onConn(conn net.Conn) {
 	server.forward.Add(s2c.AccessIP, conn)
 	defer server.forward.Del(s2c.AccessIP)
 
-	logs.Info("accept cloud client from %s assign ip ", conn.RemoteAddr().String(), s2c.AccessIP)
+	logs.Info("accept cloud client from %s assign ip %s", conn.RemoteAddr().String(), s2c.AccessIP)
 
-	server.god.UpdateClientCount(1)
-	defer server.god.UpdateClientCount(-1)
+	go func() {
+		server.god.UpdateClientCount(1)
+		defer server.god.UpdateClientCount(-1)
+	}()
 
 	server.rcv(conn)
 }
 
 func (server *Server) rcv(conn net.Conn) {
 	defer conn.Close()
+
 	for {
 		select {
 		case <-server.stop:
@@ -304,6 +302,8 @@ func (server *Server) readIface() {
 			logs.Error("send to ", peer, err)
 			continue
 		}
+
+		logs.Debug("%s %s", p.Dst())
 	}
 }
 

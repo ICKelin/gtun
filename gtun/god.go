@@ -39,6 +39,7 @@ func (g *God) Access() (string, error) {
 		IsWindows: runtime.GOOS == "windows",
 		AuthToken: g.token,
 	}
+
 	s, err := PostJson(url, body, nil)
 	if err != nil {
 		return "", err

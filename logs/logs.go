@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"strings"
 )
 
 func init() {
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
+	log.SetFlags(log.Ldate | log.Lmicroseconds)
 }
 
 func Debug(format string, v ...interface{}) {
@@ -32,5 +34,9 @@ func Fatal(format string, v ...interface{}) {
 }
 
 func print(level, format string, v ...interface{}) {
-	log.Printf(fmt.Sprintf("%s %s\n", level, format), v...)
+	_, path, line, _ := runtime.Caller(2)
+	sp := strings.Split(path, "/")
+
+	file := sp[len(sp)-1]
+	log.Printf(fmt.Sprintf("%s:%d %s %s\n", file, line, level, format), v...)
 }

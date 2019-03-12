@@ -28,3 +28,7 @@ func (p Packet) Version() int {
 func (p Packet) Dst() string {
 	return fmt.Sprintf("%d.%d.%d.%d", p[16], p[17], p[18], p[19])
 }
+
+func (p Packet) Src() string {
+	return fmt.Sprintf("%d.%d.%d.%d", p[12], p[13], p[14], p[15])
+}

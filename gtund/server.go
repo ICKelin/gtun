@@ -32,7 +32,7 @@ type Server struct {
 	authKey    string
 	gateway    string
 	sndqueue   chan *GtunClientContext
-	stop       chan struct{}
+	done       chan struct{}
 
 	iface       *Interface
 	reverse     *Reverse
@@ -57,7 +57,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		nameservers: strings.Split(cfg.nameservers, ","),
 		forward:     NewForward(),
 		sndqueue:    make(chan *GtunClientContext),
-		stop:        make(chan struct{}),
+		done:        make(chan struct{}),
 	}
 
 	// init server listener
@@ -117,6 +117,12 @@ func (server *Server) Run() {
 	go server.snd()
 
 	for {
+		select {
+		case <-server.done:
+			return
+		default:
+		}
+
 		conn, err := server.listener.Accept()
 		if err != nil {
 			logs.Error("accept: %v", err)
@@ -127,9 +133,9 @@ func (server *Server) Run() {
 	}
 }
 
-func (server *Server) Stop() {
+func (server *Server) Close() {
 	server.listener.Close()
-	close(server.stop)
+	close(server.done)
 }
 
 func (server *Server) onConn(conn net.Conn) {
@@ -194,11 +200,12 @@ func (server *Server) rcv(conn net.Conn) {
 
 	for {
 		select {
-		case <-server.stop:
+		case <-server.done:
+			logs.Info("server receive done signal")
 			return
 		default:
-
 		}
+
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
 			if err != io.EOF {
@@ -233,7 +240,7 @@ func (server *Server) rcv(conn net.Conn) {
 func (server *Server) snd() {
 	for {
 		select {
-		case <-server.stop:
+		case <-server.done:
 			return
 		default:
 		}
@@ -256,8 +263,10 @@ func (server *Server) readIface() {
 	buff := make([]byte, 65536)
 	for {
 		select {
-		case <-server.stop:
+		case <-server.done:
+			logs.Info("server receive done signal")
 			return
+
 		default:
 		}
 
@@ -280,7 +289,7 @@ func (server *Server) readIface() {
 			if !f.IsIPV4() {
 				// broadcast
 				server.forward.Broadcast(server.sndqueue, buff[:nr])
-				return
+				continue
 			}
 
 			ethOffset = 14
@@ -289,10 +298,14 @@ func (server *Server) readIface() {
 		p := Packet(buff[ethOffset:nr])
 
 		if p.Invalid() {
+			logs.Warn("invalid packet")
 			continue
 		}
 
+		logs.Debug("%s %s", p.Src(), p.Dst())
+
 		if p.Version() != 4 {
+			logs.Warn("only support for ipv4")
 			continue
 		}
 
@@ -303,7 +316,6 @@ func (server *Server) readIface() {
 			continue
 		}
 
-		logs.Debug("%s %s", p.Dst())
 	}
 }
 

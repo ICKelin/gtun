@@ -13,19 +13,19 @@ func init() {
 }
 
 func Debug(format string, v ...interface{}) {
-	print("[DEBUG]", format, v...)
+	print("[D]", format, v...)
 }
 
 func Info(format string, v ...interface{}) {
-	print("[INF]", format, v...)
+	print("[I]", format, v...)
 }
 
 func Warn(format string, v ...interface{}) {
-	print("[WARN]", format, v...)
+	print("[W]", format, v...)
 }
 
 func Error(format string, v ...interface{}) {
-	print("[ERROR]", format, v...)
+	print("[E]", format, v...)
 }
 
 func Fatal(format string, v ...interface{}) {

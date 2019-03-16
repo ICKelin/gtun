@@ -40,7 +40,7 @@ func Main() {
 	}
 
 	server.Run()
-	server.Stop()
+	server.Close()
 }
 
 func GetPublicIP() string {

@@ -302,8 +302,6 @@ func (server *Server) readIface() {
 			continue
 		}
 
-		logs.Debug("%s %s", p.Src(), p.Dst())
-
 		if p.Version() != 4 {
 			logs.Warn("only support for ipv4")
 			continue

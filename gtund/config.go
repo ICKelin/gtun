@@ -7,8 +7,6 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
-var config Config
-
 type Config struct {
 	Name            string           `toml:"name"`
 	ServerConfig    *ServerConfig    `toml:"server"`
@@ -30,15 +28,10 @@ func ParseConfig(path string) (*Config, error) {
 func parseConfig(content []byte) (*Config, error) {
 	var c Config
 	err := toml.Unmarshal(content, &c)
-	config = c
 	return &c, err
 }
 
 func (c *Config) String() string {
 	cnt, _ := json.MarshalIndent(c, "", "\t")
 	return string(cnt)
-}
-
-func GetConfig() *Config {
-	return &config
 }

@@ -17,24 +17,25 @@ var (
 )
 
 type ServerConfig struct {
-	Listen   string `toml:"listen"`
-	AuthKey  string `toml:"auth_key"`
-	RouteUrl string `toml:"route_url"`
+	Listen      string   `toml:"listen"`
+	AuthKey     string   `toml:"auth_key"`
+	RouteUrl    string   `toml:"route_url"`
+	Nameservers []string `toml:"nameservers"`
 }
 
 type Server struct {
-	listenAddr string
-	authKey    string
-	gateway    string
-	sndqueue   chan *GtunClientContext
-	done       chan struct{}
-
-	iface       *Interface
-	dhcp        *DHCP
-	forward     *Forward
-	registry    *Registry
+	listenAddr  string
+	authKey     string
+	gateway     string
 	routeUrl    string
 	nameservers []string
+	sndqueue    chan *GtunClientContext
+	done        chan struct{}
+
+	iface    *Interface
+	dhcp     *DHCP
+	forward  *Forward
+	registry *Registry
 }
 
 type GtunClientContext struct {

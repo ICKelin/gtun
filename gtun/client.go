@@ -27,7 +27,7 @@ type Client struct {
 	authKey    string
 	myip       string
 	gw         string
-	god        *God
+	registry   *Registry
 }
 
 func NewClient(cfg *ClientConfig) *Client {
@@ -35,14 +35,14 @@ func NewClient(cfg *ClientConfig) *Client {
 		serverAddr: cfg.serverAddr,
 		authKey:    cfg.authKey,
 		myip:       "",
-		god:        NewGod(&GodConfig{}), // everything use default
+		registry:   NewRegistry(&RegistryConfig{}), // everything use default
 	}
 }
 
 func (client *Client) Run(opts *Options) {
 	for {
-		server, err := client.god.Access()
-		if err != nil && client.god.must {
+		server, err := client.registry.Access()
+		if err != nil && client.registry.must {
 			logs.Error("get server address fail: %v", err)
 			time.Sleep(time.Second * 3)
 			continue

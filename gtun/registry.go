@@ -13,31 +13,31 @@ import (
 	"github.com/ICKelin/gtun/common"
 )
 
-type GodConfig struct {
-	GodAddr  string `json:"god_addr"`
-	GodToken string `json:"token"`
-	Must     bool   `json:"must"`
+type RegistryConfig struct {
+	Addr  string `json:"addr"`
+	Token string `json:"token"`
+	Must  bool   `json:"must"`
 }
 
-type God struct {
-	serverAddr string
-	token      string
-	must       bool
+type Registry struct {
+	addr  string
+	token string
+	must  bool
 }
 
-func NewGod(cfg *GodConfig) *God {
-	return &God{
-		serverAddr: cfg.GodAddr,
-		token:      cfg.GodToken,
-		must:       cfg.Must,
+func NewRegistry(cfg *RegistryConfig) *Registry {
+	return &Registry{
+		addr:  cfg.Addr,
+		token: cfg.Token,
+		must:  cfg.Must,
 	}
 }
 
-func (g *God) Access() (string, error) {
-	url := fmt.Sprintf("%s/gtun/access", g.serverAddr)
+func (r *Registry) Access() (string, error) {
+	url := fmt.Sprintf("%s/gtun/access", r.addr)
 	body := &common.C2GRegister{
 		IsWindows: runtime.GOOS == "windows",
-		AuthToken: g.token,
+		AuthToken: r.token,
 	}
 
 	s, err := PostJson(url, body, nil)
@@ -45,17 +45,17 @@ func (g *God) Access() (string, error) {
 		return "", err
 	}
 
-	r := &common.ResponseBody{}
-	err = json.Unmarshal([]byte(s), &r)
+	respbody := &common.ResponseBody{}
+	err = json.Unmarshal([]byte(s), &respbody)
 	if err != nil {
 		return "", err
 	}
 
-	if r.Code != common.CODE_SUCCESS {
-		return "", errors.New(r.Message)
+	if respbody.Code != common.CODE_SUCCESS {
+		return "", errors.New(respbody.Message)
 	}
 
-	bytes, err := json.Marshal(r.Data)
+	bytes, err := json.Marshal(respbody.Data)
 	if err != nil {
 		return "", err
 	}

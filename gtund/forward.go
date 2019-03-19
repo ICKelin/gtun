@@ -8,8 +8,6 @@ import (
 	"github.com/ICKelin/gtun/common"
 )
 
-type ForwardConfig struct {
-}
 type Forward struct {
 	table *sync.Map
 }
@@ -58,7 +56,7 @@ func (forward *Forward) Peer(sndqueue chan *GtunClientContext, dst string, buff 
 	if err != nil {
 		return err
 	}
-	sndqueue <- &GtunClientContext{conn: c, payload: bytes}
 
+	sndqueue <- &GtunClientContext{conn: c, payload: bytes}
 	return nil
 }

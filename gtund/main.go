@@ -1,6 +1,7 @@
 package gtund
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -9,31 +10,58 @@ import (
 	"github.com/ICKelin/gtun/logs"
 )
 
+var version = ""
+
 func Main() {
-	opts, err := ParseArgs()
-	if err != nil {
-		fmt.Printf("parse args fail: %v", err)
+	flgVersion := flag.Bool("v", false, "print version")
+	flgConf := flag.String("c", "", "config file")
+	flag.Parse()
+
+	if *flgVersion {
+		fmt.Println(version)
 		return
 	}
 
-	if opts.confpath != "" {
-		_, err = ParseConfig(opts.confpath)
+	conf, err := ParseConfig(*flgConf)
+	if err != nil {
+		logs.Error("parse config file fail: %s %v", *flgConf, err)
+		return
+	}
+
+	dhcp, err := NewDHCP(conf.DHCPConfig)
+	if err != nil {
+		logs.Error("init dhcp fail: %v", err)
+		return
+	}
+
+	iface, err := NewInterface(conf.InterfaceConfig, conf.DHCPConfig.Gateway, conf.DHCPConfig.CIDR)
+	if err != nil {
+		logs.Error("init interface fail: %v", err)
+		return
+	}
+
+	var registry *Registry
+	if conf.RegistryConfig != nil {
+		registry := NewRegistry(conf.RegistryConfig, &Service{
+			Name:        conf.Name,
+			PublicIP:    GetPublicIP(),
+			Port:        0,
+			ClientLimit: conf.DHCPConfig.ClientCount,
+			IsTap:       conf.InterfaceConfig.IsTap,
+		})
+
+		go registry.Run()
+	}
+
+	if conf.ReverseConfig != nil {
+		r := NewReverse(conf.ReverseConfig)
+		err := r.Run()
 		if err != nil {
-			logs.Error("parse config file fail: %s %v", opts.confpath, err)
-			return
+			logs.Warn("run reverse fail: %v", err)
 		}
 	}
 
-	serverCfg := &ServerConfig{
-		listenAddr:  opts.listenAddr,
-		authKey:     opts.authKey,
-		gateway:     opts.gateway,
-		routeUrl:    opts.routeUrl,
-		nameservers: opts.nameserver,
-		reverseFile: opts.reverseFile,
-	}
-
-	server, err := NewServer(serverCfg)
+	server, err := NewServer(conf.ServerConfig, dhcp, iface, registry)
 	if err != nil {
 		logs.Error("new server: %v", err)
 		return

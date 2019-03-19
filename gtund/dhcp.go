@@ -1,96 +1,85 @@
 package gtund
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"strings"
+	"net"
 	"sync"
 )
 
+var (
+	defaultGateway    = ""
+	defaultCidr       = "100.64.240.1/24"
+	errNotAvaliableIP = fmt.Errorf("not avaliable ip")
+)
+
 type DHCPConfig struct {
-	gateway string
-	mask    string
+	Gateway     string `toml:"gateway"`
+	Nameserver  string `toml:"nameserver"`
+	CIDR        string `toml:"cidr"`
+	ClientCount int    `toml:"-"`
 }
 
 type DHCP struct {
+	sync.Mutex
 	gateway string
-	mask    string
-	mu      *sync.Mutex
-	table   *sync.Map
+	mask    int
+	table   map[string]bool
 }
 
 func NewDHCP(cfg *DHCPConfig) (*DHCP, error) {
-	dhcp := &DHCP{
-		gateway: cfg.gateway,
-		mask:    defaultMask,
-		table:   new(sync.Map),
-		mu:      new(sync.Mutex),
+	cidr := cfg.CIDR
+	if cidr == "" {
+		cidr = defaultCidr
 	}
 
-	sp := strings.Split(cfg.gateway, ".")
-	if len(sp) != 4 {
-		return nil, fmt.Errorf("invalid gateway address %s", cfg.gateway)
+	gateway := cfg.Gateway
+	if gateway == "" {
+		gateway = defaultGateway
 	}
 
-	prefix := fmt.Sprintf("%s.%s.%s", sp[0], sp[1], sp[2])
-	for i := 10; i < 250; i++ {
-		ip := fmt.Sprintf("%s.%d", prefix, i)
-		dhcp.table.Store(ip, false)
+	ip, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, err
 	}
+
+	mask, _ := ipnet.Mask.Size()
+	p := ip.To4()
+
+	igateway := (int(p[0]) << 24) + (int(p[1]) << 16) + (int(p[2]) << 8) + int(p[3])
+	ipcount := (1 << uint(32-mask)) - 2 // ignore broadcast
+
+	dhcp := &DHCP{}
+	dhcp.gateway = gateway
+	dhcp.mask = mask
+	dhcp.table = make(map[string]bool)
+
+	for i := 0; i < ipcount; i++ {
+		uip := igateway + i
+		ele := fmt.Sprintf("%d.%d.%d.%d", byte(uip>>24), byte(uip>>16), byte(uip>>8), byte(uip))
+		dhcp.table[ele] = false
+	}
+	dhcp.table[gateway] = true
+	cfg.ClientCount = ipcount
 
 	return dhcp, nil
 }
 
-func (dhcp *DHCP) SelectIP(prefer string) (string, error) {
-	dhcp.mu.Lock()
-	val, _ := dhcp.table.Load(prefer)
-	if val != nil && !val.(bool) {
-		dhcp.table.Store(prefer, true)
-		dhcp.mu.Unlock()
-		return prefer, nil
-	}
-	dhcp.mu.Unlock()
+func (dhcp *DHCP) SelectIP() (string, error) {
+	dhcp.Lock()
+	defer dhcp.Unlock()
 
-	ip := ""
-	dhcp.table.Range(func(key, value interface{}) bool {
-		if value.(bool) == false {
-			dhcp.table.Store(key, true)
-			ip = key.(string)
-			return false
+	for ip, inuse := range dhcp.table {
+		if !inuse {
+			dhcp.table[ip] = true
+			return ip, nil
 		}
-		return true
-	})
-
-	if ip == "" {
-		return "", errors.New("not avaliable ip in pool")
 	}
-	return ip, nil
+
+	return "", errNotAvaliableIP
 }
 
 func (dhcp *DHCP) RecycleIP(ip string) {
-	dhcp.table.Store(ip, false)
-}
-
-func (dhcp *DHCP) InUsed(ip string) bool {
-	v, ok := dhcp.table.Load(ip)
-	if ok {
-		return v.(bool)
-	}
-
-	return false
-}
-
-func (dhcp *DHCP) Use(ip string) {
-	dhcp.table.Store(ip, true)
-}
-
-func (dhcp *DHCP) Status() string {
-	status := make(map[interface{}]interface{})
-	dhcp.table.Range(func(key, value interface{}) bool {
-		status[key] = value
-		return true
-	})
-	bytes, _ := json.Marshal(dhcp)
-	return string(bytes)
+	dhcp.Lock()
+	defer dhcp.Unlock()
+	dhcp.table[ip] = false
 }

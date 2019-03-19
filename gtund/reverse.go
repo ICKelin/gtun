@@ -2,6 +2,7 @@ package gtund
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -11,32 +12,27 @@ import (
 	"github.com/ICKelin/gtun/logs"
 )
 
+var (
+	defaultRule = "reverse.policy"
+)
+
 type ReverseConfig struct {
-	ruleFile string
+	Rule string `toml:"rule"`
 }
 
 type Reverse struct {
-	sync.Mutex
 	ruleFile string
-	policy   []*ReversePolicy
 }
 
-func NewReverse(cfg *ReverseConfig) (*Reverse, error) {
-	reverse := &Reverse{
-		ruleFile: cfg.ruleFile,
+func NewReverse(cfg *ReverseConfig) *Reverse {
+	rule := cfg.Rule
+	if rule == "" {
+		rule = defaultRule
 	}
 
-	policy, err := LoadReversePolicy(cfg.ruleFile)
-	if err != nil {
-		return nil, err
+	return &Reverse{
+		ruleFile: rule,
 	}
-	reverse.policy = policy
-
-	for _, r := range reverse.policy {
-		go Proxy(r.Proto, r.From, r.To)
-	}
-
-	return reverse, nil
 }
 
 type ReversePolicy struct {
@@ -45,13 +41,26 @@ type ReversePolicy struct {
 	To    string `to:"json"`
 }
 
-func LoadReversePolicy(path string) ([]*ReversePolicy, error) {
+func (r *Reverse) Run() error {
+	policy, err := r.LoadPolicy(r.ruleFile)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range policy {
+		go proxy(r.Proto, r.From, r.To)
+	}
+
+	return nil
+}
+
+func (r *Reverse) LoadPolicy(path string) ([]*ReversePolicy, error) {
 	fp, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 
-	reverse := make([]*ReversePolicy, 0)
+	policies := make([]*ReversePolicy, 0)
 
 	reader := bufio.NewReader(fp)
 	for {
@@ -63,44 +72,53 @@ func LoadReversePolicy(path string) ([]*ReversePolicy, error) {
 			break
 		}
 
-		line := string(bline)
-		if len(line) > 0 && line[0] == '#' {
+		r, err := r.loadline(string(bline))
+		if err != nil {
+			logs.Warn("%v", err)
 			continue
 		}
 
-		sp1 := strings.Split(line, " ")
-		if len(sp1) != 2 {
-			continue
-		}
-
-		sp2 := strings.Split(sp1[1], "->")
-		if len(sp2) != 2 {
-			continue
-		}
-
-		reversePolicy := &ReversePolicy{
-			Proto: sp1[0],
-			From:  sp2[0],
-			To:    sp2[1],
-		}
-
-		reverse = append(reverse, reversePolicy)
+		policies = append(policies, r)
 	}
 
-	return reverse, nil
+	return policies, nil
 }
 
-func Proxy(prot string, from, to string) {
+func (r *Reverse) loadline(line string) (*ReversePolicy, error) {
+	if len(line) > 0 && line[0] == '#' {
+		return nil, fmt.Errorf("ignore comment")
+	}
+
+	sp := strings.Split(line, " ")
+	if len(sp) != 2 {
+		return nil, fmt.Errorf("invalid line %s", line)
+	}
+
+	sp1 := strings.Split(sp[1], "->")
+	if len(sp1) != 2 {
+		return nil, fmt.Errorf("invalid line %s", line)
+	}
+
+	p := &ReversePolicy{
+		Proto: sp[0],
+		From:  sp1[0],
+		To:    sp1[1],
+	}
+
+	return p, nil
+}
+
+func proxy(prot string, from, to string) {
 	if strings.ToLower(prot) == "tcp" {
-		ProxyTCP(from, to)
+		proxyTCP(from, to)
 	}
 
 	if strings.ToLower(prot) == "udp" {
-		ProxyUDP(from, to)
+		proxyUDP(from, to)
 	}
 }
 
-func ProxyTCP(from, to string) {
+func proxyTCP(from, to string) {
 	listener, err := net.Listen("tcp", from)
 	if err != nil {
 		logs.Error("listen fail: %v", err)
@@ -119,7 +137,7 @@ func ProxyTCP(from, to string) {
 	}
 }
 
-func ProxyUDP(from, to string) {
+func proxyUDP(from, to string) {
 	laddr, err := net.ResolveUDPAddr("udp", from)
 	if err != nil {
 		logs.Error("resolve udp fail: %v", err)

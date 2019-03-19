@@ -3,13 +3,19 @@ package gtund
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"github.com/pelletier/go-toml"
 )
 
 var config Config
 
 type Config struct {
-	Name   string     `json:"name"`
-	GodCfg *GodConfig `json:"god_config"`
+	Name            string           `toml:"name"`
+	ServerConfig    *ServerConfig    `toml:"server"`
+	DHCPConfig      *DHCPConfig      `toml:"dhcp"`
+	InterfaceConfig *InterfaceConfig `toml:"interface"`
+	RegistryConfig  *RegistryConfig  `toml:"registry"`
+	ReverseConfig   *ReverseConfig   `toml:"reverse"`
 }
 
 func ParseConfig(path string) (*Config, error) {
@@ -23,7 +29,7 @@ func ParseConfig(path string) (*Config, error) {
 
 func parseConfig(content []byte) (*Config, error) {
 	var c Config
-	err := json.Unmarshal(content, &c)
+	err := toml.Unmarshal(content, &c)
 	config = c
 	return &c, err
 }

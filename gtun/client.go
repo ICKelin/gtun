@@ -67,7 +67,7 @@ func (client *Client) Run(opts *Options) {
 
 		s2c, err := authorize(conn, client.authKey)
 		if err != nil {
-			logs.Error("auth fail: ", err)
+			logs.Error("auth fail: %v", err)
 			time.Sleep(time.Second * 3)
 			continue
 		}

@@ -19,14 +19,14 @@ type GtundConfig struct {
 type gtund struct {
 	listener string
 	token    string
-	// gtundManager *models.GtundManager
+	m        *Models
 }
 
 func NewGtund(cfg *GtundConfig) *gtund {
 	return &gtund{
 		listener: cfg.Listener,
 		token:    cfg.Token,
-		// gtundManager: models.GetGtundManager(),
+		m:        NewModels(),
 	}
 }
 
@@ -56,32 +56,25 @@ func (d *gtund) onConn(conn net.Conn) {
 		return
 	}
 
-	// gtundInfo, err := d.gtundManager.NewGtund(reg)
-	// if err != nil {
-	// 	logs.Error("new gtund fail: ", err)
-	// 	return
-	// }
-
-	// defer d.gtundManager.RemoveGtund(gtundInfo.Id)
-
 	logs.Info("register gtund from %s %v", conn.RemoteAddr().String(), reg)
 	defer logs.Info("disconnect from %s", conn.RemoteAddr().String())
+	defer d.onDisconnect(conn.RemoteAddr().String())
 
 	sndbuffer := make(chan []byte)
 
-	stop := make(chan struct{})
+	done := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 
-	go d.recv(conn, wg, sndbuffer, stop)
-	go d.send(conn, wg, sndbuffer, stop)
+	go d.recv(conn, wg, sndbuffer, done)
+	go d.send(conn, wg, sndbuffer, done)
 
 	wg.Wait()
 }
 
-func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
+func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, done chan struct{}) {
 	defer logs.Info("close receive")
-	defer close(stop)
+	defer close(done)
 	defer conn.Close()
 	defer wg.Done()
 
@@ -106,14 +99,14 @@ func (d *gtund) recv(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, s
 	}
 }
 
-func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, stop chan struct{}) {
+func (d *gtund) send(conn net.Conn, wg *sync.WaitGroup, sndbuffer chan []byte, done chan struct{}) {
 	defer logs.Info("close send")
 	defer conn.Close()
 	defer wg.Done()
 
 	for {
 		select {
-		case <-stop:
+		case <-done:
 			return
 
 		case bytes := <-sndbuffer:
@@ -158,6 +151,9 @@ func (d *gtund) onRegister(conn net.Conn) (*common.S2GRegister, error) {
 		return nil, errors.New("invalid token")
 	}
 
+	// store gtund info
+	d.m.NewGtund(conn.RemoteAddr().String(), &reg)
+
 	msg := common.Response(nil, nil)
 	resp, err := common.Encode(common.G2S_REGISTER, msg)
 	if err != nil {
@@ -169,6 +165,10 @@ func (d *gtund) onRegister(conn net.Conn) (*common.S2GRegister, error) {
 	conn.SetWriteDeadline(time.Time{})
 
 	return &reg, nil
+}
+
+func (d *gtund) onDisconnect(addr string) {
+	d.m.RemoveGtund(addr)
 }
 
 func (d *gtund) onHeartbeat(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
@@ -192,13 +192,7 @@ func (d *gtund) onUpdate(conn net.Conn, bytes []byte, sndbuffer chan []byte) {
 		return
 	}
 
-	// gtund, err := d.gtundManager.IncReferenceCount(obj.Count)
-	// if err != nil {
-	// 	d.response(nil, err, sndbuffer)
-	// 	return
-	// }
-
-	// d.response(gtund, nil, sndbuffer)
+	d.m.UpdateRefCount(conn.RemoteAddr().String(), obj.Count)
 }
 
 func (d *gtund) response(data interface{}, err error, sndbuffer chan []byte) {

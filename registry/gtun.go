@@ -3,6 +3,7 @@ package registry
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -18,18 +19,15 @@ type GtunConfig struct {
 type gtun struct {
 	listener string
 	tokens   []string
+	m        *Models
 }
 
-func NewGtun(cfg *GtunConfig) *gtun {
+func NewGtun(cfg *GtunConfig, m *Models) *gtun {
 	return &gtun{
 		listener: cfg.Listener,
 		tokens:   cfg.Tokens,
+		m:        m,
 	}
-}
-
-func (g *gtun) Run() error {
-	http.HandleFunc("/gtun/access", g.onGtunAccess)
-	return http.ListenAndServe(g.listener, nil)
 }
 
 func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
@@ -54,19 +52,19 @@ func (g *gtun) onGtunAccess(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// gtundInfo, err := models.GetGtundManager().GetAvailableGtund(regInfo.IsWindows)
-	// if err != nil {
-	// 	bytes := common.Response(nil, err)
-	// 	w.Write(bytes)
-	// 	return
-	// }
+	gtund, err := g.m.RandomGetGtund(regInfo.IsWindows)
+	if err != nil {
+		bytes := common.Response(nil, err)
+		w.Write(bytes)
+		return
+	}
 
-	// respObj := &common.G2CRegister{
-	// 	ServerAddress: fmt.Sprintf("%s:%d", gtundInfo.PublicIP, gtundInfo.Port),
-	// }
+	respObj := &common.G2CRegister{
+		ServerAddress: fmt.Sprintf("%s:%d", gtund.PublicIP, gtund.Port),
+	}
 
-	// bytes := common.Response(respObj, nil)
-	// w.Write(bytes)
+	bytes := common.Response(respObj, nil)
+	w.Write(bytes)
 	logs.Info("register from %s", r.RemoteAddr)
 }
 

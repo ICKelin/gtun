@@ -30,6 +30,7 @@ type Service struct {
 	Name        string
 	PublicIP    string
 	Port        int
+	CIDR        string
 	ClientLimit int
 	IsTap       bool
 }
@@ -40,6 +41,7 @@ type Registry struct {
 	addr              string
 	token             string
 	must              bool
+	currentClient     int
 
 	service   *Service
 	sndbuffer chan []byte
@@ -76,12 +78,8 @@ func NewRegistry(cfg *RegistryConfig, service *Service) *Registry {
 func (r *Registry) Run() error {
 	for {
 		err := r.run()
-		logs.Error("disconnect with registry: %v", err)
-		if r.must {
-			time.Sleep(time.Second * 3)
-			continue
-		}
-		return err
+		logs.Warn("disconnect with registry: %v", err)
+		time.Sleep(time.Second * 3)
 	}
 }
 
@@ -101,6 +99,7 @@ func (g *Registry) Sync(inc int) error {
 	}
 
 	g.sndbuffer <- bytes
+	g.currentClient += 1
 	return nil
 }
 
@@ -138,8 +137,10 @@ func (r *Registry) register(conn net.Conn) (*common.ResponseBody, error) {
 		PublicIP:       r.service.PublicIP,
 		Port:           r.service.Port,
 		Name:           r.service.Name,
+		CIDR:           r.service.CIDR,
 		Token:          r.token,
 		MaxClientCount: r.service.ClientLimit,
+		Count:          r.currentClient,
 		IsWindows:      r.service.IsTap,
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/ICKelin/gtun/logs"
@@ -42,10 +43,19 @@ func Main() {
 
 	var registry *Registry
 	if conf.RegistryConfig != nil {
-		registry := NewRegistry(conf.RegistryConfig, &Service{
+		sp := strings.Split(conf.ServerConfig.Listen, ":")
+		if len(sp) != 2 {
+			logs.Error("invalid listen address")
+			return
+		}
+
+		port, _ := strconv.Atoi(sp[1])
+
+		registry = NewRegistry(conf.RegistryConfig, &Service{
 			Name:        conf.Name,
 			PublicIP:    GetPublicIP(),
-			Port:        0,
+			Port:        port,
+			CIDR:        conf.DHCPConfig.CIDR,
 			ClientLimit: conf.DHCPConfig.ClientCount,
 			IsTap:       conf.InterfaceConfig.IsTap,
 		})

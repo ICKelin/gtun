@@ -59,7 +59,7 @@ func NewDHCP(cfg *DHCPConfig) (*DHCP, error) {
 		dhcp.table[ele] = false
 	}
 	dhcp.table[gateway] = true
-	cfg.ClientCount = ipcount
+	cfg.ClientCount = ipcount - 1 // ignore gateway
 
 	return dhcp, nil
 }

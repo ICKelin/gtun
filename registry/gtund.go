@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -22,11 +23,11 @@ type gtund struct {
 	m        *Models
 }
 
-func NewGtund(cfg *GtundConfig) *gtund {
+func NewGtund(cfg *GtundConfig, m *Models) *gtund {
 	return &gtund{
 		listener: cfg.Listener,
 		token:    cfg.Token,
-		m:        NewModels(),
+		m:        m,
 	}
 }
 
@@ -45,6 +46,12 @@ func (d *gtund) Run() error {
 
 		go d.onConn(conn)
 	}
+}
+
+func (d *gtund) GetGtundList(w http.ResponseWriter, r *http.Request) {
+	list := d.m.Status()
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(list))
 }
 
 func (d *gtund) onConn(conn net.Conn) {

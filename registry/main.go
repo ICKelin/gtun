@@ -2,6 +2,7 @@ package registry
 
 import (
 	"flag"
+	"net/http"
 
 	"github.com/ICKelin/gtun/logs"
 )
@@ -16,11 +17,18 @@ func Main() {
 		return
 	}
 
+	m := NewModels()
+
+	d := NewGtund(conf.GtundConfig, m)
 	go func() {
-		d := NewGtund(conf.GtundConfig)
 		logs.Error("run server for gtund fail: %v", d.Run())
 	}()
 
-	c := NewGtun(conf.GtunConfig)
-	logs.Error("run api for gtun fail: %v", c.Run())
+	g := NewGtun(conf.GtunConfig, m)
+
+	logs.Info("api listen %s", g.listener)
+
+	http.HandleFunc("/gtun/access", g.onGtunAccess)
+	http.HandleFunc("/gtund/list", d.GetGtundList)
+	http.ListenAndServe(g.listener, nil)
 }

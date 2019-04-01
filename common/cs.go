@@ -26,10 +26,9 @@ func OSID(goos string) int {
 }
 
 type C2SAuthorize struct {
-	Version  string `json:"version"`
-	OS       int    `json:"os"`
-	AccessIP string `json:"access_ip"`
-	Key      string `json:"key"`
+	Version string `json:"version"`
+	OS      int    `json:"os"`
+	Key     string `json:"key"`
 }
 
 type S2CAuthorize struct {

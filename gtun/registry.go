@@ -13,6 +13,17 @@ import (
 	"github.com/ICKelin/gtun/common"
 )
 
+var (
+	defaultAddr  = "http://127.0.0.1:9091"
+	defaultToken = "gtun-cs-token"
+
+	defaultConfig = &RegistryConfig{
+		Addr:  defaultAddr,
+		Token: defaultToken,
+		Must:  false,
+	}
+)
+
 type RegistryConfig struct {
 	Addr  string `json:"addr"`
 	Token string `json:"token"`
@@ -26,6 +37,20 @@ type Registry struct {
 }
 
 func NewRegistry(cfg *RegistryConfig) *Registry {
+	if cfg == nil {
+		cfg = defaultConfig
+	}
+
+	addr := cfg.Addr
+	if addr == "" {
+		addr = defaultAddr
+	}
+
+	token := cfg.Token
+	if token == "" {
+		token = defaultToken
+	}
+
 	return &Registry{
 		addr:  cfg.Addr,
 		token: cfg.Token,
@@ -74,8 +99,8 @@ func (r *Registry) Access() (string, error) {
 
 func PostJson(uri string, jsonbody interface{}, header map[string]string) (data string, err error) {
 	tr := &http.Transport{
-		MaxIdleConns:    10,
-		IdleConnTimeout: 30 * time.Second,
+		MaxIdleConns:    3,
+		IdleConnTimeout: 10 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 

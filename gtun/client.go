@@ -17,9 +17,20 @@ import (
 	"github.com/songgao/water"
 )
 
+var (
+	defaultServer        = "127.0.0.1:9091"
+	defaultClientAuthKey = "gtun-cs-token"
+	defaultLayer2        = false
+	defaultClientConfig  = &ClientConfig{
+		ServerAddr: defaultServer,
+		AuthKey:    defaultClientAuthKey,
+	}
+)
+
 type ClientConfig struct {
-	serverAddr string
-	authKey    string
+	ServerAddr string `toml:"server"`
+	AuthKey    string `toml:"auth"`
+	layer2     bool   `toml:"layer2"`
 }
 
 type Client struct {
@@ -27,25 +38,42 @@ type Client struct {
 	authKey    string
 	myip       string
 	gw         string
+	layer2     bool
 	registry   *Registry
 }
 
-func NewClient(cfg *ClientConfig) *Client {
+func NewClient(cfg *ClientConfig, registry *Registry) *Client {
+	if cfg == nil {
+		cfg = defaultClientConfig
+	}
+
+	addr := cfg.ServerAddr
+	if addr == "" {
+		addr = defaultServer
+	}
+
+	authkey := cfg.AuthKey
+	if authkey == "" {
+		authkey = defaultClientAuthKey
+	}
+
 	return &Client{
-		serverAddr: cfg.serverAddr,
-		authKey:    cfg.authKey,
-		myip:       "",
-		registry:   NewRegistry(&RegistryConfig{}), // everything use default
+		serverAddr: addr,
+		authKey:    authkey,
+		layer2:     cfg.layer2,
+		registry:   registry,
 	}
 }
 
-func (client *Client) Run(opts *Options) {
+func (client *Client) Run() {
 	for {
 		server, err := client.registry.Access()
-		if err != nil && client.registry.must {
+		if err != nil {
 			logs.Error("get server address fail: %v", err)
-			time.Sleep(time.Second * 3)
-			continue
+			if client.registry.must {
+				time.Sleep(time.Second * 3)
+				continue
+			}
 		}
 
 		if server == "" {
@@ -74,7 +102,7 @@ func (client *Client) Run(opts *Options) {
 
 		logs.Info("connect to %s success, assign ip %s", server, s2c.AccessIP)
 
-		ifce, err := NewIfce(opts.tap)
+		ifce, err := NewIfce(client.layer2)
 		if err != nil {
 			logs.Error("new interface fail: %v", err)
 			return
@@ -116,10 +144,6 @@ func (client *Client) Run(opts *Options) {
 	}
 }
 
-func (client *Client) needreload(nip string) bool {
-	return client.myip == "" || client.myip != nip
-}
-
 func conServer(srv string) (conn net.Conn, err error) {
 	tcp, err := net.DialTimeout("tcp", srv, time.Second*10)
 	if err != nil {
@@ -131,10 +155,9 @@ func conServer(srv string) (conn net.Conn, err error) {
 
 func authorize(conn net.Conn, key string) (s2cauthorize *common.S2CAuthorize, err error) {
 	c2sauthorize := &common.C2SAuthorize{
-		OS:       common.OSID(runtime.GOOS),
-		Version:  common.Version(),
-		AccessIP: "",
-		Key:      key,
+		OS:      common.OSID(runtime.GOOS),
+		Version: common.Version(),
+		Key:     key,
 	}
 
 	payload, err := json.Marshal(c2sauthorize)

@@ -1,20 +1,22 @@
 package gtun
 
 import (
+	"flag"
 	"fmt"
-	"os"
 )
 
 func Main() {
-	opts, err := ParseArgs()
+	flgConf := flag.String("c", "", "config file")
+	flag.Parse()
+
+	conf, err := ParseConfig(*flgConf)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "parse args fail: %v\n", err)
+		fmt.Printf("load config fail: %v\n", err)
 		return
 	}
 
-	cliConfig := &ClientConfig{
-		serverAddr: opts.srv,
-		authKey:    opts.authkey,
-	}
-	NewClient(cliConfig).Run(opts)
+	registry := NewRegistry(conf.RegistryConfig)
+
+	client := NewClient(conf.ClientConfig, registry)
+	client.Run()
 }

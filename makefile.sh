@@ -1,12 +1,20 @@
 rm -r bin
+
+mkdir -p bin/registry
+mkdir -p bin/registry/log
+
 mkdir -p bin/gtun
 mkdir -p bin/gtun/log
 
 mkdir -p bin/gtund
 mkdir -p bin/gtund/log
 
+GOOS=linux go build -o bin/registry/registry main/registry/*.go
+cp etc/registry.conf bin/registry/
+
 
 GOOS=linux go build -o bin/gtund/gtund main/gtund/*.go
+cp etc/gtund.conf bin/gtund/
 
 cd main/gtun
 echo "building gtun_cli_darwin...."

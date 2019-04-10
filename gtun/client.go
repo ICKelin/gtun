@@ -121,11 +121,16 @@ func (client *Client) Run() {
 		}
 
 		go func() {
-			routes, err := downloadRoutes(s2c.RouteScriptUrl)
-			if err != nil {
-				logs.Warn("download route from %s fail: %v", s2c.RouteScriptUrl, err)
+			for {
+				routes, err := downloadRoutes(s2c.RouteScriptUrl)
+				if err != nil {
+					logs.Warn("download route from %s fail: %v", s2c.RouteScriptUrl, err)
+					continue
+				}
+
+				insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
+				break
 			}
-			insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
 		}()
 
 		done := make(chan struct{})

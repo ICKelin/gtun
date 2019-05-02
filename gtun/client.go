@@ -105,7 +105,7 @@ func (client *Client) Run() {
 		ifce, err := NewIfce(client.layer2)
 		if err != nil {
 			logs.Error("new interface fail: %v", err)
-			return
+			continue
 		}
 
 		client.myip = s2c.AccessIP
@@ -120,20 +120,26 @@ func (client *Client) Run() {
 			continue
 		}
 
+		done := make(chan struct{})
+
 		go func() {
+			failCount := 0
 			for {
 				routes, err := downloadRoutes(s2c.RouteScriptUrl)
 				if err != nil {
 					logs.Warn("download route from %s fail: %v", s2c.RouteScriptUrl, err)
+					failCount += 1
+					time.Sleep(time.Second * 3)
+					if failCount >= 10 {
+						break
+					}
 					continue
 				}
 
-				insertRoute(routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
+				insertRoute(done, routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
 				break
 			}
 		}()
-
-		done := make(chan struct{})
 
 		wg := &sync.WaitGroup{}
 		wg.Add(3)
@@ -141,7 +147,6 @@ func (client *Client) Run() {
 		go heartbeat(sndqueue, done, wg)
 		go snd(conn, sndqueue, done, wg)
 		go rcv(conn, ifce, wg)
-
 		wg.Wait()
 
 		ifce.Close()
@@ -384,7 +389,7 @@ func downloadRoutes(url string) ([]string, error) {
 	return routes, nil
 }
 
-func insertRoute(routedIPS []string, devIP, gw string, devName string) {
+func insertRoute(done chan struct{}, routedIPS []string, devIP, gw string, devName string) {
 	// Windows platform route add need iface index args.
 	ifceIndex := -1
 	ifce, err := net.InterfaceByName(devName)
@@ -398,7 +403,12 @@ func insertRoute(routedIPS []string, devIP, gw string, devName string) {
 
 	logs.Info("inserting routes")
 	for _, address := range routedIPS {
-		execRoute(address, devName, devIP, gw, ifceIndex)
+		select {
+		case <-done:
+			return
+		default:
+			execRoute(address, devName, devIP, gw, ifceIndex)
+		}
 	}
 
 	logs.Info("inserted routes, routes count: %d", len(routedIPS))

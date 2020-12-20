@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/common"
-	"github.com/ICKelin/gtun/logs"
+	"github.com/ICKelin/gtun/pkg/logs"
 )
 
 var (
@@ -32,10 +32,9 @@ type Server struct {
 	sndqueue    chan *GtunClientContext
 	done        chan struct{}
 
-	iface    *Interface
-	dhcp     *DHCP
-	forward  *Forward
-	registry *Registry
+	iface   *Interface
+	dhcp    *DHCP
+	forward *Forward
 }
 
 type GtunClientContext struct {
@@ -43,7 +42,7 @@ type GtunClientContext struct {
 	payload []byte
 }
 
-func NewServer(cfg *ServerConfig, dhcp *DHCP, iface *Interface, registry *Registry) (*Server, error) {
+func NewServer(cfg *ServerConfig, dhcp *DHCP, iface *Interface) (*Server, error) {
 	s := &Server{
 		listenAddr: cfg.Listen,
 		authKey:    cfg.AuthKey,
@@ -53,7 +52,6 @@ func NewServer(cfg *ServerConfig, dhcp *DHCP, iface *Interface, registry *Regist
 		done:       make(chan struct{}),
 		iface:      iface,
 		dhcp:       dhcp,
-		registry:   registry,
 	}
 
 	return s, nil
@@ -138,11 +136,6 @@ func (s *Server) onConn(conn net.Conn) {
 	defer s.forward.Del(s2c.AccessIP)
 
 	logs.Info("accept cloud client from %s assign ip %s", conn.RemoteAddr().String(), s2c.AccessIP)
-
-	if s.registry != nil {
-		s.registry.Sync(1)
-		defer s.registry.Sync(-1)
-	}
 
 	s.handleClient(conn)
 }

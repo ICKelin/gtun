@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/common"
-	"github.com/ICKelin/gtun/logs"
+	"github.com/ICKelin/gtun/pkg/logs"
 	"github.com/songgao/water"
 )
 
@@ -39,10 +39,9 @@ type Client struct {
 	myip       string
 	gw         string
 	layer2     bool
-	registry   *Registry
 }
 
-func NewClient(cfg *ClientConfig, registry *Registry) *Client {
+func NewClient(cfg *ClientConfig) *Client {
 	if cfg == nil {
 		cfg = defaultClientConfig
 	}
@@ -61,24 +60,12 @@ func NewClient(cfg *ClientConfig, registry *Registry) *Client {
 		serverAddr: addr,
 		authKey:    authkey,
 		layer2:     cfg.layer2,
-		registry:   registry,
 	}
 }
 
 func (client *Client) Run() {
 	for {
-		server, err := client.registry.Access()
-		if err != nil {
-			logs.Error("get server address fail: %v", err)
-			if client.registry.must {
-				time.Sleep(time.Second * 3)
-				continue
-			}
-		}
-
-		if server == "" {
-			server = client.serverAddr
-		}
+		server := client.serverAddr
 
 		if server == "" {
 			logs.Error("empty server")

@@ -12,7 +12,6 @@ type Config struct {
 	ServerConfig    *ServerConfig    `toml:"server"`
 	DHCPConfig      *DHCPConfig      `toml:"dhcp"`
 	InterfaceConfig *InterfaceConfig `toml:"interface"`
-	RegistryConfig  *RegistryConfig  `toml:"registry"`
 	ReverseConfig   *ReverseConfig   `toml:"reverse"`
 }
 

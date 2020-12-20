@@ -15,8 +15,6 @@ func Main() {
 		return
 	}
 
-	registry := NewRegistry(conf.RegistryConfig)
-
-	client := NewClient(conf.ClientConfig, registry)
+	client := NewClient(conf.ClientConfig)
 	client.Run()
 }

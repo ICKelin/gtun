@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ICKelin/gtun/logs"
+	"github.com/ICKelin/gtun/pkg/logs"
 )
 
 var (

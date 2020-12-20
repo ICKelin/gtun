@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/ICKelin/gtun/logs"
+	"github.com/ICKelin/gtun/pkg/logs"
 )
 
 var version = ""
@@ -41,28 +40,6 @@ func Main() {
 		return
 	}
 
-	var registry *Registry
-	if conf.RegistryConfig != nil {
-		sp := strings.Split(conf.ServerConfig.Listen, ":")
-		if len(sp) != 2 {
-			logs.Error("invalid listen address")
-			return
-		}
-
-		port, _ := strconv.Atoi(sp[1])
-
-		registry = NewRegistry(conf.RegistryConfig, &Service{
-			Name:        conf.Name,
-			PublicIP:    GetPublicIP(),
-			Port:        port,
-			CIDR:        conf.DHCPConfig.CIDR,
-			ClientLimit: conf.DHCPConfig.ClientCount,
-			IsTap:       conf.InterfaceConfig.IsTap,
-		})
-
-		go registry.Run()
-	}
-
 	if conf.ReverseConfig != nil {
 		r := NewReverse(conf.ReverseConfig)
 		err := r.Run()
@@ -71,7 +48,7 @@ func Main() {
 		}
 	}
 
-	server, err := NewServer(conf.ServerConfig, dhcp, iface, registry)
+	server, err := NewServer(conf.ServerConfig, dhcp, iface)
 	if err != nil {
 		logs.Error("new server: %v", err)
 		return

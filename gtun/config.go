@@ -8,8 +8,7 @@ import (
 )
 
 type Config struct {
-	ClientConfig   *ClientConfig   `toml:"client"`
-	RegistryConfig *RegistryConfig `toml:"registry"`
+	ClientConfig *ClientConfig `toml:"client"`
 }
 
 func ParseConfig(path string) (*Config, error) {

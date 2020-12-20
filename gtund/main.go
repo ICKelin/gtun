@@ -22,6 +22,8 @@ func Main() {
 		return
 	}
 
+	logs.Init("/logs/gtund.log", "debug", 5)
+
 	conf, err := ParseConfig(*flgConf)
 	if err != nil {
 		logs.Error("parse config file fail: %s %v", *flgConf, err)

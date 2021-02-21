@@ -3,6 +3,8 @@ package gtun
 import (
 	"flag"
 	"fmt"
+
+	"github.com/ICKelin/gtun/pkg/logs"
 )
 
 func Main() {
@@ -14,6 +16,7 @@ func Main() {
 		fmt.Printf("load config fail: %v\n", err)
 		return
 	}
+	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
 	client := NewClient(conf.ClientConfig)
 	client.Run()

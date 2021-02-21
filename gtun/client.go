@@ -1,14 +1,10 @@
 package gtun
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
-	"os/exec"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -30,7 +26,6 @@ var (
 type ClientConfig struct {
 	ServerAddr string `toml:"server"`
 	AuthKey    string `toml:"auth"`
-	layer2     bool   `toml:"layer2"`
 }
 
 type Client struct {
@@ -38,7 +33,6 @@ type Client struct {
 	authKey    string
 	myip       string
 	gw         string
-	layer2     bool
 }
 
 func NewClient(cfg *ClientConfig) *Client {
@@ -59,21 +53,13 @@ func NewClient(cfg *ClientConfig) *Client {
 	return &Client{
 		serverAddr: addr,
 		authKey:    authkey,
-		layer2:     cfg.layer2,
 	}
 }
 
 func (client *Client) Run() {
 	for {
 		server := client.serverAddr
-
-		if server == "" {
-			logs.Error("empty server")
-			time.Sleep(time.Second * 3)
-			continue
-		}
-
-		conn, err := conServer(server)
+		conn, err := net.DialTimeout("tcp", server, time.Second*10)
 		if err != nil {
 			logs.Error("connect to server fail: %v", err)
 			time.Sleep(time.Second * 3)
@@ -89,16 +75,14 @@ func (client *Client) Run() {
 
 		logs.Info("connect to %s success, assign ip %s", server, s2c.AccessIP)
 
-		ifce, err := NewIfce(client.layer2)
-		if err != nil {
-			logs.Error("new interface fail: %v", err)
-			continue
-		}
-
 		client.myip = s2c.AccessIP
 		client.gw = s2c.Gateway
 		sndqueue := make(chan []byte)
-		go ifaceRead(ifce, sndqueue)
+		ifce, err := NewIfce()
+		if err != nil {
+			logs.Error("new interface fail: %v", err)
+			return
+		}
 
 		err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
 		if err != nil {
@@ -108,46 +92,19 @@ func (client *Client) Run() {
 		}
 
 		done := make(chan struct{})
-
-		go func() {
-			failCount := 0
-			for {
-				routes, err := downloadRoutes(s2c.RouteScriptUrl)
-				if err != nil {
-					logs.Warn("download route from %s fail: %v", s2c.RouteScriptUrl, err)
-					failCount += 1
-					time.Sleep(time.Second * 3)
-					if failCount >= 10 {
-						break
-					}
-					continue
-				}
-
-				insertRoute(done, routes, s2c.AccessIP, s2c.Gateway, ifce.Name())
-				break
-			}
-		}()
-
 		wg := &sync.WaitGroup{}
 		wg.Add(3)
 
+		go ifaceRead(ifce, sndqueue)
 		go heartbeat(sndqueue, done, wg)
 		go snd(conn, sndqueue, done, wg)
 		go rcv(conn, ifce, wg)
 		wg.Wait()
 
+		setdownIface(ifce, s2c.AccessIP, s2c.Gateway)
 		ifce.Close()
 		logs.Info("reconnecting")
 	}
-}
-
-func conServer(srv string) (conn net.Conn, err error) {
-	tcp, err := net.DialTimeout("tcp", srv, time.Second*10)
-	if err != nil {
-		return nil, err
-	}
-
-	return tcp, nil
 }
 
 func authorize(conn net.Conn, key string) (s2cauthorize *common.S2CAuthorize, err error) {
@@ -258,178 +215,4 @@ func ifaceRead(ifce *water.Interface, sndqueue chan []byte) {
 		bytes, _ := common.Encode(common.C2C_DATA, packet[:n])
 		sndqueue <- bytes
 	}
-}
-
-func clearIfConfig(ifce *water.Interface, ip string, gw string) {
-	switch runtime.GOOS {
-	case "linux":
-		args := strings.Split(fmt.Sprintf("addr del %s/24 dev %s", ip, ifce.Name()), " ")
-		exec.Command("ip", args...).CombinedOutput()
-
-	case "darwin":
-
-	case "windows":
-	}
-}
-
-func setupIface(ifce *water.Interface, ip string, gw string) (err error) {
-	type CMD struct {
-		cmd  string
-		args []string
-	}
-
-	cmdlist := make([]*CMD, 0)
-
-	switch runtime.GOOS {
-	case "linux":
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{ifce.Name(), "up"}})
-		args := strings.Split(fmt.Sprintf("addr add %s/24 dev %s", ip, ifce.Name()), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ip", args: args})
-
-	case "darwin":
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: []string{ifce.Name(), "up"}})
-
-		args := strings.Split(fmt.Sprintf("%s %s %s", ifce.Name(), ip, ip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
-
-		args = strings.Split(fmt.Sprintf("add -net %s/24 %s", gw, ip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
-
-	case "windows":
-		args := strings.Split(fmt.Sprintf("interface ip set address name=\"%s\" addr=%s source=static mask=255.255.255.0 gateway=%s", ifce.Name(), ip, gw), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "netsh", args: args})
-
-		args = strings.Split(fmt.Sprintf("delete 0.0.0.0 %s", gw), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
-	}
-
-	for _, c := range cmdlist {
-		output, err := exec.Command(c.cmd, c.args...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("run %s error %s", c, string(output))
-		}
-	}
-
-	return nil
-}
-
-func releaseDevice(device, ip, gateway string) (err error) {
-	type CMD struct {
-		cmd  string
-		args []string
-	}
-
-	cmdlist := make([]*CMD, 0)
-
-	switch runtime.GOOS {
-	case "linux":
-		args := strings.Split(fmt.Sprintf("%s down", device), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
-
-	case "darwin":
-		gw := strings.Split(gateway, ".")
-		if len(gw) != 4 {
-			break
-		}
-
-		s := strings.Join(gw[:3], ".")
-		args := strings.Split(fmt.Sprintf("delete -net %s/24 %s", s, ip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "route", args: args})
-
-		args = strings.Split(fmt.Sprintf("%s delete %s", device, ip), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
-
-		args = strings.Split(fmt.Sprintf("%s down", device), " ")
-		cmdlist = append(cmdlist, &CMD{cmd: "ifconfig", args: args})
-	}
-
-	for _, c := range cmdlist {
-		output, _ := exec.Command(c.cmd, c.args...).CombinedOutput()
-		if err != nil {
-			fmt.Printf("run %s error %s\n", c, string(output))
-		}
-	}
-
-	return nil
-}
-
-func downloadRoutes(url string) ([]string, error) {
-	routes := make([]string, 0)
-
-	logs.Info("downloading route file from: %s", url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	reader := bufio.NewReader(resp.Body)
-	for {
-		line, _, err := reader.ReadLine()
-		if err != nil {
-			break
-		}
-		// may need to validate ip/cidr format
-		routes = append(routes, string(line))
-	}
-	logs.Info("downloaded route file from: %s", url)
-	return routes, nil
-}
-
-func insertRoute(done chan struct{}, routedIPS []string, devIP, gw string, devName string) {
-	// Windows platform route add need iface index args.
-	ifceIndex := -1
-	ifce, err := net.InterfaceByName(devName)
-	if err != nil {
-		if runtime.GOOS == "windows" {
-			return
-		}
-	} else {
-		ifceIndex = ifce.Index
-	}
-
-	logs.Info("inserting routes")
-	for _, address := range routedIPS {
-		select {
-		case <-done:
-			return
-		default:
-			execRoute(address, devName, devIP, gw, ifceIndex)
-		}
-	}
-
-	logs.Info("inserted routes, routes count: %d", len(routedIPS))
-}
-
-type CMD struct {
-	cmd  string
-	args []string
-}
-
-func execRoute(address, device, tunip, gateway string, ifceIndex int) {
-	cmd := &CMD{}
-
-	switch runtime.GOOS {
-	case "linux":
-		args := strings.Split(fmt.Sprintf("ro add %s dev %s", address, device), " ")
-		cmd = &CMD{cmd: "ip", args: args}
-
-	case "darwin":
-		args := strings.Split(fmt.Sprintf("add -net %s %s", address, tunip), " ")
-		cmd = &CMD{cmd: "route", args: args}
-
-	case "windows":
-		args := strings.Split(fmt.Sprintf("add %s %s if %d", address, gateway, ifceIndex), " ")
-		cmd = &CMD{cmd: "route", args: args}
-
-	default:
-		return
-	}
-
-	output, err := exec.Command(cmd.cmd, cmd.args...).CombinedOutput()
-	if err != nil {
-		logs.Debug("add %s fail %s", address, string(output))
-	}
-
-	logs.Debug(string(output))
 }

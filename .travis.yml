@@ -1,6 +1,6 @@
 language: go
 go:
-    - 1.9
+    - 1.13
 before_install:
     - go get github.com/songgao/water
 install:
@@ -8,8 +8,8 @@ install:
     - go get github.com/ICKelin/gtun/gtund
 before_script:
 script:
-    - cd $HOME/gopath/src/github.com/ICKelin/gtun/main/gtun
+    - cd $HOME/gopath/src/github.com/ICKelin/gtun/cmd/gtun
     - GOOS=linux go build -o gtun
-    - cd $HOME/gopath/src/github.com/ICKelin/gtun/main/gtund
+    - cd $HOME/gopath/src/github.com/ICKelin/gtun/cmd/gtund
     - GOOS=linux go build -o gtund
 

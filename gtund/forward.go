@@ -57,7 +57,10 @@ func (forward *Forward) Peer(dst string, buff []byte) error {
 		return err
 	}
 
-	sndbuf <- bytes
+	select {
+	case sndbuf <- bytes:
+	default:
+	}
 	logs.Debug("send dst %s bytes size: %d", dst, len(bytes))
 	return nil
 }

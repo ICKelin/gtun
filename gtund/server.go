@@ -55,7 +55,6 @@ func NewServer(cfg ServerConfig, dhcp *DHCP, iface *Interface) (*Server, error) 
 
 func (s *Server) Run() error {
 	go s.readIface()
-	// go s.snd()
 
 	listener, err := net.Listen("tcp", s.listenAddr)
 	if err != nil {
@@ -117,7 +116,7 @@ func (s *Server) onConn(conn net.Conn) {
 	s2c.Nameservers = s.nameservers
 	s.authResp(conn, s2c)
 
-	sndbuf := make(chan []byte)
+	sndbuf := make(chan []byte, 10)
 	s.forward.Add(s2c.AccessIP, sndbuf)
 	defer s.forward.Del(s2c.AccessIP)
 

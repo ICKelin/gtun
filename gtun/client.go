@@ -57,6 +57,12 @@ func NewClient(cfg *ClientConfig) *Client {
 }
 
 func (client *Client) Run() {
+	ifce, err := NewIfce()
+	if err != nil {
+		logs.Error("new interface fail: %v", err)
+		return
+	}
+
 	for {
 		server := client.serverAddr
 		conn, err := net.DialTimeout("tcp", server, time.Second*10)
@@ -78,13 +84,7 @@ func (client *Client) Run() {
 		client.myip = s2c.AccessIP
 		client.gw = s2c.Gateway
 		sndqueue := make(chan []byte)
-		ifce, err := NewIfce()
-		if err != nil {
-			logs.Error("new interface fail: %v", err)
-			return
-		}
-
-		err = setupIface(ifce, s2c.AccessIP, s2c.Gateway)
+		err = SetIfaceIP(ifce, s2c.AccessIP)
 		if err != nil {
 			logs.Error("setup iface fail: %v", err)
 			time.Sleep(time.Second * 3)
@@ -101,8 +101,7 @@ func (client *Client) Run() {
 		go rcv(conn, ifce, wg)
 		wg.Wait()
 
-		setdownIface(ifce, s2c.AccessIP, s2c.Gateway)
-		ifce.Close()
+		RemoveIfaceIP(ifce, s2c.AccessIP)
 		logs.Info("reconnecting")
 	}
 }
@@ -190,13 +189,15 @@ func snd(conn net.Conn, sndqueue chan []byte, done chan struct{}, wg *sync.WaitG
 
 func heartbeat(sndqueue chan []byte, done chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
+	tick := time.NewTicker(time.Second * 3)
+	defer tick.Stop()
 
 	for {
 		select {
 		case <-done:
 			return
 
-		case <-time.After(time.Second * 3):
+		case <-tick.C:
 			bytes, _ := common.Encode(common.C2S_HEARTBEAT, nil)
 			sndqueue <- bytes
 		}

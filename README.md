@@ -106,7 +106,7 @@ sudo nohup ./gtun_linux_amd64 -c gtun.toml &
 
 完成以上步骤之后，基本完成了整个程序的部署，以下是可选内容，如果您需要IP加速，可以参考。
 
-**添加IP代理**
+**第三步(可选)：添加IP代理**
 
 需要在gtun所在机器上进行操作
 
@@ -116,14 +116,7 @@ sudo nohup ./gtun_linux_amd64 -c gtun.toml &
 
 依次类推，如果需要加入更多的ip代理，将上面命令中的8.8.8.8/16修改即可。
 
-## thanks
-[songgao/water](https://github.com/songgao/water)
+## 更多
+如果对网络感兴趣，可以查看我的一些[文章列表](https://github.com/ICKelin/article)，或者关注我的个人公众号.
 
-## more
-[tun/tap vpn](https://github.com/ICKelin/article/issues/9)
-
-any [issues](https://github.com/ICKelin/gtun/issues/new) are welcome
-
-## TODO
-- 测试内网穿透
-- 测试新版本
+![ICKelin](qrcode.jpg)

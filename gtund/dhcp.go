@@ -7,7 +7,6 @@ import (
 )
 
 var (
-	defaultGateway    = ""
 	defaultCidr       = "100.64.240.1/24"
 	errNotAvaliableIP = fmt.Errorf("not avaliable ip")
 )
@@ -26,16 +25,9 @@ type DHCP struct {
 	table   map[string]bool
 }
 
-func NewDHCP(cfg *DHCPConfig) (*DHCP, error) {
+func NewDHCP(cfg DHCPConfig) (*DHCP, error) {
 	cidr := cfg.CIDR
-	if cidr == "" {
-		cidr = defaultCidr
-	}
-
 	gateway := cfg.Gateway
-	if gateway == "" {
-		gateway = defaultGateway
-	}
 
 	ip, ipnet, err := net.ParseCIDR(cidr)
 	if err != nil {

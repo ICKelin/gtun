@@ -8,17 +8,13 @@ import (
 	"github.com/songgao/water"
 )
 
-type InterfaceConfig struct {
-	IsTap bool `toml:"istap"`
-}
-
 type Interface struct {
 	*water.Interface
 	ip   string
 	cidr string
 }
 
-func NewInterface(cfg *InterfaceConfig, ip, cidr string) (*Interface, error) {
+func NewInterface(istap bool, ip, cidr string) (*Interface, error) {
 	iface := &Interface{
 		ip:   ip,
 		cidr: cidr,
@@ -26,7 +22,7 @@ func NewInterface(cfg *InterfaceConfig, ip, cidr string) (*Interface, error) {
 
 	ifconfig := water.Config{}
 
-	if cfg.IsTap {
+	if istap {
 		ifconfig.DeviceType = water.TAP
 	} else {
 		ifconfig.DeviceType = water.TUN
@@ -66,6 +62,7 @@ func setupDevice(dev, ip, cidr string) (err error) {
 
 	return nil
 }
+
 func execCmd(cmd string, args []string) (string, error) {
 	b, err := exec.Command(cmd, args...).CombinedOutput()
 	return string(b), err

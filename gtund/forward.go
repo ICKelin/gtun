@@ -2,10 +2,10 @@ package gtund
 
 import (
 	"fmt"
-	"net"
 	"sync"
 
 	"github.com/ICKelin/gtun/common"
+	"github.com/ICKelin/gtun/pkg/logs"
 )
 
 type Forward struct {
@@ -19,14 +19,14 @@ func NewForward() *Forward {
 	return forwardTable
 }
 
-func (forward *Forward) Add(cip string, conn net.Conn) {
-	forward.table.Store(cip, conn)
+func (forward *Forward) Add(cip string, sndbuf chan []byte) {
+	forward.table.Store(cip, sndbuf)
 }
 
-func (forward *Forward) Get(cip string) (conn net.Conn) {
+func (forward *Forward) Get(cip string) chan []byte {
 	val, ok := forward.table.Load(cip)
 	if ok {
-		return val.(net.Conn)
+		return val.(chan []byte)
 	}
 	return nil
 }
@@ -35,20 +35,20 @@ func (forward *Forward) Del(cip string) {
 	forward.table.Delete(cip)
 }
 
-func (forward *Forward) Broadcast(sndqueue chan *GtunClientContext, buff []byte) {
+func (forward *Forward) Broadcast(buff []byte) {
 	forward.table.Range(func(key, val interface{}) bool {
-		conn, ok := val.(net.Conn)
+		sndbuf, ok := val.(chan []byte)
 		if ok {
 			bytes, _ := common.Encode(common.C2C_DATA, buff)
-			sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
+			sndbuf <- bytes
 		}
 		return true
 	})
 }
 
-func (forward *Forward) Peer(sndqueue chan *GtunClientContext, dst string, buff []byte) error {
-	c := forward.Get(dst)
-	if c == nil {
+func (forward *Forward) Peer(dst string, buff []byte) error {
+	sndbuf := forward.Get(dst)
+	if sndbuf == nil {
 		return fmt.Errorf("%s offline", dst)
 	}
 
@@ -57,6 +57,7 @@ func (forward *Forward) Peer(sndqueue chan *GtunClientContext, dst string, buff 
 		return err
 	}
 
-	sndqueue <- &GtunClientContext{conn: c, payload: bytes}
+	sndbuf <- bytes
+	logs.Debug("send dst %s bytes size: %d", dst, len(bytes))
 	return nil
 }

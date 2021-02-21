@@ -8,11 +8,17 @@ import (
 )
 
 type Config struct {
-	Name            string           `toml:"name"`
-	ServerConfig    *ServerConfig    `toml:"server"`
-	DHCPConfig      *DHCPConfig      `toml:"dhcp"`
-	InterfaceConfig *InterfaceConfig `toml:"interface"`
-	ReverseConfig   *ReverseConfig   `toml:"reverse"`
+	Name         string       `toml:"name"`   // instance name
+	IsTap        bool         `toml:"istap"`  // is tap device(supported for windows)
+	ServerConfig ServerConfig `toml:"server"` // tcp server configuration
+	DHCPConfig   DHCPConfig   `toml:"dhcp"`   // ip block configuration
+	Log          Log          `toml:"log"`
+}
+
+type Log struct {
+	Days  int64  `toml:"days"`
+	Level string `toml:"level"`
+	Path  string `toml:"path"`
 }
 
 func ParseConfig(path string) (*Config, error) {

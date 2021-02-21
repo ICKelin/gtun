@@ -1,8 +1,8 @@
 package gtund
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"time"
@@ -29,8 +29,6 @@ type Server struct {
 	gateway     string
 	routeUrl    string
 	nameservers []string
-	sndqueue    chan *GtunClientContext
-	done        chan struct{}
 
 	iface   *Interface
 	dhcp    *DHCP
@@ -42,14 +40,12 @@ type GtunClientContext struct {
 	payload []byte
 }
 
-func NewServer(cfg *ServerConfig, dhcp *DHCP, iface *Interface) (*Server, error) {
+func NewServer(cfg ServerConfig, dhcp *DHCP, iface *Interface) (*Server, error) {
 	s := &Server{
 		listenAddr: cfg.Listen,
 		authKey:    cfg.AuthKey,
 		routeUrl:   cfg.RouteUrl,
 		forward:    NewForward(),
-		sndqueue:   make(chan *GtunClientContext),
-		done:       make(chan struct{}),
 		iface:      iface,
 		dhcp:       dhcp,
 	}
@@ -59,7 +55,7 @@ func NewServer(cfg *ServerConfig, dhcp *DHCP, iface *Interface) (*Server, error)
 
 func (s *Server) Run() error {
 	go s.readIface()
-	go s.snd()
+	// go s.snd()
 
 	listener, err := net.Listen("tcp", s.listenAddr)
 	if err != nil {
@@ -68,13 +64,6 @@ func (s *Server) Run() error {
 	defer listener.Close()
 
 	for {
-		select {
-		case <-s.done:
-			return fmt.Errorf("receive done signal")
-
-		default:
-		}
-
 		conn, err := listener.Accept()
 		if err != nil {
 			return err
@@ -82,10 +71,6 @@ func (s *Server) Run() error {
 
 		go s.onConn(conn)
 	}
-}
-
-func (s *Server) Close() {
-	close(s.done)
 }
 
 func (s *Server) onConn(conn net.Conn) {
@@ -132,25 +117,22 @@ func (s *Server) onConn(conn net.Conn) {
 	s2c.Nameservers = s.nameservers
 	s.authResp(conn, s2c)
 
-	s.forward.Add(s2c.AccessIP, conn)
+	sndbuf := make(chan []byte)
+	s.forward.Add(s2c.AccessIP, sndbuf)
 	defer s.forward.Del(s2c.AccessIP)
 
 	logs.Info("accept cloud client from %s assign ip %s", conn.RemoteAddr().String(), s2c.AccessIP)
 
-	s.handleClient(conn)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.snd(ctx, conn, sndbuf)
+	s.recv(conn, sndbuf)
 }
 
-func (s *Server) handleClient(conn net.Conn) {
+func (s *Server) recv(conn net.Conn, sndbuf chan []byte) {
 	defer conn.Close()
 
 	for {
-		select {
-		case <-s.done:
-			logs.Info("server receive done signal")
-			return
-		default:
-		}
-
 		cmd, pkt, err := common.Decode(conn)
 		if err != nil {
 			if err != io.EOF {
@@ -168,7 +150,7 @@ func (s *Server) handleClient(conn net.Conn) {
 				continue
 			}
 
-			s.sndqueue <- &GtunClientContext{conn: conn, payload: bytes}
+			sndbuf <- bytes
 
 		case common.C2C_DATA:
 			_, err = s.iface.Write(pkt)
@@ -182,23 +164,23 @@ func (s *Server) handleClient(conn net.Conn) {
 	}
 }
 
-func (s *Server) snd() {
+func (s *Server) snd(ctx context.Context, conn net.Conn, sndbuf chan []byte) {
 	for {
 		select {
-		case <-s.done:
-			logs.Info("snd receive done signal")
+		case <-ctx.Done():
+			logs.Warn("close send")
 			return
 
-		case ctx := <-s.sndqueue:
-			ctx.conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
-			nw, err := ctx.conn.Write(ctx.payload)
-			ctx.conn.SetWriteDeadline(time.Time{})
+		case payload := <-sndbuf:
+			conn.SetWriteDeadline(time.Now().Add(time.Second * 30))
+			nw, err := conn.Write(payload)
+			conn.SetWriteDeadline(time.Time{})
 			if err != nil {
 				logs.Error("write to peer fail: %v", err)
 			}
 
-			if nw != len(ctx.payload) {
-				logs.Error("write not full %d %d", nw, len(ctx.payload))
+			if nw != len(payload) {
+				logs.Error("write not full %d %d", nw, len(payload))
 			}
 		}
 	}
@@ -207,14 +189,6 @@ func (s *Server) snd() {
 func (s *Server) readIface() {
 	buff := make([]byte, 65536)
 	for {
-		select {
-		case <-s.done:
-			logs.Info("server receive done signal")
-			return
-
-		default:
-		}
-
 		nr, err := s.iface.Read(buff)
 		if err != nil {
 			if err != io.EOF {
@@ -233,7 +207,7 @@ func (s *Server) readIface() {
 
 			if !f.IsIPV4() {
 				// broadcast
-				s.forward.Broadcast(s.sndqueue, buff[:nr])
+				s.forward.Broadcast(buff[:nr])
 				continue
 			}
 
@@ -253,7 +227,7 @@ func (s *Server) readIface() {
 		}
 
 		peer := p.Dst()
-		err = s.forward.Peer(s.sndqueue, peer, buff[:nr])
+		err = s.forward.Peer(peer, buff[:nr])
 		if err != nil {
 			logs.Error("send to ", peer, err)
 			continue

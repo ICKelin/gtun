@@ -10,7 +10,7 @@ var (
 )
 
 func TestNewDHCP(t *testing.T) {
-	dhcp, err := NewDHCP(&DHCPConfig{
+	dhcp, err := NewDHCP(DHCPConfig{
 		CIDR: "192.168.10.1/24",
 	})
 
@@ -26,7 +26,7 @@ func TestNewDHCP(t *testing.T) {
 }
 
 func TestSelect(t *testing.T) {
-	cfg := &DHCPConfig{
+	cfg := DHCPConfig{
 		CIDR: "192.168.10.1/24",
 	}
 
@@ -49,23 +49,3 @@ func TestSelect(t *testing.T) {
 		}
 	}
 }
-
-// func TestRecycle(t *testing.T) {
-// 	cfg := &DHCPConfig{
-// 		gateway: "192.168.6.1",
-// 	}
-
-// 	dhcp, err := NewDHCP(cfg)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-
-// 	for i := 0; i < poolCount; i++ {
-// 		ip, err := dhcp.SelectIP("")
-// 		assert.Equal(t, nil, err)
-// 		assert.NotEqual(t, "", ip)
-// 		assert.Equal(t, true, dhcp.InUsed(ip))
-// 		dhcp.RecycleIP(ip)
-// 		assert.Equal(t, false, dhcp.InUsed(ip))
-// 	}
-// }

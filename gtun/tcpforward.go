@@ -94,7 +94,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 		logs.Error("no route to host: %s", dip)
 		return
 	}
-
+	logs.Debug("%s:%s=>%s:%s", sip, sport, dip, dport)
 	stream, err := sess.conn.OpenStream()
 	if err != nil {
 		logs.Error("open stream fail: %v", err)
@@ -102,8 +102,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	}
 	defer stream.Close()
 
-	targetIP := "127.0.0.1"
-	bytes := encodeProxyProtocol("tcp", sip, sport, targetIP, dport)
+	bytes := encodeProxyProtocol("tcp", sip, sport, dip, dport)
 	stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
 	_, err = stream.Write(bytes)
 	stream.SetWriteDeadline(time.Time{})

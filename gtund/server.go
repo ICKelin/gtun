@@ -91,7 +91,7 @@ func (s *Server) handleStream(stream *yamux.Stream) {
 	buf := make([]byte, bodylen)
 	nr, err := io.ReadFull(stream, buf)
 	if err != nil {
-		log.Println(err)
+		logs.Error("read proxy protocol fail: %v", err)
 		stream.Close()
 		return
 	}
@@ -99,7 +99,7 @@ func (s *Server) handleStream(stream *yamux.Stream) {
 	proxyProtocol := proto.ProxyProtocol{}
 	err = json.Unmarshal(buf[:nr], &proxyProtocol)
 	if err != nil {
-		log.Println("unmarshal fail: ", err)
+		logs.Error("unmarshal proxy protocol fail: %v", err)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (s *Server) tcpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	remoteConn, err := net.DialTimeout("tcp", addr, time.Second*10)
 	if err != nil {
-		log.Println(err)
+		logs.Error("dial server %s fail: %v", addr, err)
 		stream.Close()
 		return
 	}
@@ -137,14 +137,14 @@ func (s *Server) udpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	raddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
-		log.Println(err)
+		logs.Error("resolve %s fail: %v", addr, err)
 		stream.Close()
 		return
 	}
 
 	remoteConn, err := net.DialUDP("udp", nil, raddr)
 	if err != nil {
-		log.Println(err)
+		logs.Error("dial %s udp fail: %v", raddr, err)
 		return
 	}
 
@@ -155,14 +155,14 @@ func (s *Server) udpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
 		for {
 			_, err := io.ReadFull(stream, hdr)
 			if err != nil {
-				log.Println("read stream fail: ", err)
+				logs.Error("read stream fail: %v", err)
 				break
 			}
 			nlen := binary.BigEndian.Uint16(hdr)
 			buf := make([]byte, nlen)
 			_, err = io.ReadFull(stream, buf)
 			if err != nil {
-				log.Println("read stream body fail: ", err)
+				logs.Error("read stream body fail: %v", err)
 				break
 			}
 
@@ -177,14 +177,14 @@ func (s *Server) udpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
 		for {
 			nr, err := remoteConn.Read(buf)
 			if err != nil {
-				log.Println(err)
+				logs.Error("read from remote fail: %v", err)
 				break
 			}
 
 			bytes := encode(buf[:nr])
 			_, err = stream.Write(bytes)
 			if err != nil {
-				log.Println(err)
+				logs.Error("stream write fail: %v", err)
 				break
 			}
 		}

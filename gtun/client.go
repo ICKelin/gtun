@@ -20,12 +20,6 @@ type Client struct {
 	sessionMgr *SessionManager
 }
 
-type TCPForwardConfig struct {
-	ListenAddr   string `yaml:"listen"`
-	ReadTimeout  int    `yaml:"readTimeout"`
-	WriteTimeout int    `yaml:"writeTimeout"`
-}
-
 func NewClient(cfg *ClientConfig) *Client {
 	return &Client{
 		cfg:        cfg,

@@ -2,10 +2,7 @@ language: go
 go:
     - 1.13
 before_install:
-    - go get github.com/songgao/water
 install:
-    - go get github.com/ICKelin/gtun/gtun
-    - go get github.com/ICKelin/gtun/gtund
 before_script:
 script:
     - cd $HOME/gopath/src/github.com/ICKelin/gtun/cmd/gtun

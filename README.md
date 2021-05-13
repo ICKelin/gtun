@@ -8,6 +8,11 @@
 - gtun是个ip代理，可以通过手动配置路由，对多个IP、IP段进行代理转发
 - ~~gtun支持内网穿透功能~~ 最新版本的gtun不再支持内网穿透功能，如果需要使用内网穿透，可以移步至[opennotr](https://github.com/ICKelin/opennotr)
 
+## 相关视频、教程
+
+- [使用gtun跨可用区访问k8s集群]()
+
+
 ## 限制
 gtun自身具备一定的穿墙功能，在法律允许的范围内使用gtun.
 

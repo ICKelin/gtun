@@ -8,10 +8,7 @@ import (
 )
 
 type Config struct {
-	Name         string       `toml:"name"`   // instance name
-	IsTap        bool         `toml:"istap"`  // is tap device(supported for windows)
 	ServerConfig ServerConfig `toml:"server"` // tcp server configuration
-	DHCPConfig   DHCPConfig   `toml:"dhcp"`   // ip block configuration
 	Log          Log          `toml:"log"`
 }
 

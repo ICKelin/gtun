@@ -26,19 +26,7 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	dhcp, err := NewDHCP(conf.DHCPConfig)
-	if err != nil {
-		logs.Error("init dhcp fail: %v", err)
-		return
-	}
-
-	iface, err := NewInterface(conf.IsTap, conf.DHCPConfig.Gateway, conf.DHCPConfig.CIDR)
-	if err != nil {
-		logs.Error("init interface fail: %v", err)
-		return
-	}
-
-	server, err := NewServer(conf.ServerConfig, dhcp, iface)
+	server, err := NewServer(conf.ServerConfig)
 	if err != nil {
 		logs.Error("new server: %v", err)
 		return

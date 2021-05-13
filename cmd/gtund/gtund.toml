@@ -1,0 +1,16 @@
+name="us-node-1-1"
+
+[server]
+listen=":9623"
+auth_key="gtun-cs-token"
+nameservers=["8.8.8.8", "8.8.4.4"]
+
+[dhcp]
+cidr="100.64.240.1/24"
+gateway="100.64.240.1"
+nameserver="8.8.8.8"
+
+[log]
+level="debug"
+path="log.log"
+days=3

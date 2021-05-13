@@ -8,11 +8,10 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-var defaultRegion = "US"
-
 type ClientConfig struct {
-	ServerAddr string `toml:"server"`
-	AuthKey    string `toml:"auth"`
+	Region     string
+	ServerAddr string
+	AuthKey    string
 }
 
 type Client struct {
@@ -31,7 +30,7 @@ func (client *Client) Run() {
 	for {
 		conn, err := net.DialTimeout("tcp", client.cfg.ServerAddr, time.Second*10)
 		if err != nil {
-			logs.Error("connect to server fail: %v", err)
+			logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
@@ -43,14 +42,14 @@ func (client *Client) Run() {
 			continue
 		}
 
-		sess := newSession(mux, defaultRegion)
-		client.sessionMgr.AddSession(defaultRegion, sess)
+		sess := newSession(mux, client.cfg.Region)
+		client.sessionMgr.AddSession(client.cfg.Region, sess)
 		select {
 		case <-sess.conn.CloseChan():
 			break
 		}
 
-		client.sessionMgr.DeleteSession(defaultRegion)
+		client.sessionMgr.DeleteSession(client.cfg.Region)
 		logs.Warn("reconnect")
 	}
 }

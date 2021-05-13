@@ -16,6 +16,7 @@ var (
 )
 
 type TCPForward struct {
+	region     string
 	listenAddr string
 	// writeTimeout defines the tcp connection write timeout in second
 	// default value set to 10 seconds
@@ -30,7 +31,7 @@ type TCPForward struct {
 	sessMgr *SessionManager
 }
 
-func NewTCPForward(cfg TCPForwardConfig) *TCPForward {
+func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
 	tcpReadTimeout := cfg.ReadTimeout
 	if tcpReadTimeout <= 0 {
 		tcpReadTimeout = defaultTCPTimeout
@@ -41,6 +42,7 @@ func NewTCPForward(cfg TCPForwardConfig) *TCPForward {
 		tcpWriteTimeout = int(defaultTCPTimeout)
 	}
 	return &TCPForward{
+		region:       region,
 		listenAddr:   cfg.ListenAddr,
 		writeTimeout: time.Duration(tcpWriteTimeout) * time.Second,
 		readTimeout:  time.Duration(tcpReadTimeout) * time.Second,
@@ -89,7 +91,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	dip, dport, _ := net.SplitHostPort(conn.LocalAddr().String())
 	sip, sport, _ := net.SplitHostPort(conn.RemoteAddr().String())
 
-	sess := f.sessMgr.GetSession(defaultRegion)
+	sess := f.sessMgr.GetSession(f.region)
 	if sess == nil {
 		logs.Error("no route to host: %s", dip)
 		return

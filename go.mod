@@ -24,4 +24,5 @@ require (
 	github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37 // indirect
 	github.com/xtaci/smux v2.0.1+incompatible
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	gopkg.in/yaml.v2 v2.3.0
 )

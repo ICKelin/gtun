@@ -29,6 +29,7 @@ type udpSession struct {
 }
 
 type UDPForward struct {
+	region         string
 	listenAddr     string
 	sessionTimeout int
 	readTimeout    time.Duration
@@ -45,7 +46,7 @@ type UDPForward struct {
 	udpsessLock sync.Mutex
 }
 
-func NewUDPForward(cfg UDPForwardConfig) *UDPForward {
+func NewUDPForward(region string, cfg UDPForwardConfig) *UDPForward {
 	readTimeout := cfg.ReadTimeout
 	if readTimeout <= 0 {
 		readTimeout = defaultUDPTimeout
@@ -62,6 +63,7 @@ func NewUDPForward(cfg UDPForwardConfig) *UDPForward {
 	}
 
 	return &UDPForward{
+		region:         region,
 		listenAddr:     cfg.ListenAddr,
 		readTimeout:    time.Duration(readTimeout) * time.Second,
 		writeTimeout:   time.Duration(writeTimeout) * time.Second,
@@ -154,7 +156,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 			f.udpsessLock.Unlock()
 		} else {
 			f.udpsessLock.Unlock()
-			sess := f.sessMgr.GetSession(defaultRegion)
+			sess := f.sessMgr.GetSession(f.region)
 			if sess == nil {
 				logs.Error("no route to host: %s", dip)
 				continue

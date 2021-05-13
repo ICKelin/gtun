@@ -21,7 +21,7 @@ var (
 
 type ServerConfig struct {
 	Listen  string `toml:"listen"`
-	AuthKey string `toml:"auth_key"`
+	AuthKey string `toml:"authKey"`
 }
 
 type Server struct {

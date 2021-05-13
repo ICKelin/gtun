@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-/gtund -c /gtund.conf
+/gtund -c /gtund.yaml

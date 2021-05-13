@@ -1,0 +1,8 @@
+server:
+  listen: ":9098"
+  authKey: "rewrite with your auth key"
+
+log:
+  days: 5
+  level: "info"
+  path: "gtund.log"

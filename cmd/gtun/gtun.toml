@@ -1,8 +1,0 @@
-[client]
-server = "192.168.31.65:9399"
-auth="gtun-cs-token"
-
-[log]
-level="debug"
-path="log.log"
-days=3

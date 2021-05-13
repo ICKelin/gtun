@@ -1,0 +1,20 @@
+forwards:
+  US: 
+    server: "127.0.0.1:9098"
+    authKey: "rewrite with your auth key"
+    tcp:
+      listenAddr: ":8098"
+    udp:
+      listenAddr: ":8098"
+  CN: 
+    server: "127.0.0.1:9097"
+    authKey: "rewrite with your auth key"
+    tcp:
+      listenAddr: ":8097"
+    udp:
+      listenAddr: ":8097"
+
+logs:
+  days: 5
+  level: "info"
+  path: "gtund.log"

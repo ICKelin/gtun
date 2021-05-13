@@ -3,33 +3,38 @@ package gtun
 import (
 	"io/ioutil"
 
-	"github.com/pelletier/go-toml"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	ClientConfig *ClientConfig    `toml:"client"`
-	TCPForward   TCPForwardConfig `toml:"tcpforward"`
-	UDPForward   UDPForwardConfig `toml:"udpforward"`
-	Log          Log              `toml:"log"`
+	Forwards map[string]ForwardConfig `yaml:"forwards"`
+	Log      Log                      `yaml:"log"`
 }
 
-type Log struct {
-	Days  int64  `toml:"days"`
-	Level string `toml:"level"`
-	Path  string `toml:"path"`
+type ForwardConfig struct {
+	ServerAddr string           `yaml:"server"`
+	AuthKey    string           `yaml:"authKey"`
+	TCPForward TCPForwardConfig `yaml:"tcp"`
+	UDPForward UDPForwardConfig `yaml:"udp"`
 }
 
 type TCPForwardConfig struct {
-	ListenAddr   string `toml:"listen"`
-	ReadTimeout  int    `toml:"readTimeout"`
-	WriteTimeout int    `toml:"writeTimeout"`
+	ListenAddr   string `yaml:"listen"`
+	ReadTimeout  int    `yaml:"readTimeout"`
+	WriteTimeout int    `yaml:"writeTimeout"`
 }
 
 type UDPForwardConfig struct {
-	ListenAddr     string `toml:"listen"`
-	ReadTimeout    int    `toml:"readTimeout"`
-	WriteTimeout   int    `toml:"writeTimeout"`
-	SessionTimeout int    `toml:"sessionTimeout"`
+	ListenAddr     string `yaml:"listen"`
+	ReadTimeout    int    `yaml:"readTimeout"`
+	WriteTimeout   int    `yaml:"writeTimeout"`
+	SessionTimeout int    `yaml:"sessionTimeout"`
+}
+
+type Log struct {
+	Days  int64  `yaml:"days"`
+	Level string `yaml:"level"`
+	Path  string `yaml:"path"`
 }
 
 func ParseConfig(path string) (*Config, error) {
@@ -43,6 +48,6 @@ func ParseConfig(path string) (*Config, error) {
 
 func parseConfig(content []byte) (*Config, error) {
 	conf := Config{}
-	err := toml.Unmarshal(content, &conf)
+	err := yaml.Unmarshal(content, &conf)
 	return &conf, err
 }

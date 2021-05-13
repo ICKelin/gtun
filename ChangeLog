@@ -15,3 +15,6 @@
 
 2018.08.30
             Refactor code.
+
+2021.05.13
+            use tproxy for traffic redirect, support multi forwards eg: CN, US

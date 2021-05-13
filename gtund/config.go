@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/pelletier/go-toml"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	ServerConfig ServerConfig `toml:"server"` // tcp server configuration
-	Log          Log          `toml:"log"`
+	ServerConfig ServerConfig `yaml:"server"`
+	Log          Log          `yaml:"log"`
 }
 
 type Log struct {
-	Days  int64  `toml:"days"`
-	Level string `toml:"level"`
-	Path  string `toml:"path"`
+	Days  int64  `yaml:"days"`
+	Level string `yaml:"level"`
+	Path  string `yaml:"path"`
 }
 
 func ParseConfig(path string) (*Config, error) {
@@ -29,7 +29,7 @@ func ParseConfig(path string) (*Config, error) {
 
 func parseConfig(content []byte) (*Config, error) {
 	var c Config
-	err := toml.Unmarshal(content, &c)
+	err := yaml.Unmarshal(content, &c)
 	return &c, err
 }
 

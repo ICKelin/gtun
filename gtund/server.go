@@ -29,11 +29,6 @@ type Server struct {
 	authKey    string
 }
 
-type GtunClientContext struct {
-	conn    net.Conn
-	payload []byte
-}
-
 func NewServer(cfg ServerConfig) (*Server, error) {
 	s := &Server{
 		listenAddr: cfg.Listen,
@@ -53,6 +48,11 @@ func (s *Server) Run() error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			if ne, ok := err.(net.Error); ok {
+				if ne.Temporary() {
+					continue
+				}
+			}
 			return err
 		}
 

@@ -1,5 +1,10 @@
 package proto
 
+import (
+	"encoding/binary"
+	"encoding/json"
+)
+
 const (
 	CmdAuth = iota
 	CmdHeartbeat
@@ -21,4 +26,24 @@ type ProxyProtocol struct {
 	SrcPort  string `json:"sport"`
 	DstIP    string `json:"dip"`
 	DstPort  string `json:"dport"`
+}
+
+func EncodeData(raw []byte) []byte {
+	buf := make([]byte, 2)
+	binary.BigEndian.PutUint16(buf, uint16(len(raw)))
+	buf = append(buf, raw...)
+	return buf
+}
+
+func EncodeProxyProtocol(protocol, sip, sport, dip, dport string) []byte {
+	proxyProtocol := &ProxyProtocol{
+		Protocol: protocol,
+		SrcIP:    sip,
+		SrcPort:  sport,
+		DstIP:    dip,
+		DstPort:  dport,
+	}
+
+	body, _ := json.Marshal(proxyProtocol)
+	return EncodeData(body)
 }

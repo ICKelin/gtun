@@ -1,0 +1,24 @@
+version: '3'
+services:     
+  opennotrd:
+    image: ickelin/gtun:latest
+    container_name: gtun
+    restart: always
+    volumes:
+      - /opt/apps/logs:/opt/logs
+    environment:
+      TIME_ZONE: Asia/Shanghai
+      settings: |
+       forwards:
+          CN: 
+            server: "10.60.6.95:8524"
+            authKey: "rewrite with your auth key"
+            tcp:
+              listen: ":8524"
+            udp:
+              listen: ":8525"
+
+        log:
+          days: 5
+          level: "info"
+          path: "/opt/logs/gtun.log"

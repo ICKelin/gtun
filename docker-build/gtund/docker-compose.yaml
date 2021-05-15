@@ -1,0 +1,19 @@
+version: '3'
+services:     
+  opennotrd:
+    image: ickelin/gtund:latest
+    container_name: gtund
+    restart: always
+    volumes:
+      - /opt/apps/logs:/opt/logs
+    environment:
+      TIME_ZONE: Asia/Shanghai
+      settings: |
+        server:
+          listen: ":9098"
+          authKey: "rewrite with your auth key"
+
+        log:
+          days: 5
+          level: "info"
+          path: "/opt/logs/gtund.log"

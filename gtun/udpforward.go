@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/ICKelin/gtun/pkg/logs"
+	"github.com/ICKelin/gtun/pkg/proto"
 	"github.com/hashicorp/yamux"
 )
 
@@ -126,7 +127,7 @@ func (f *UDPForward) Listen() (*net.UDPConn, error) {
 }
 
 func (f *UDPForward) Serve(lconn *net.UDPConn) error {
-	go f.recyeleSession()
+	go f.recycleSession()
 	buf := make([]byte, 64*1024)
 	oob := make([]byte, 1024)
 	for {
@@ -173,7 +174,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 			f.udpSessions[key] = udpsess
 			f.udpsessLock.Unlock()
 
-			bytes := encodeProxyProtocol("udp", sip, sport, dip, dport)
+			bytes := proto.EncodeProxyProtocol("udp", sip, sport, dip, dport)
 			stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
 			_, err = stream.Write(bytes)
 			stream.SetWriteDeadline(time.Time{})
@@ -187,7 +188,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 
 		stream := udpsess.stream
 
-		bytes := encode(buf[:nr])
+		bytes := proto.EncodeData(buf[:nr])
 		stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
 		_, err = stream.Write(bytes)
 		stream.SetWriteDeadline(time.Time{})
@@ -245,7 +246,7 @@ func (f *UDPForward) forwardUDP(stream *yamux.Stream, sessionKey string, fromadd
 	}
 }
 
-func (f *UDPForward) recyeleSession() {
+func (f *UDPForward) recycleSession() {
 	tick := time.NewTicker(time.Second * 5)
 	for range tick.C {
 		f.udpsessLock.Lock()

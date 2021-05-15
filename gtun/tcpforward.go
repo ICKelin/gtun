@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/pkg/logs"
+	"github.com/ICKelin/gtun/pkg/proto"
 )
 
 var (
@@ -29,6 +30,8 @@ type TCPForward struct {
 	// the session manager is the global session manager
 	// it stores opennotr_client to opennotr_server connection
 	sessMgr *SessionManager
+
+	mempool sync.Pool
 }
 
 func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
@@ -47,6 +50,11 @@ func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
 		writeTimeout: time.Duration(tcpWriteTimeout) * time.Second,
 		readTimeout:  time.Duration(tcpReadTimeout) * time.Second,
 		sessMgr:      GetSessionManager(),
+		mempool: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 32*1024)
+			},
+		},
 	}
 }
 
@@ -104,7 +112,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	}
 	defer stream.Close()
 
-	bytes := encodeProxyProtocol("tcp", sip, sport, dip, dport)
+	bytes := proto.EncodeProxyProtocol("tcp", sip, sport, dip, dport)
 	stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
 	_, err = stream.Write(bytes)
 	stream.SetWriteDeadline(time.Time{})
@@ -121,10 +129,12 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 		defer wg.Done()
 		defer stream.Close()
 		defer conn.Close()
-		buf := make([]byte, 4096)
+		obj := f.mempool.Get()
+		buf := obj.([]byte)
 		io.CopyBuffer(stream, conn, buf)
 	}()
 
-	buf := make([]byte, 4096)
+	obj := f.mempool.Get()
+	buf := obj.([]byte)
 	io.CopyBuffer(conn, stream, buf)
 }

@@ -1,13 +1,9 @@
 package gtun
 
 import (
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"net"
 	"syscall"
-
-	"github.com/ICKelin/gtun/pkg/proto"
 )
 
 func checksumAdd(buf []byte, seed uint32) uint32 {
@@ -78,22 +74,31 @@ func sendUDPViaRaw(fd int, src, dst *net.UDPAddr, payload []byte) error {
 	return syscall.Sendto(fd, data, 0, &addr)
 }
 
-func encode(raw []byte) []byte {
-	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, uint16(len(raw)))
-	buf = append(buf, raw...)
-	return buf
-}
+// func CreateIPsetHashNet(setname string) error{
+// 	return execCmd("ipset", []string{"create", setname,"hash:net"})
+// }
 
-func encodeProxyProtocol(protocol, sip, sport, dip, dport string) []byte {
-	proxyProtocol := &proto.ProxyProtocol{
-		Protocol: protocol,
-		SrcIP:    sip,
-		SrcPort:  sport,
-		DstIP:    dip,
-		DstPort:  dport,
-	}
+// func CreateIPtablesRule(ruleSpec ...string) error {
+// 	return execCmd("iptables", rule)
+// }
 
-	body, _ := json.Marshal(proxyProtocol)
-	return encode(body)
-}
+// func CreateIPrule(rule ...string) {
+// 	opts := []string{"rule"}
+// 	opts = append(opts, routes...}
+// 	return execCmd("ip", opts)
+// }
+
+// func CreateRoute(route ...string) {
+// 	opts := []string{"ro"}
+// 	opts = append(opts, routes...}
+// 	return execCmd("ip", opts)
+// }
+
+// func execCmd(cmd, opts ...string) error {
+// 	output, _ := exec.Command(cmd, opts).CombinedOutput()
+// 	if len(output) != 0 {
+// 		return fmt.Errorf("exec %s fail: %s", ruleSpec, output)
+// 	}
+
+// 	return nil
+// }

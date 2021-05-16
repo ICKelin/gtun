@@ -252,7 +252,6 @@ func (f *UDPForward) recycleSession() {
 		f.udpsessLock.Lock()
 		for k, s := range f.udpSessions {
 			if time.Now().Sub(s.lastActive).Seconds() > float64(f.sessionTimeout) {
-				logs.Warn("remove udp %v session, lastActive: %v", k, s.lastActive)
 				delete(f.udpSessions, k)
 			}
 		}

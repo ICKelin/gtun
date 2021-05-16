@@ -19,6 +19,7 @@ var (
 type TCPForward struct {
 	region     string
 	listenAddr string
+
 	// writeTimeout defines the tcp connection write timeout in second
 	// default value set to 10 seconds
 	writeTimeout time.Duration
@@ -44,6 +45,7 @@ func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
 	if tcpWriteTimeout <= 0 {
 		tcpWriteTimeout = int(defaultTCPTimeout)
 	}
+
 	return &TCPForward{
 		region:       region,
 		listenAddr:   cfg.ListenAddr,
@@ -75,7 +77,6 @@ func (f *TCPForward) Listen() (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return listener, nil
 }
 

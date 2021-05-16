@@ -42,11 +42,18 @@ func (client *Client) Run() {
 			continue
 		}
 
+		logs.Info("connect to region %s success", client.cfg.region)
 		sess := newSession(mux, client.cfg.Region)
 		client.sessionMgr.AddSession(client.cfg.Region, sess)
-		select {
-		case <-sess.conn.CloseChan():
-			break
+		tick := time.NewTicker(time.Second * 10)
+		for {
+			select {
+			case <-mux.CloseChan():
+				break
+			case <-tick.C:
+				rtt, _ := mux.Ping()
+				logs.Info("region %s rtt %dms", client.cfg.Region, rtt.Milliseconds())
+			}
 		}
 
 		client.sessionMgr.DeleteSession(client.cfg.Region)

@@ -73,32 +73,3 @@ func sendUDPViaRaw(fd int, src, dst *net.UDPAddr, payload []byte) error {
 	copy(addr.Addr[:], data[16:20])
 	return syscall.Sendto(fd, data, 0, &addr)
 }
-
-// func CreateIPsetHashNet(setname string) error{
-// 	return execCmd("ipset", []string{"create", setname,"hash:net"})
-// }
-
-// func CreateIPtablesRule(ruleSpec ...string) error {
-// 	return execCmd("iptables", rule)
-// }
-
-// func CreateIPrule(rule ...string) {
-// 	opts := []string{"rule"}
-// 	opts = append(opts, routes...}
-// 	return execCmd("ip", opts)
-// }
-
-// func CreateRoute(route ...string) {
-// 	opts := []string{"ro"}
-// 	opts = append(opts, routes...}
-// 	return execCmd("ip", opts)
-// }
-
-// func execCmd(cmd, opts ...string) error {
-// 	output, _ := exec.Command(cmd, opts).CombinedOutput()
-// 	if len(output) != 0 {
-// 		return fmt.Errorf("exec %s fail: %s", ruleSpec, output)
-// 	}
-
-// 	return nil
-// }

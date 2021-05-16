@@ -1,6 +1,6 @@
 version: '3'
 services:     
-  opennotrd:
+  gtund:
     image: ickelin/gtund:latest
     container_name: gtund
     restart: always

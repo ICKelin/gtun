@@ -1,6 +1,6 @@
 version: '3'
 services:     
-  opennotrd:
+  gtun:
     image: ickelin/gtun:latest
     container_name: gtun
     restart: always

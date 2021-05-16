@@ -42,7 +42,7 @@ func (client *Client) Run() {
 			continue
 		}
 
-		logs.Info("connect to region %s success", client.cfg.region)
+		logs.Info("connect to region %s success", client.cfg.Region)
 		sess := newSession(mux, client.cfg.Region)
 		client.sessionMgr.AddSession(client.cfg.Region, sess)
 		tick := time.NewTicker(time.Second * 10)

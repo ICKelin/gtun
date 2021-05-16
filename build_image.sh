@@ -1,4 +1,3 @@
-#!/bin/bash
 WORKSPACE=`pwd`
 ./build_exec.sh
 
@@ -12,4 +11,5 @@ echo "builded gtund docker image"
 echo "building gtun docker image"
 cd $WORKSPACE/docker-build/gtun
 cp $WORKSPACE/bin/gtun/gtun-linux_amd64 .
+docker build . -t gtun
 echo "builded gtun docker image"

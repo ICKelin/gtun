@@ -11,5 +11,5 @@ echo "builded gtund docker image"
 
 echo "building gtun docker image"
 cd $WORKSPACE/docker-build/gtun
-cp $WORKSPACE/bin/gtun/gtun .
+cp $WORKSPACE/bin/gtun/gtun-linux_amd64 .
 echo "builded gtun docker image"

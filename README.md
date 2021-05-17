@@ -23,13 +23,19 @@ gtun对标阿里云的全球应用加速，ucloud的pathX等产品的功能，�
 
 ## 目录
 - [介绍](#gtun)
-- [技术原理](#技术原理)
 - [功能特性](#功能特性)
+- [技术原理](#技术原理)
+- [安装部署](#安装部署)
+  - [前期准备](#前期准备)
+  - [安装运行gtund](#安装运行gtund)
+  - [安装运行gtun](#安装运行gtun)
+  - [配置加速ip](#配置加速ip)
+  - [功能测试](#功能测试)
 - [应用场景](#应用场景)
    - [IP加速]()
    - [域名加速]()
+   - [k8s集群访问]()
    - [全球应用加速]()
-- [安装部署](#安装部署)
 - [有问题怎么办](#有问题怎么办)
 - [关于作者](#关于作者)
 
@@ -37,6 +43,7 @@ gtun对标阿里云的全球应用加速，ucloud的pathX等产品的功能，�
 
 - 纯应用层实现，不存在overlay网络，支持tcp和udp协议以及运行在其上的所有七层协议
 - 支持ip加速，配合dnsmasq等软件可支持域名加速场景
+- 支持动态和静态内容访问加速
 - 引入`kcp`，`quic`等协议优化跨境传输
 
 [返回目录](#目录)
@@ -55,9 +62,91 @@ gtun本身只提供流量代理通道，至于哪些流量需要被劫持，这�
 
 [返回目录](#目录)
 
-## 应用场景
-
 ## 安装部署
+在这一节当中结合实际应用场景说明如何安装和部署gtun和gtund程序，在本应用场景当中，通过配置IP代理加速，加快访问位于美国的云服务器ssh服务。
+
+### 前期准备
+
+- 一台公有云服务器，用于部署服务端程序gtund，区域越靠近被加速区域（源站）越好，并且确认gtund监听的端口被打开
+- 另外一台可以是公有云服务器，也可以是内网机器，用于部署客户端程序gtun，目前gtun只支持linux系统。
+
+### 安装运行gtund
+gtund需要运行在公有云上，相对比较简单，原则上越靠近源站越好。
+
+首先生成配置文件，可以下载[gtund.yaml](https://github.com/ICKelin/gtun/blob/tproxy/etc/gtund.yaml)进行修改
+
+```yaml
+server:
+  listen: ":9098"
+  authKey: "rewrite with your auth key"
+
+log:
+  days: 5
+  level: "info"
+  path: "gtund.log"
+```
+
+大部分情况下您只需要修改`authKey`字段即可，配置文件生成之后，通过运行
+`./gtund -c gtund.yaml`文件即可。
+
+### 安装运行gtun
+gtun可以运行在内网，也可以运行在公有云，在本场景当中，gtun会被部署在内网。
+
+首先生成配置文件，可以下载gtun.yaml进行修改
+
+```yaml
+forwards:
+  CN: 
+    server: "10.60.6.95:8524"
+    authKey: "rewrite with your auth key"
+    tcp:
+      listen: ":8524"
+    udp:
+      listen: ":8525"
+
+log:
+  days: 5
+  level: "info"
+  path: "gtun.log"
+```
+
+- `forwards`配置了转发路线相关配置，key为转发的区域
+- `server`字段配置了gtund所在机器的ip和端口
+- `authKey`字段配置了gtun和gtund双方认证的key，在gtund的配置文件当中指定
+- `tcp/udp`为tcp/udp代理相关配置，此处配置了tcp/udp代理监听的端口，所有需要代理加速的流量都会被重定向到该端口。
+
+配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。
+### 配置加速ip
+在上述过程中，启动了gtun和gtund程序，但是并未添加任何需要加速的信息，那么gtun如何进行加速呢？需要额外手动配置加速ip，并将该ip的tcp流量全部转发至`127.0.0.1:8524`端口，udp流量全部转发至`127.0.0.1:8525`端口。
+
+这个过程是通过ipset和路由来配置的。以`1.1.1.1`为例
+
+第一步，创建ipset，并将`8.8.8.8`加入其中
+
+`ipset create GTUN-US hash:net`
+
+`ipset add GTUN-US 8.8.8.8`
+
+第二步，创建iptables规则，匹配目的ip为`GTUN-US`这个ipset内部的ip，然后做`tproxy`操作，将流量重定向到本地`8524`和`8525`端口
+
+```
+iptables -t mangle -I PREROUTING -p tcp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 8524
+iptables -t mangle -I PREROUTING -p udp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 8524
+iptables -t mangle -I OUTPUT -m set --match-set GTUN-US dst -j MARK --set-mark 1
+```
+
+第三步，添加路由表，确保数据包不被路由选择子系统丢弃
+
+```
+ip rule add fwmark 1 lookup 100
+ip ro add local default dev lo table 100
+```
+
+至此所有配置都已经完成，后续需要新增代理ip，只使用以下命令将ip加入`GTUN-US`这个ipset当中即可
+
+### 功能测试
+
+## 应用场景
 
 ## 有问题怎么办
 

@@ -3,9 +3,15 @@ package gtun
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/pkg/logs"
 )
+
+func init() {
+	go http.ListenAndServe(":6060", nil)
+}
 
 func Main() {
 	flgConf := flag.String("c", "", "config file")

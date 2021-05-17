@@ -47,12 +47,17 @@ func (client *Client) Run() {
 		client.sessionMgr.AddSession(client.cfg.Region, sess)
 		tick := time.NewTicker(time.Second * 10)
 		for {
+			isclose := false
 			select {
 			case <-mux.CloseChan():
+				isclose = true
 				break
 			case <-tick.C:
 				rtt, _ := mux.Ping()
 				logs.Info("region %s rtt %dms", client.cfg.Region, rtt.Milliseconds())
+			}
+			if isclose {
+				break
 			}
 		}
 

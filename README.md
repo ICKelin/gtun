@@ -12,7 +12,6 @@
 <a href="https://github.com/ICKelin/gtun/blob/master/LICENSE">
 <img src="https://img.shields.io/github/license/mashape/apistatus.svg" alt="license">
 </a>
-
 gtun是一款开源的ip代理加速软件，通过`tproxy`技术实现流量劫持，`quic`和`kcp`等协议优化广域网传输，gtun提供一个基础通道，所有加入`ipset`的ip，出口，入口流量都会被gtun进行拦截并代理到指定出口。
 
 gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。
@@ -30,12 +29,8 @@ gtun对标阿里云的全球应用加速，ucloud的pathX等产品的功能，�
   - [安装运行gtund](#安装运行gtund)
   - [安装运行gtun](#安装运行gtun)
   - [配置加速ip](#配置加速ip)
-  - [功能测试](#功能测试)
+  - [加速效果测试](#加速效果)
 - [应用场景](#应用场景)
-   - [IP加速]()
-   - [域名加速]()
-   - [k8s集群访问]()
-   - [全球应用加速]()
 - [有问题怎么办](#有问题怎么办)
 - [关于作者](#关于作者)
 
@@ -142,11 +137,63 @@ ip rule add fwmark 1 lookup 100
 ip ro add local default dev lo table 100
 ```
 
-至此所有配置都已经完成，后续需要新增代理ip，只使用以下命令将ip加入`GTUN-US`这个ipset当中即可
+至此所有配置都已经完成，后续需要新增代理ip，只使用以下命令将ip加入`GTUN-US`这个ipset当中即可，现在可以先尝试测试`1.1.1.1`这个ip的代理
+```
+root@raspberrypi:/home/pi# nslookup www.google.com 1.1.1.1
+Server:		1.1.1.1
+Address:	1.1.1.1#53
 
-### 功能测试
+Non-authoritative answer:
+Name:	www.google.com
+Address: 142.250.73.228
+```
+
+### 加速效果
+
+有了上述的基础，现在可以进行下载速度测试对比，以`http://speedtest.atlanta.linode.com/100MB-atlanta.bin`这个文件作为测试，
+
+首先是通过gtun代理加速之后的测试，需要将`speedtest.atlanta.linode.com`加入到GTUN-US当中
+
+`ipset add GTUN-US speedtest.atlanta.linode.com`
+
+```shell
+root@raspberrypi:/home/pi# wget http://speedtest.atlanta.linode.com/100MB-atlanta.bin -v
+--2021-05-18 22:00:23--  http://speedtest.atlanta.linode.com/100MB-atlanta.bin
+正在解析主机 speedtest.atlanta.linode.com (speedtest.atlanta.linode.com)... 50.116.39.117, 2600:3c02::f03c:91ff:feae:641
+正在连接 speedtest.atlanta.linode.com (speedtest.atlanta.linode.com)|50.116.39.117|:80... 已连接。
+已发出 HTTP 请求，正在等待回应... 200 OK
+长度：104857600 (100M) [application/octet-stream]
+正在保存至: “100MB-atlanta.bin”
+
+100MB-atlanta.bin                   100%[==================================================================>] 100.00M  2.39MB/s    in 57s
+
+2021-05-18 22:01:21 (1.77 MB/s) - 已保存 “100MB-atlanta.bin” [104857600/104857600])
+```
+
+然后通过正常网络测试，将`speedtest.atlanta.linode.com`从GTUN-US当中移除即可
+
+`ipset del GTUN-US speedtest.atlanta.linode.com`
+
+```
+root@raspberrypi:/home/pi# wget http://speedtest.atlanta.linode.com/100MB-atlanta.bin -v
+--2021-05-18 22:04:44--  http://speedtest.atlanta.linode.com/100MB-atlanta.bin
+正在解析主机 speedtest.atlanta.linode.com (speedtest.atlanta.linode.com)... 50.116.39.117, 2600:3c02::f03c:91ff:feae:641
+正在连接 speedtest.atlanta.linode.com (speedtest.atlanta.linode.com)|50.116.39.117|:80... 已连接。
+已发出 HTTP 请求，正在等待回应... 200 OK
+长度：104857600 (100M) [application/octet-stream]
+正在保存至: “100MB-atlanta.bin.1”
+
+100MB-atlanta.bin.1                   0%[                                                                   ]   1012K  9.50KB/s    eta 98m 58s
+```
+
+可以看见，通过gtun加速之后，速度可以达到2.39MB/s，而未通过gtun加速的正常下载速度则为15KB/s左右的速度，两者差了一个数量级。
 
 ## 应用场景
+
+- IP加速，可用于ip，子网加速
+- 域名，站点加速，需要使用dnsmasq或者nginx/openresty等组件实现
+- k8s集群网络代理，ip加速的一个子集，可代理访问k8s的service，pod网段
+- 全球应用加速
 
 ## 有问题怎么办
 

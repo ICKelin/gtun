@@ -92,7 +92,7 @@ log:
 ### 安装运行gtun
 gtun可以运行在内网，也可以运行在公有云，在本场景当中，gtun会被部署在内网。
 
-首先生成配置文件，可以下载gtun.yaml进行修改
+首先生成配置文件，可以下载[gtun.yaml](https://github.com/ICKelin/gtun/blob/tproxy/etc/gtun.yaml)进行修改
 
 ```yaml
 forwards:
@@ -121,11 +121,11 @@ log:
 
 这个过程是通过ipset和路由来配置的。以`1.1.1.1`为例
 
-第一步，创建ipset，并将`8.8.8.8`加入其中
+第一步，创建ipset，并将`1.1.1.1`加入其中
 
 `ipset create GTUN-US hash:net`
 
-`ipset add GTUN-US 8.8.8.8`
+`ipset add GTUN-US 1.1.1.1`
 
 第二步，创建iptables规则，匹配目的ip为`GTUN-US`这个ipset内部的ip，然后做`tproxy`操作，将流量重定向到本地`8524`和`8525`端口
 

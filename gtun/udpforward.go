@@ -163,7 +163,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 				continue
 			}
 
-			stream, err := sess.OpenStream()
+			stream, err := sess.conn.OpenStream()
 			if err != nil {
 				logs.Error("open stream fail: %v", err)
 				continue

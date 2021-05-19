@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/pkg/logs"
-	"github.com/hashicorp/yamux"
+	"github.com/xtaci/smux"
 )
 
 type ClientConfig struct {
@@ -35,7 +35,7 @@ func (client *Client) Run() {
 			continue
 		}
 
-		mux, err := yamux.Client(conn, nil)
+		mux, err := smux.Client(conn, nil)
 		if err != nil {
 			logs.Error("new yamux session fail: %v", err)
 			time.Sleep(time.Second * 3)
@@ -43,19 +43,11 @@ func (client *Client) Run() {
 		}
 
 		logs.Info("connect to region %s success", client.cfg.Region)
-		client.sessionMgr.AddSession(client.cfg.Region, mux)
-		tick := time.NewTicker(time.Second * 10)
-		for {
-			isclose := false
-			select {
-			case <-mux.CloseChan():
-				isclose = true
-				break
-			case <-tick.C:
-				rtt, _ := mux.Ping()
-				logs.Info("region %s rtt %dms", client.cfg.Region, rtt.Milliseconds())
-			}
-			if isclose {
+		sess := newSession(mux, client.cfg.Region)
+		client.sessionMgr.AddSession(client.cfg.Region, sess)
+		tick := time.NewTicker(time.Second * 1)
+		for range tick.C {
+			if sess.conn.IsClosed() {
 				break
 			}
 		}

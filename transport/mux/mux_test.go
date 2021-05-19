@@ -2,7 +2,6 @@ package mux
 
 import (
 	"fmt"
-	"io"
 	"testing"
 	"time"
 
@@ -30,9 +29,6 @@ func TestYamux(t *testing.T) {
 				for {
 					stream, err := conn.AcceptStream()
 					if err != nil {
-						if err != io.EOF {
-							t.Error(err)
-						}
 						break
 					}
 					count += 1
@@ -51,13 +47,13 @@ func TestYamux(t *testing.T) {
 		return
 	}
 	defer conn.Close()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1000; i++ {
 		stream, err := conn.OpenStream()
 		if err != nil {
 			t.Error(err)
 			break
 		}
 		stream.Close()
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Millisecond * 100)
 	}
 }

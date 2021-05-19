@@ -11,7 +11,7 @@ import (
 
 	"github.com/ICKelin/gtun/pkg/logs"
 	"github.com/ICKelin/gtun/pkg/proto"
-	"github.com/hashicorp/yamux"
+	"github.com/xtaci/smux"
 )
 
 var (
@@ -62,7 +62,7 @@ func (s *Server) Run() error {
 
 func (s *Server) onConn(conn net.Conn) {
 	defer conn.Close()
-	sess, err := yamux.Server(conn, nil)
+	sess, err := smux.Server(conn, nil)
 	if err != nil {
 		logs.Error("create yamux server fail: %v", err)
 		return
@@ -78,7 +78,7 @@ func (s *Server) onConn(conn net.Conn) {
 	}
 }
 
-func (s *Server) handleStream(stream *yamux.Stream) {
+func (s *Server) handleStream(stream *smux.Stream) {
 	lenbuf := make([]byte, 2)
 	_, err := stream.Read(lenbuf)
 	if err != nil {
@@ -111,7 +111,7 @@ func (s *Server) handleStream(stream *yamux.Stream) {
 	}
 }
 
-func (s *Server) tcpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
+func (s *Server) tcpProxy(stream *smux.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	remoteConn, err := net.DialTimeout("tcp", addr, time.Second*10)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *Server) tcpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
 	}()
 }
 
-func (s *Server) udpProxy(stream *yamux.Stream, p *proto.ProxyProtocol) {
+func (s *Server) udpProxy(stream *smux.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	raddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {

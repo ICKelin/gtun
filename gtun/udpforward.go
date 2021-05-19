@@ -13,7 +13,7 @@ import (
 
 	"github.com/ICKelin/gtun/pkg/logs"
 	"github.com/ICKelin/gtun/pkg/proto"
-	"github.com/hashicorp/yamux"
+	"github.com/ICKelin/gtun/transport"
 )
 
 var (
@@ -25,7 +25,7 @@ var (
 )
 
 type udpSession struct {
-	stream     *yamux.Stream
+	stream     transport.Stream
 	lastActive time.Time
 }
 
@@ -163,7 +163,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 				continue
 			}
 
-			stream, err := sess.conn.OpenStream()
+			stream, err := sess.OpenStream()
 			if err != nil {
 				logs.Error("open stream fail: %v", err)
 				continue
@@ -200,7 +200,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 }
 
 // forwardUDP reads from stream and write to tofd via rawsocket
-func (f *UDPForward) forwardUDP(stream *yamux.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
+func (f *UDPForward) forwardUDP(stream transport.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
 	defer stream.Close()
 	defer func() {
 		f.udpsessLock.Lock()

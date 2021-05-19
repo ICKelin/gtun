@@ -3,7 +3,7 @@ package gtun
 import (
 	"sync"
 
-	"github.com/hashicorp/yamux"
+	"github.com/ICKelin/gtun/transport"
 )
 
 var sessionMgr = &SessionManager{}
@@ -18,29 +18,16 @@ func GetSessionManager() *SessionManager {
 	return sessionMgr
 }
 
-// Session defines each opennotr_client to opennotr_server connection
-type Session struct {
-	conn   *yamux.Session
-	region string
-}
-
-func newSession(conn *yamux.Session, region string) *Session {
-	return &Session{
-		conn:   conn,
-		region: region,
-	}
-}
-
-func (mgr *SessionManager) AddSession(region string, sess *Session) {
+func (mgr *SessionManager) AddSession(region string, sess transport.Session) {
 	mgr.sessions.Store(region, sess)
 }
 
-func (mgr *SessionManager) GetSession(region string) *Session {
+func (mgr *SessionManager) GetSession(region string) transport.Session {
 	val, ok := mgr.sessions.Load(region)
 	if !ok {
 		return nil
 	}
-	return val.(*Session)
+	return val.(transport.Session)
 }
 
 func (mgr *SessionManager) DeleteSession(region string) {

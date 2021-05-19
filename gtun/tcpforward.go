@@ -106,7 +106,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 		return
 	}
 	logs.Debug("%s:%s=>%s:%s", sip, sport, dip, dport)
-	stream, err := sess.conn.OpenStream()
+	stream, err := sess.OpenStream()
 	if err != nil {
 		logs.Error("open stream fail: %v", err)
 		return

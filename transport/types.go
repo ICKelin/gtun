@@ -1,14 +1,24 @@
 package transport
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
-type Client struct{}
+type Dialer interface {
+	Dial(target string) (Conn, error)
+}
 
-type Server struct{}
+type Listener interface {
+	Accept() (Conn, error)
+	Close() error
+	Addr() net.Addr
+}
 
-type Session interface {
+type Conn interface {
 	OpenStream() (Stream, error)
 	AcceptStream() (Stream, error)
+	Close()
 }
 
 type Stream interface {

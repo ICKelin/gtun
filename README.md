@@ -12,6 +12,7 @@
 <a href="https://github.com/ICKelin/gtun/blob/master/LICENSE">
 <img src="https://img.shields.io/github/license/mashape/apistatus.svg" alt="license">
 </a>
+
 gtun是一款开源的ip代理加速软件，通过`tproxy`技术实现流量劫持，`quic`和`kcp`等协议优化广域网传输，gtun提供一个基础通道，所有加入`ipset`的ip，出口，入口流量都会被gtun进行拦截并代理到指定出口。
 
 gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。

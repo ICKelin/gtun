@@ -27,19 +27,6 @@ func NewClient(cfg *ClientConfig) *Client {
 
 func (client *Client) Run() {
 	for {
-		// conn, err := net.DialTimeout("tcp", client.cfg.ServerAddr, time.Second*10)
-		// if err != nil {
-		// 	logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)
-		// 	time.Sleep(time.Second * 3)
-		// 	continue
-		// }
-
-		// mux, err := smux.Client(conn, nil)
-		// if err != nil {
-		// 	logs.Error("new yamux session fail: %v", err)
-		// 	time.Sleep(time.Second * 3)
-		// 	continue
-		// }
 		dialer := mux.Dialer{}
 		conn, err := dialer.Dial(client.cfg.ServerAddr)
 		if err != nil {

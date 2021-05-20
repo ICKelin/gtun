@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/ICKelin/gtun/pkg/logs"
-	"github.com/ICKelin/gtun/pkg/proto"
+	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/gtun/internal/proto"
 	"github.com/xtaci/smux"
 )
 

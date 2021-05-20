@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/ICKelin/gtun/pkg/logs"
+	"github.com/ICKelin/gtun/internal/logs"
 )
 
 var version = ""

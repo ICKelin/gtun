@@ -1,11 +1,10 @@
 package gtun
 
 import (
-	"net"
 	"time"
 
 	"github.com/ICKelin/gtun/pkg/logs"
-	"github.com/xtaci/smux"
+	"github.com/ICKelin/gtun/transport/mux"
 )
 
 type ClientConfig struct {
@@ -28,22 +27,29 @@ func NewClient(cfg *ClientConfig) *Client {
 
 func (client *Client) Run() {
 	for {
-		conn, err := net.DialTimeout("tcp", client.cfg.ServerAddr, time.Second*10)
+		// conn, err := net.DialTimeout("tcp", client.cfg.ServerAddr, time.Second*10)
+		// if err != nil {
+		// 	logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)
+		// 	time.Sleep(time.Second * 3)
+		// 	continue
+		// }
+
+		// mux, err := smux.Client(conn, nil)
+		// if err != nil {
+		// 	logs.Error("new yamux session fail: %v", err)
+		// 	time.Sleep(time.Second * 3)
+		// 	continue
+		// }
+		dialer := mux.Dialer{}
+		conn, err := dialer.Dial(client.cfg.ServerAddr)
 		if err != nil {
 			logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
-		mux, err := smux.Client(conn, nil)
-		if err != nil {
-			logs.Error("new yamux session fail: %v", err)
-			time.Sleep(time.Second * 3)
-			continue
-		}
-
 		logs.Info("connect to region %s success", client.cfg.Region)
-		sess := newSession(mux, client.cfg.Region)
+		sess := newSession(conn, client.cfg.Region)
 		client.sessionMgr.AddSession(client.cfg.Region, sess)
 		tick := time.NewTicker(time.Second * 1)
 		for range tick.C {

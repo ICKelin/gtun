@@ -38,6 +38,10 @@ func (c *Conn) Close() {
 	c.mux.Close()
 }
 
+func (c *Conn) IsClosed() bool {
+	return c.mux.IsClosed()
+}
+
 func (d *Dialer) Dial(remote string) (transport.Conn, error) {
 	conn, err := net.Dial("tcp", remote)
 	if err != nil {

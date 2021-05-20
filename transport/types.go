@@ -19,6 +19,7 @@ type Conn interface {
 	OpenStream() (Stream, error)
 	AcceptStream() (Stream, error)
 	Close()
+	IsClosed() bool
 }
 
 type Stream interface {

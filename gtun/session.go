@@ -3,7 +3,7 @@ package gtun
 import (
 	"sync"
 
-	"github.com/xtaci/smux"
+	"github.com/ICKelin/gtun/transport"
 )
 
 var sessionMgr = &SessionManager{}
@@ -20,13 +20,14 @@ func GetSessionManager() *SessionManager {
 
 // Session defines each opennotr_client to opennotr_server connection
 type Session struct {
-	conn    *smux.Session
+	// conn    *smux.Session
+	conn    transport.Conn
 	region  string
 	rxbytes uint64
 	txbytes uint64
 }
 
-func newSession(conn *smux.Session, region string) *Session {
+func newSession(conn transport.Conn, region string) *Session {
 	return &Session{
 		conn:   conn,
 		region: region,

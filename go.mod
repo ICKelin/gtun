@@ -8,8 +8,8 @@ require (
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
-	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
 	github.com/klauspost/reedsolomon v1.9.9 // indirect
+	github.com/lucas-clemente/quic-go v0.16.1
 	github.com/mmcloughlin/avo v0.0.0-20201216231306-039ef47f4f69 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.5.1

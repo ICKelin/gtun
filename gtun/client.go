@@ -3,7 +3,7 @@ package gtun
 import (
 	"time"
 
-	"github.com/ICKelin/gtun/pkg/logs"
+	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/transport/mux"
 )
 

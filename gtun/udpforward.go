@@ -11,8 +11,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/ICKelin/gtun/pkg/logs"
-	"github.com/ICKelin/gtun/pkg/proto"
+	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/gtun/internal/proto"
 	"github.com/ICKelin/gtun/transport"
 )
 

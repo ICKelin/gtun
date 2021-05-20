@@ -6,7 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/ICKelin/gtun/pkg/logs"
+	"github.com/ICKelin/gtun/internal/logs"
 )
 
 func init() {

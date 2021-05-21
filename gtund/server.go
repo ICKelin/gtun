@@ -11,7 +11,8 @@ import (
 
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/proto"
-	"github.com/xtaci/smux"
+	"github.com/ICKelin/gtun/transport"
+	"github.com/ICKelin/gtun/transport/kcp"
 )
 
 var (
@@ -39,7 +40,8 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 }
 
 func (s *Server) Run() error {
-	listener, err := net.Listen("tcp", s.listenAddr)
+
+	listener, err := kcp.Listen(s.listenAddr)
 	if err != nil {
 		return err
 	}
@@ -60,16 +62,10 @@ func (s *Server) Run() error {
 	}
 }
 
-func (s *Server) onConn(conn net.Conn) {
+func (s *Server) onConn(conn transport.Conn) {
 	defer conn.Close()
-	sess, err := smux.Server(conn, nil)
-	if err != nil {
-		logs.Error("create yamux server fail: %v", err)
-		return
-	}
-
 	for {
-		stream, err := sess.AcceptStream()
+		stream, err := conn.AcceptStream()
 		if err != nil {
 			logs.Error("accept stream fail: %v", err)
 			break
@@ -78,7 +74,7 @@ func (s *Server) onConn(conn net.Conn) {
 	}
 }
 
-func (s *Server) handleStream(stream *smux.Stream) {
+func (s *Server) handleStream(stream transport.Stream) {
 	lenbuf := make([]byte, 2)
 	_, err := stream.Read(lenbuf)
 	if err != nil {
@@ -111,7 +107,7 @@ func (s *Server) handleStream(stream *smux.Stream) {
 	}
 }
 
-func (s *Server) tcpProxy(stream *smux.Stream, p *proto.ProxyProtocol) {
+func (s *Server) tcpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	remoteConn, err := net.DialTimeout("tcp", addr, time.Second*10)
 	if err != nil {
@@ -133,7 +129,7 @@ func (s *Server) tcpProxy(stream *smux.Stream, p *proto.ProxyProtocol) {
 	}()
 }
 
-func (s *Server) udpProxy(stream *smux.Stream, p *proto.ProxyProtocol) {
+func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
 	raddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {

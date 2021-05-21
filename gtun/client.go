@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport/mux"
+	"github.com/ICKelin/gtun/transport/kcp"
 )
 
 type ClientConfig struct {
@@ -27,7 +27,7 @@ func NewClient(cfg *ClientConfig) *Client {
 
 func (client *Client) Run() {
 	for {
-		dialer := mux.Dialer{}
+		dialer := kcp.Dialer{}
 		conn, err := dialer.Dial(client.cfg.ServerAddr)
 		if err != nil {
 			logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)

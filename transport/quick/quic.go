@@ -53,11 +53,12 @@ func (d *Dialer) Dial(remote string) (transport.Conn, error) {
 		NextProtos:         []string{"quic-echo-example"},
 	}
 
-	sess, err := quic.DialAddr(remote, tlsConf, nil)
+	sess, err := quic.DialAddr(remote, tlsConf, &quic.Config{
+		MaxIncomingStreams: -1,
+	})
 	if err != nil {
 		return nil, err
 	}
-
 	return &Conn{sess: sess}, nil
 }
 
@@ -66,7 +67,6 @@ func (l *Listener) Accept() (transport.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &Conn{conn}, nil
 }
 
@@ -75,7 +75,7 @@ func (l *Listener) Close() error {
 }
 
 func Listen(laddr string) (transport.Listener, error) {
-	listener, err := quic.ListenAddr(laddr, generateTLSConfig(), nil)
+	listener, err := quic.ListenAddr(laddr, generateTLSConfig(), &quic.Config{})
 	if err != nil {
 		return nil, err
 	}

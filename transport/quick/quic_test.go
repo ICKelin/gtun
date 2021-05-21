@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"testing"
 	"time"
-
-	"github.com/ICKelin/gtun/transport"
 )
 
 func TestQuic(t *testing.T) {
@@ -33,9 +31,7 @@ func TestQuic(t *testing.T) {
 					}
 					count += 1
 					fmt.Println("Accept stream ", count)
-					go func(s transport.Stream) {
-						stream.Close()
-					}(stream)
+					fmt.Println(stream.Close())
 				}
 			}()
 		}
@@ -53,7 +49,7 @@ func TestQuic(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		stream.Close()
-		time.Sleep(time.Millisecond * 100)
+		fmt.Println(stream.Close())
+		time.Sleep(time.Millisecond * 10)
 	}
 }

@@ -40,7 +40,6 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 }
 
 func (s *Server) Run() error {
-
 	listener, err := kcp.Listen(s.listenAddr)
 	if err != nil {
 		return err

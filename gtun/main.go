@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/gtun/transport/kcp"
 )
 
 func init() {
@@ -42,13 +43,9 @@ func Main() {
 		}
 
 		go udpfw.Serve(udpConn)
-
-		client := NewClient(&ClientConfig{
-			ServerAddr: cfg.ServerAddr,
-			AuthKey:    cfg.AuthKey,
-			Region:     region,
-		})
-		go client.Run()
+		dialer := kcp.Dialer{}
+		client := NewClient(&dialer)
+		go client.Run(region, cfg.ServerAddr)
 	}
 
 	select {}

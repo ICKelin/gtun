@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport/kcp"
+	"github.com/ICKelin/gtun/transport"
 )
 
 type ClientConfig struct {
@@ -14,30 +14,29 @@ type ClientConfig struct {
 }
 
 type Client struct {
-	cfg        *ClientConfig
+	dialer     transport.Dialer
 	sessionMgr *SessionManager
 }
 
-func NewClient(cfg *ClientConfig) *Client {
+func NewClient(dialer transport.Dialer) *Client {
 	return &Client{
-		cfg:        cfg,
+		dialer:     dialer,
 		sessionMgr: GetSessionManager(),
 	}
 }
 
-func (client *Client) Run() {
+func (client *Client) Run(region, remote string) {
 	for {
-		dialer := kcp.Dialer{}
-		conn, err := dialer.Dial(client.cfg.ServerAddr)
+		conn, err := client.dialer.Dial(remote)
 		if err != nil {
-			logs.Error("connect to %s fail: %v", client.cfg.ServerAddr, err)
+			logs.Error("connect to %s fail: %v", remote, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
-		logs.Info("connect to region %s success", client.cfg.Region)
-		sess := newSession(conn, client.cfg.Region)
-		client.sessionMgr.AddSession(client.cfg.Region, sess)
+		logs.Info("connect to region %s success", region)
+		sess := newSession(conn, region)
+		client.sessionMgr.AddSession(region, sess)
 		tick := time.NewTicker(time.Second * 1)
 		for range tick.C {
 			if sess.conn.IsClosed() {
@@ -45,7 +44,7 @@ func (client *Client) Run() {
 			}
 		}
 
-		client.sessionMgr.DeleteSession(client.cfg.Region)
+		client.sessionMgr.DeleteSession(region)
 		logs.Warn("reconnect")
 	}
 }

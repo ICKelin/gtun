@@ -43,7 +43,7 @@ func (c *Conn) IsClosed() bool {
 }
 
 func (dialer *Dialer) Dial(remote string) (transport.Conn, error) {
-	kcpconn, err := kcpgo.DialWithOptions(remote, nil, 0, 0)
+	kcpconn, err := kcpgo.DialWithOptions(remote, nil, 10, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +51,13 @@ func (dialer *Dialer) Dial(remote string) (transport.Conn, error) {
 	// kcp options
 	// just for test
 	kcpconn.SetStreamMode(true)
-	kcpconn.SetWriteDelay(true)
+	kcpconn.SetWriteDelay(false)
 	kcpconn.SetNoDelay(1, 10, 2, 1)
-	kcpconn.SetWindowSize(2048, 2048)
-	kcpconn.SetMtu(1480)
-	kcpconn.SetACKNoDelay(false)
+	kcpconn.SetWindowSize(1024, 1024)
+	kcpconn.SetMtu(1350)
+	kcpconn.SetACKNoDelay(true)
+	kcpconn.SetReadBuffer(4194304)
+	kcpconn.SetWriteBuffer(4194304)
 
 	sess, err := smux.Client(kcpconn, nil)
 	if err != nil {
@@ -71,11 +73,11 @@ func (l *Listener) Accept() (transport.Conn, error) {
 	}
 
 	conn.SetStreamMode(true)
-	conn.SetWriteDelay(true)
+	conn.SetWriteDelay(false)
 	conn.SetNoDelay(1, 10, 2, 1)
-	conn.SetWindowSize(2048, 2048)
-	conn.SetMtu(1480)
-	conn.SetACKNoDelay(false)
+	conn.SetWindowSize(1024, 1024)
+	conn.SetMtu(1350)
+	conn.SetACKNoDelay(true)
 	mux, err := smux.Server(conn, nil)
 	if err != nil {
 		return nil, err
@@ -93,9 +95,11 @@ func (l *Listener) Addr() net.Addr {
 }
 
 func Listen(laddr string) (transport.Listener, error) {
-	listener, err := kcpgo.ListenWithOptions(laddr, nil, 0, 0)
+	listener, err := kcpgo.ListenWithOptions(laddr, nil, 10, 3)
 	if err != nil {
 		return nil, err
 	}
+	listener.SetReadBuffer(4194304)
+	listener.SetWriteBuffer(4194304)
 	return &Listener{Listener: listener}, nil
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/proto"
 	"github.com/ICKelin/gtun/transport"
-	"github.com/ICKelin/gtun/transport/kcp"
 )
 
 var (
@@ -26,28 +25,18 @@ type ServerConfig struct {
 }
 
 type Server struct {
-	listenAddr string
-	authKey    string
+	listener transport.Listener
 }
 
-func NewServer(cfg ServerConfig) (*Server, error) {
-	s := &Server{
-		listenAddr: cfg.Listen,
-		authKey:    cfg.AuthKey,
+func NewServer(listener transport.Listener) *Server {
+	return &Server{
+		listener: listener,
 	}
-
-	return s, nil
 }
 
 func (s *Server) Run() error {
-	listener, err := kcp.Listen(s.listenAddr)
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-
 	for {
-		conn, err := listener.Accept()
+		conn, err := s.listener.Accept()
 		if err != nil {
 			if ne, ok := err.(net.Error); ok {
 				if ne.Temporary() {

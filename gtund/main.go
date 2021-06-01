@@ -34,14 +34,16 @@ func Main() {
 	case "kcp":
 		listener, err = kcp.Listen(conf.ServerConfig.Listen)
 		if err != nil {
-			fmt.Printf("new kcp server fail: %v", err)
+			logs.Error("new kcp server fail: %v", err)
+			return
 		}
 		defer listener.Close()
 
 	default:
 		listener, err = mux.Listen(conf.ServerConfig.Listen)
 		if err != nil {
-			fmt.Printf("new mux server fail: %v", err)
+			logs.Error("new mux server fail: %v", err)
+			return
 		}
 		defer listener.Close()
 	}

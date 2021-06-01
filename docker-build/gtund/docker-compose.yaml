@@ -17,4 +17,4 @@ services:
         log:
           days: 5
           level: "info"
-          path: "gtund.log"
+          path: "/opt/logs/gtund.log"

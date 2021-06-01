@@ -11,7 +11,7 @@ services:
       settings: |
        forwards:
           CN: 
-            server: "10.60.6.95:8524"
+            server: "127.0.0.1:9098"
             authKey: "rewrite with your auth key"
             tcp:
               listen: ":8524"

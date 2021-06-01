@@ -16,6 +16,7 @@ type ForwardConfig struct {
 	AuthKey    string           `yaml:"authKey"`
 	TCPForward TCPForwardConfig `yaml:"tcp"`
 	UDPForward UDPForwardConfig `yaml:"udp"`
+	Transport  TransportConfig  `yaml:"transport"`
 }
 
 type TCPForwardConfig struct {
@@ -29,6 +30,11 @@ type UDPForwardConfig struct {
 	ReadTimeout    int    `yaml:"readTimeout"`
 	WriteTimeout   int    `yaml:"writeTimeout"`
 	SessionTimeout int    `yaml:"sessionTimeout"`
+}
+
+type TransportConfig struct {
+	Scheme        string `yaml:"scheme"`
+	ConfigContent string `yaml:"config"`
 }
 
 type Log struct {

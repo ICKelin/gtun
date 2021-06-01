@@ -6,6 +6,11 @@ forwards:
       listen: ":8524"
     udp:
       listen: ":8525"
+    transport:
+      # scheme: kcp,mux
+      scheme: kcp
+      config: |
+        {}
 
 log:
   days: 5

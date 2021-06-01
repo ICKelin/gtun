@@ -20,8 +20,8 @@ var (
 )
 
 type ServerConfig struct {
-	Listen  string `toml:"listen"`
-	AuthKey string `toml:"authKey"`
+	Listen  string `yaml:"listen"`
+	AuthKey string `yaml:"authKey"`
 }
 
 type Server struct {

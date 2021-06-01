@@ -10,6 +10,7 @@ import (
 
 var _ transport.Dialer = &Dialer{}
 var _ transport.Conn = &Conn{}
+var _ transport.Listener = &Listener{}
 
 type Dialer struct{}
 

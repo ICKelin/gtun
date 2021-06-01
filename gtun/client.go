@@ -25,9 +25,9 @@ func NewClient(dialer transport.Dialer) *Client {
 	}
 }
 
-func (client *Client) Run(region, remote string) {
+func (c *Client) Run(region, remote string) {
 	for {
-		conn, err := client.dialer.Dial(remote)
+		conn, err := c.dialer.Dial(remote)
 		if err != nil {
 			logs.Error("connect to %s fail: %v", remote, err)
 			time.Sleep(time.Second * 3)
@@ -36,7 +36,7 @@ func (client *Client) Run(region, remote string) {
 
 		logs.Info("connect to region %s success", region)
 		sess := newSession(conn, region)
-		client.sessionMgr.AddSession(region, sess)
+		c.sessionMgr.AddSession(region, sess)
 		tick := time.NewTicker(time.Second * 1)
 		for range tick.C {
 			if sess.conn.IsClosed() {
@@ -44,7 +44,7 @@ func (client *Client) Run(region, remote string) {
 			}
 		}
 
-		client.sessionMgr.DeleteSession(region)
+		c.sessionMgr.DeleteSession(region)
 		logs.Warn("reconnect")
 	}
 }

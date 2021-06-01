@@ -1,8 +1,9 @@
 server:
   listen: ":9098"
   authKey: "rewrite with your auth key"
+  scheme: "kcp"
 
 log:
   days: 5
   level: "info"
-  path: "/opt/logs/gtund.log"
+  path: "gtund.log"

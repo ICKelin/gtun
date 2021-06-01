@@ -7,7 +7,9 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/gtun/transport"
 	"github.com/ICKelin/gtun/transport/kcp"
+	"github.com/ICKelin/gtun/transport/mux"
 )
 
 func init() {
@@ -43,8 +45,16 @@ func Main() {
 		}
 
 		go udpfw.Serve(udpConn)
-		dialer := kcp.Dialer{}
-		client := NewClient(&dialer)
+
+		var dialer transport.Dialer
+		switch cfg.Transport.Scheme {
+		case "kcp":
+			dialer = &kcp.Dialer{}
+		default:
+			dialer = &mux.Dialer{}
+		}
+
+		client := NewClient(dialer)
 		go client.Run(region, cfg.ServerAddr)
 	}
 

@@ -31,7 +31,7 @@ type Conn interface {
 	IsClosed() bool
 }
 
-// Stream deines a transport stream base on
+// Stream defines a transport stream base on
 // Conn.OpenStream or Conn.AcceptStream
 type Stream interface {
 	Write(buf []byte) (int, error)

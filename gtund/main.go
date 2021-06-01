@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/gtun/transport"
 	"github.com/ICKelin/gtun/transport/kcp"
+	"github.com/ICKelin/gtun/transport/mux"
 )
 
 var version = ""
@@ -27,11 +29,23 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	listener, err := kcp.Listen(conf.ServerConfig.Listen)
-	if err != nil {
-		fmt.Printf("new kcp server fail: %v", err)
+	var listener transport.Listener
+
+	switch conf.ServerConfig.Scheme {
+	case "kcp":
+		listener, err := kcp.Listen(conf.ServerConfig.Listen)
+		if err != nil {
+			fmt.Printf("new kcp server fail: %v", err)
+		}
+		defer listener.Close()
+
+	default:
+		listener, err := mux.Listen(conf.ServerConfig.Listen)
+		if err != nil {
+			fmt.Printf("new mux server fail: %v", err)
+		}
+		defer listener.Close()
 	}
-	defer listener.Close()
 
 	server := NewServer(listener)
 	server.Run()

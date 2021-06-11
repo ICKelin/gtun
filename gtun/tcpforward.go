@@ -131,11 +131,13 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 		defer stream.Close()
 		defer conn.Close()
 		obj := f.mempool.Get()
+		defer f.mempool.Put(obj)
 		buf := obj.([]byte)
 		io.CopyBuffer(stream, conn, buf)
 	}()
 
 	obj := f.mempool.Get()
+	defer f.mempool.Put(obj)
 	buf := obj.([]byte)
 	io.CopyBuffer(conn, stream, buf)
 }

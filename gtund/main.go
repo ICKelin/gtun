@@ -3,6 +3,8 @@ package gtund
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/transport"
@@ -11,6 +13,10 @@ import (
 )
 
 var version = ""
+
+func init() {
+	go http.ListenAndServe(":6060", nil)
+}
 
 func Main() {
 	flgVersion := flag.Bool("v", false, "print version")

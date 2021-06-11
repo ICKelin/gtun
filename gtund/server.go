@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/ICKelin/gtun/internal/logs"
@@ -27,11 +28,17 @@ type ServerConfig struct {
 
 type Server struct {
 	listener transport.Listener
+	udpPool  sync.Pool
 }
 
 func NewServer(listener transport.Listener) *Server {
 	return &Server{
 		listener: listener,
+		udpPool: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 1024*64)
+			},
+		},
 	}
 }
 
@@ -159,9 +166,13 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 	go func() {
 		defer remoteConn.Close()
 		defer stream.Close()
-		buf := make([]byte, 64*1024)
+		obj := s.udpPool.Get()
+		defer s.udpPool.Put(obj)
+		buf := obj.([]byte)
 		for {
+			remoteConn.SetReadDeadline(time.Now().Add(time.Second * 10))
 			nr, err := remoteConn.Read(buf)
+			remoteConn.SetReadDeadline(time.Time{})
 			if err != nil {
 				logs.Error("read from remote fail: %v", err)
 				break

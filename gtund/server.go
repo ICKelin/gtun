@@ -29,6 +29,7 @@ type ServerConfig struct {
 type Server struct {
 	listener transport.Listener
 	udpPool  sync.Pool
+	tcpPool  sync.Pool
 }
 
 func NewServer(listener transport.Listener) *Server {
@@ -37,6 +38,11 @@ func NewServer(listener transport.Listener) *Server {
 		udpPool: sync.Pool{
 			New: func() interface{} {
 				return make([]byte, 1024*64)
+			},
+		},
+		tcpPool: sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 1024*8)
 			},
 		},
 	}
@@ -116,14 +122,18 @@ func (s *Server) tcpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 	go func() {
 		defer remoteConn.Close()
 		defer stream.Close()
-		io.Copy(remoteConn, stream)
+		obj := s.tcpPool.Get()
+		defer s.tcpPool.Put(obj)
+		buf := obj.([]byte)
+		io.CopyBuffer(remoteConn, stream, buf)
 	}()
 
-	go func() {
-		defer remoteConn.Close()
-		defer stream.Close()
-		io.Copy(stream, remoteConn)
-	}()
+	defer remoteConn.Close()
+	defer stream.Close()
+	obj := s.tcpPool.Get()
+	defer s.tcpPool.Put(obj)
+	buf := obj.([]byte)
+	io.CopyBuffer(stream, remoteConn, buf)
 }
 
 func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
@@ -163,29 +173,27 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 		}
 	}()
 
-	go func() {
-		defer remoteConn.Close()
-		defer stream.Close()
-		obj := s.udpPool.Get()
-		defer s.udpPool.Put(obj)
-		buf := obj.([]byte)
-		for {
-			remoteConn.SetReadDeadline(time.Now().Add(time.Second * 10))
-			nr, err := remoteConn.Read(buf)
-			remoteConn.SetReadDeadline(time.Time{})
-			if err != nil {
-				logs.Error("read from remote fail: %v", err)
-				break
-			}
-
-			bytes := encode(buf[:nr])
-			_, err = stream.Write(bytes)
-			if err != nil {
-				logs.Error("stream write fail: %v", err)
-				break
-			}
+	defer remoteConn.Close()
+	defer stream.Close()
+	obj := s.udpPool.Get()
+	defer s.udpPool.Put(obj)
+	buf := obj.([]byte)
+	for {
+		remoteConn.SetReadDeadline(time.Now().Add(time.Second * 10))
+		nr, err := remoteConn.Read(buf)
+		remoteConn.SetReadDeadline(time.Time{})
+		if err != nil {
+			logs.Error("read from remote fail: %v", err)
+			break
 		}
-	}()
+
+		bytes := encode(buf[:nr])
+		_, err = stream.Write(bytes)
+		if err != nil {
+			logs.Error("stream write fail: %v", err)
+			break
+		}
+	}
 }
 
 func encode(raw []byte) []byte {

@@ -158,7 +158,9 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 		for {
 			_, err := io.ReadFull(stream, hdr)
 			if err != nil {
-				logs.Error("read stream fail: %v", err)
+				if err != net.ErrClosed {
+					logs.Error("read stream fail: %v", err)
+				}
 				break
 			}
 			nlen := binary.BigEndian.Uint16(hdr)
@@ -183,6 +185,9 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 		nr, err := remoteConn.Read(buf)
 		remoteConn.SetReadDeadline(time.Time{})
 		if err != nil {
+			if ne, ok := err.(net.Error); ok && ne.Timeout() {
+				break
+			}
 			logs.Error("read from remote fail: %v", err)
 			break
 		}

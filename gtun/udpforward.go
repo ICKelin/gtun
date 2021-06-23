@@ -169,6 +169,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 				continue
 			}
 
+			logs.Debug("open new stream for %s", key)
 			udpsess = &udpSession{stream, time.Now()}
 			f.udpsessLock.Lock()
 			f.udpSessions[key] = udpsess
@@ -252,6 +253,8 @@ func (f *UDPForward) recycleSession() {
 		f.udpsessLock.Lock()
 		for k, s := range f.udpSessions {
 			if time.Now().Sub(s.lastActive).Seconds() > float64(f.sessionTimeout) {
+				logs.Warn("remove udp session")
+				s.stream.Close()
 				delete(f.udpSessions, k)
 			}
 		}

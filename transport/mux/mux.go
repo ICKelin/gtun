@@ -42,6 +42,14 @@ func (c *Conn) IsClosed() bool {
 	return c.mux.IsClosed()
 }
 
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.mux.RemoteAddr()
+}
+
+func (c *Conn) LocalAddr() net.Addr {
+	return c.mux.LocalAddr()
+}
+
 func (d *Dialer) Dial(remote string) (transport.Conn, error) {
 	conn, err := net.Dial("tcp", remote)
 	if err != nil {

@@ -29,6 +29,7 @@ type Conn interface {
 	AcceptStream() (Stream, error)
 	Close()
 	IsClosed() bool
+	RemoteAddr() net.Addr
 }
 
 // Stream defines a transport stream base on

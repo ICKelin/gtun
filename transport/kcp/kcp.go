@@ -43,6 +43,14 @@ func (c *Conn) IsClosed() bool {
 	return c.mux.IsClosed()
 }
 
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.mux.RemoteAddr()
+}
+
+func (c *Conn) LocalAddr() net.Addr {
+	return c.mux.LocalAddr()
+}
+
 func (dialer *Dialer) Dial(remote string) (transport.Conn, error) {
 	kcpconn, err := kcpgo.DialWithOptions(remote, nil, 10, 3)
 	if err != nil {

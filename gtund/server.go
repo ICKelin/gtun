@@ -52,6 +52,7 @@ func (s *Server) Run() error {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
+			logs.Error("listener accept fail: %v", err)
 			if ne, ok := err.(net.Error); ok {
 				if ne.Temporary() {
 					time.Sleep(time.Millisecond * 100)
@@ -61,6 +62,7 @@ func (s *Server) Run() error {
 			return err
 		}
 
+		logs.Info("accept connect from remote: %s", conn.RemoteAddr().String())
 		go s.onConn(conn)
 	}
 }
@@ -70,7 +72,7 @@ func (s *Server) onConn(conn transport.Conn) {
 	for {
 		stream, err := conn.AcceptStream()
 		if err != nil {
-			logs.Error("accept stream fail: %v", err)
+			logs.Error("accept %s stream fail: %v", conn.RemoteAddr().String(), err)
 			break
 		}
 		go s.handleStream(stream)
@@ -183,18 +185,21 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 		nr, err := remoteConn.Read(buf)
 		remoteConn.SetReadDeadline(time.Time{})
 		if err != nil {
-			if ne, ok := err.(net.Error); ok && ne.Timeout() {
-				break
-			}
-			logs.Error("read from remote fail: %v", err)
+			logs.Error("read from remote %s fail: %v", remoteConn.RemoteAddr().String(), err)
 			break
 		}
 
 		bytes := encode(buf[:nr])
-		_, err = stream.Write(bytes)
+		stream.SetWriteDeadline(time.Now().Add(time.Second * 10))
+		nw, err := stream.Write(bytes)
+		stream.SetWriteDeadline(time.Time{})
 		if err != nil {
 			logs.Error("stream write fail: %v", err)
 			break
+		}
+
+		if nw != len(bytes) {
+			logs.Error("bug: stream write %d bytes, expected %d", nw, len(bytes))
 		}
 	}
 }

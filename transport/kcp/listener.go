@@ -1,6 +1,7 @@
 package kcp
 
 import (
+	"encoding/json"
 	"net"
 
 	"github.com/ICKelin/gtun/transport"
@@ -10,23 +11,53 @@ import (
 
 var _ transport.Listener = &Listener{}
 
+var defaultListenConfig = KCPConfig{
+	FecDataShards:   10,
+	FecParityShards: 3,
+	Nodelay:         1,
+	Interval:        10,
+	Resend:          2,
+	Nc:              1,
+	SndWnd:          1024,
+	RcvWnd:          1024,
+	Mtu:             1350,
+	AckNoDelay:      true,
+	Rcvbuf:          4194304,
+	SndBuf:          4194304,
+}
+
 type Listener struct {
+	config KCPConfig
 	*kcpgo.Listener
 }
 
+func NewListener(rawConfig json.RawMessage) *Listener {
+	l := &Listener{}
+	if len(rawConfig) <= 0 {
+		l.config = defaultConfig
+	} else {
+		cfg := KCPConfig{}
+		json.Unmarshal(rawConfig, &cfg)
+		l.config = cfg
+	}
+	return l
+}
 func (l *Listener) Accept() (transport.Conn, error) {
-	conn, err := l.Listener.AcceptKCP()
+	cfg := l.config
+	kcpconn, err := l.Listener.AcceptKCP()
 	if err != nil {
 		return nil, err
 	}
 
-	conn.SetStreamMode(true)
-	conn.SetWriteDelay(false)
-	conn.SetNoDelay(1, 10, 2, 1)
-	conn.SetWindowSize(1024, 1024)
-	conn.SetMtu(1350)
-	conn.SetACKNoDelay(true)
-	mux, err := smux.Server(conn, nil)
+	kcpconn.SetStreamMode(true)
+	kcpconn.SetWriteDelay(false)
+	kcpconn.SetNoDelay(cfg.Nodelay, cfg.Interval, cfg.Resend, cfg.Nc)
+	kcpconn.SetWindowSize(cfg.RcvWnd, cfg.SndWnd)
+	kcpconn.SetMtu(cfg.Mtu)
+	kcpconn.SetACKNoDelay(cfg.AckNoDelay)
+	kcpconn.SetReadBuffer(cfg.Rcvbuf)
+	kcpconn.SetWriteBuffer(cfg.SndBuf)
+	mux, err := smux.Server(kcpconn, nil)
 	if err != nil {
 		return nil, err
 	}

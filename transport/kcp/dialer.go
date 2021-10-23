@@ -10,7 +10,7 @@ import (
 
 var _ transport.Dialer = &Dialer{}
 
-var defaultConfig = dialerConfig{
+var defaultConfig = KCPConfig{
 	FecDataShards:   10,
 	FecParityShards: 3,
 	Nodelay:         1,
@@ -25,26 +25,8 @@ var defaultConfig = dialerConfig{
 	SndBuf:          4194304,
 }
 
-type dialerConfig struct {
-	// fec args
-	FecDataShards   int `json:"dataShards"`
-	FecParityShards int `json:"parityShards"`
-	// nodelay config args
-	Nodelay  int `json:"nodelay"`
-	Interval int `json:"interval"`
-	Resend   int `json:"resend"`
-	Nc       int `json:"nc"`
-	// windows size
-	SndWnd     int  `json:"sndwnd"`
-	RcvWnd     int  `json:"rcvwnd"`
-	Mtu        int  `json:"mtu"`
-	AckNoDelay bool `json:"ackNoDelay"`
-	Rcvbuf     int  `json:"rcvBuf"`
-	SndBuf     int  `json:"sndBuf"`
-}
-
 type Dialer struct {
-	config dialerConfig
+	config KCPConfig
 }
 
 func NewDialer(rawConfig json.RawMessage) *Dialer {
@@ -52,7 +34,7 @@ func NewDialer(rawConfig json.RawMessage) *Dialer {
 	if len(rawConfig) <= 0 {
 		dialer.config = defaultConfig
 	} else {
-		cfg := dialerConfig{}
+		cfg := KCPConfig{}
 		json.Unmarshal(rawConfig, &cfg)
 		dialer.config = cfg
 	}

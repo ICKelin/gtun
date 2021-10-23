@@ -49,7 +49,7 @@ func Main() {
 		var dialer transport.Dialer
 		switch cfg.Transport.Scheme {
 		case "kcp":
-			dialer = &kcp.Dialer{}
+			dialer = kcp.NewDialer([]byte(cfg.Transport.ConfigContent))
 		default:
 			dialer = &mux.Dialer{}
 		}

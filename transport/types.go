@@ -12,6 +12,7 @@ type Dialer interface {
 
 // Listener defines transport listener for server side
 type Listener interface {
+	Listen(laddr string) error
 	// Accept returns a connection
 	// if an error occurs, it may suit each implements error
 	Accept() (Conn, error)

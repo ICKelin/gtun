@@ -38,11 +38,8 @@ func Main() {
 	var listener transport.Listener
 	switch conf.ServerConfig.Scheme {
 	case "kcp":
-		listener, err = kcp.Listen(conf.ServerConfig.Listen)
-		if err != nil {
-			logs.Error("new kcp server fail: %v", err)
-			return
-		}
+		listener = kcp.NewListener([]byte(conf.ListenerConfig))
+		listener.Listen(conf.ServerConfig.Listen)
 		defer listener.Close()
 
 	default:

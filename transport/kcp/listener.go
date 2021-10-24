@@ -42,6 +42,18 @@ func NewListener(rawConfig json.RawMessage) *Listener {
 	}
 	return l
 }
+
+func (l *Listener) Listen(laddr string) error {
+	kcpLis, err := kcpgo.ListenWithOptions(laddr, nil, 10, 3)
+	if err != nil {
+		return err
+	}
+	kcpLis.SetReadBuffer(4194304)
+	kcpLis.SetWriteBuffer(4194304)
+	l.Listener = kcpLis
+	return nil
+}
+
 func (l *Listener) Accept() (transport.Conn, error) {
 	cfg := l.config
 	kcpconn, err := l.Listener.AcceptKCP()
@@ -71,14 +83,4 @@ func (l *Listener) Close() error {
 
 func (l *Listener) Addr() net.Addr {
 	return l.Listener.Addr()
-}
-
-func Listen(laddr string) (transport.Listener, error) {
-	listener, err := kcpgo.ListenWithOptions(laddr, nil, 10, 3)
-	if err != nil {
-		return nil, err
-	}
-	listener.SetReadBuffer(4194304)
-	listener.SetWriteBuffer(4194304)
-	return &Listener{Listener: listener}, nil
 }

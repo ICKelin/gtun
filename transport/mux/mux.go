@@ -82,6 +82,10 @@ func (l *Listener) Close() error {
 	return l.Listener.Close()
 }
 
+func (l *Listener) Listen(laddr string) error {
+	return nil
+}
+
 func Listen(laddr string) (transport.Listener, error) {
 	listener, err := net.Listen("tcp", laddr)
 	if err != nil {

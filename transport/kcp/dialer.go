@@ -26,11 +26,12 @@ var defaultConfig = KCPConfig{
 }
 
 type Dialer struct {
+	remote string
 	config KCPConfig
 }
 
-func NewDialer(rawConfig json.RawMessage) *Dialer {
-	dialer := &Dialer{}
+func NewDialer(remote string, rawConfig json.RawMessage) *Dialer {
+	dialer := &Dialer{remote:remote}
 	if len(rawConfig) <= 0 {
 		dialer.config = defaultConfig
 	} else {
@@ -41,9 +42,9 @@ func NewDialer(rawConfig json.RawMessage) *Dialer {
 	return dialer
 }
 
-func (dialer *Dialer) Dial(remote string) (transport.Conn, error) {
+func (dialer *Dialer) Dial() (transport.Conn, error) {
 	cfg := dialer.config
-	kcpconn, err := kcpgo.DialWithOptions(remote, nil, cfg.FecDataShards, cfg.FecParityShards)
+	kcpconn, err := kcpgo.DialWithOptions(dialer.remote, nil, cfg.FecDataShards, cfg.FecParityShards)
 	if err != nil {
 		return nil, err
 	}

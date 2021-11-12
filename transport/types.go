@@ -7,7 +7,7 @@ import (
 
 // Dialer defines transport dialer for client side
 type Dialer interface {
-	Dial(target string) (Conn, error)
+	Dial() (Conn, error)
 }
 
 // Listener defines transport listener for server side

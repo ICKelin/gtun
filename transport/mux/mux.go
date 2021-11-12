@@ -11,7 +11,9 @@ var _ transport.Listener = &Listener{}
 var _ transport.Dialer = &Dialer{}
 var _ transport.Conn = &Conn{}
 
-type Dialer struct{}
+type Dialer struct{
+	remote string
+}
 
 type Listener struct {
 	laddr string
@@ -51,8 +53,12 @@ func (c *Conn) LocalAddr() net.Addr {
 	return c.mux.LocalAddr()
 }
 
-func (d *Dialer) Dial(remote string) (transport.Conn, error) {
-	conn, err := net.Dial("tcp", remote)
+func NewDialer(remote string)transport.Dialer {
+	return &Dialer{remote}
+}
+
+func (d *Dialer) Dial() (transport.Conn, error) {
+	conn, err := net.Dial("tcp", d.remote)
 	if err != nil {
 		return nil, err
 	}

@@ -25,11 +25,11 @@ func NewClient(dialer transport.Dialer) *Client {
 	}
 }
 
-func (c *Client) Run(region, remote string) {
+func (c *Client) Run(region string) {
 	for {
-		conn, err := c.dialer.Dial(remote)
+		conn, err := c.dialer.Dial()
 		if err != nil {
-			logs.Error("connect to %s fail: %v", remote, err)
+			logs.Error("connect to %s fail: %v", region,err)
 			time.Sleep(time.Second * 3)
 			continue
 		}

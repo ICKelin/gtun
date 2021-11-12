@@ -49,13 +49,13 @@ func Main() {
 		var dialer transport.Dialer
 		switch cfg.Transport.Scheme {
 		case "kcp":
-			dialer = kcp.NewDialer([]byte(cfg.Transport.ConfigContent))
+			dialer = kcp.NewDialer(cfg.ServerAddr, []byte(cfg.Transport.ConfigContent))
 		default:
-			dialer = &mux.Dialer{}
+			dialer = mux.NewDialer(cfg.ServerAddr)
 		}
 
 		client := NewClient(dialer)
-		go client.Run(region, cfg.ServerAddr)
+		go client.Run(region)
 	}
 
 	select {}

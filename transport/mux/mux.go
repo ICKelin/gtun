@@ -14,6 +14,7 @@ var _ transport.Conn = &Conn{}
 type Dialer struct{}
 
 type Listener struct {
+	laddr string
 	net.Listener
 }
 
@@ -64,6 +65,10 @@ func (d *Dialer) Dial(remote string) (transport.Conn, error) {
 	return &Conn{mux: mux}, nil
 }
 
+func NewListener(laddr string)*Listener {
+	return &Listener{laddr:laddr}
+}
+
 func (l *Listener) Accept() (transport.Conn, error) {
 	conn, err := l.Listener.Accept()
 	if err != nil {
@@ -82,15 +87,12 @@ func (l *Listener) Close() error {
 	return l.Listener.Close()
 }
 
-func (l *Listener) Listen(laddr string) error {
-	return nil
-}
-
-func Listen(laddr string) (transport.Listener, error) {
-	listener, err := net.Listen("tcp", laddr)
+func (l *Listener) Listen() error {
+	listener, err := net.Listen("tcp", l.laddr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &Listener{Listener: listener}, nil
+	l.Listener = listener
+	return nil
 }

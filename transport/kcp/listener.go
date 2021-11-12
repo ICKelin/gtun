@@ -27,11 +27,12 @@ var defaultListenConfig = KCPConfig{
 }
 
 type Listener struct {
+	laddr string
 	config KCPConfig
 	*kcpgo.Listener
 }
 
-func NewListener(rawConfig json.RawMessage) *Listener {
+func NewListener(laddr string, rawConfig json.RawMessage) *Listener {
 	l := &Listener{}
 	if len(rawConfig) <= 0 {
 		l.config = defaultConfig
@@ -40,11 +41,13 @@ func NewListener(rawConfig json.RawMessage) *Listener {
 		json.Unmarshal(rawConfig, &cfg)
 		l.config = cfg
 	}
+
+	l.laddr = laddr
 	return l
 }
 
-func (l *Listener) Listen(laddr string) error {
-	kcpLis, err := kcpgo.ListenWithOptions(laddr, nil, 10, 3)
+func (l *Listener) Listen() error {
+	kcpLis, err := kcpgo.ListenWithOptions(l.laddr, nil, 10, 3)
 	if err != nil {
 		return err
 	}

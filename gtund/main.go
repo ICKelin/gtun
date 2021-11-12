@@ -38,12 +38,17 @@ func Main() {
 	var listener transport.Listener
 	switch conf.ServerConfig.Scheme {
 	case "kcp":
-		listener = kcp.NewListener([]byte(conf.ListenerConfig))
-		listener.Listen(conf.ServerConfig.Listen)
+		listener = kcp.NewListener(conf.ServerConfig.Listen,[]byte(conf.ListenerConfig))
+		err := listener.Listen()
+		if err != nil {
+			logs.Error("new kcp server fail; %v",err)
+			return
+		}
 		defer listener.Close()
 
 	default:
-		listener, err = mux.Listen(conf.ServerConfig.Listen)
+		listener :=mux.NewListener(conf.ServerConfig.Listen)
+		err := listener.Listen()
 		if err != nil {
 			logs.Error("new mux server fail: %v", err)
 			return

@@ -19,6 +19,8 @@ func Main() {
 		return
 	}
 
+	logs.Init("forward.log", "debug", 10)
+
 	// initial local listener
 	var listener transport.Listener
 	lisCfg := cfg.ListenerConfig
@@ -33,7 +35,7 @@ func Main() {
 		defer listener.Close()
 
 	default:
-		listener := mux.NewListener(lisCfg.ListenAddr)
+		listener = mux.NewListener(lisCfg.ListenAddr)
 		err := listener.Listen()
 		if err != nil {
 			logs.Error("new mux server fail: %v", err)

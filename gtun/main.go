@@ -50,6 +50,8 @@ func Main() {
 		switch cfg.Transport.Scheme {
 		case "kcp":
 			dialer = kcp.NewDialer(cfg.ServerAddr, []byte(cfg.Transport.ConfigContent))
+		case "mux":
+			dialer := mux.NewDialer(cfg.ServerAddr)
 		default:
 			dialer = mux.NewDialer(cfg.ServerAddr)
 		}

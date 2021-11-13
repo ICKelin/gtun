@@ -75,6 +75,7 @@ gtund需要运行在公有云上，相对比较简单，原则上越靠近源站
 server:
   listen: ":9098"
   authKey: "rewrite with your auth key"
+  scheme: "kcp"
 
 log:
   days: 5
@@ -98,7 +99,9 @@ forwards:
     tcp:
       listen: ":8524"
     udp:
-      listen: ":8525"
+      listen: ":8524"    
+    transport:
+      scheme: kcp
 
 log:
   days: 5

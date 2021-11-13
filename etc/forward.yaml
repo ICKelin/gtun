@@ -1,0 +1,10 @@
+listener:
+  listen_addr: ":8524"
+  scheme: "tcp"
+  raw_config: ""
+
+dialer:
+  nexthop_addr: "127.0.0.1:8624"
+  scheme: "tcp"
+  raw_config: ""
+

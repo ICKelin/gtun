@@ -26,11 +26,6 @@ func NewForward(listener transport.Listener, dialer transport.Dialer) *Forward {
 }
 
 func (f *Forward) Serve() error {
-	err := f.listener.Listen()
-	if err != nil {
-		return err
-	}
-
 	for {
 		conn, err := f.listener.Accept()
 		if err != nil {
@@ -48,12 +43,13 @@ func (f *Forward) forward(conn transport.Conn) {
 	defer conn.Close()
 
 	// create a new connection to nexthop
-	conn, err := f.dialer.Dial()
+	nexthopConn, err := f.dialer.Dial()
 	if err != nil {
 		logs.Error("dian next hop fail: %v", err)
 		return
 	}
-	defer conn.Close()
+	defer nexthopConn.Close()
+	logs.Debug("open a new connection to nexthop")
 
 	// TODO: verify connection
 	for {
@@ -63,7 +59,8 @@ func (f *Forward) forward(conn transport.Conn) {
 			break
 		}
 
-		dst, err := conn.OpenStream()
+		logs.Debug("accept stream: %v", conn.RemoteAddr())
+		dst, err := nexthopConn.OpenStream()
 		if err != nil {
 			logs.Error("open nexthop stream fail: %v", err)
 			return

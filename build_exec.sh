@@ -4,8 +4,11 @@ echo "building gtund...."
 GOOS=linux go build -o bin/gtund/gtund cmd/gtund/*.go
 echo "builded gtund...."
 
-cd cmd/gtun
 echo "building gtun...."
-GOOS=linux go build -o ../../bin/gtun/gtun-linux_amd64 
-GOARCH=arm GOOS=linux go build -o ../../bin/gtun/gtun-linux_arm 
+GOOS=linux go build -o bin/gtun/gtun-linux_amd64 cmd/gtun/*.go
+GOARCH=arm GOOS=linux go build -o bin/gtun/gtun-linux_arm  cmd/gtun/*.go
 echo "builded gtun...."
+
+echo "building forward"
+GOOS=linux go build -o bin/forward/forward-linux_amd64 cmd/forward/*.go
+echo "builded forward"

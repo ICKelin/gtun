@@ -1,4 +1,4 @@
-package main
+package forward
 
 import (
 	"github.com/ICKelin/gtun/internal/logs"
@@ -47,6 +47,7 @@ func (f *Forward) Serve() error {
 func (f *Forward) forward(conn transport.Conn) {
 	defer conn.Close()
 
+	// create a new connection to nexthop
 	conn, err := f.dialer.Dial()
 	if err != nil {
 		logs.Error("dian next hop fail: %v", err)
@@ -54,6 +55,7 @@ func (f *Forward) forward(conn transport.Conn) {
 	}
 	defer conn.Close()
 
+	// TODO: verify connection
 	for {
 		stream, err := conn.AcceptStream()
 		if err != nil {

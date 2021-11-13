@@ -1,4 +1,4 @@
-package main
+package forward
 
 import (
 	"gopkg.in/yaml.v2"

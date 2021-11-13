@@ -1,4 +1,4 @@
-package main
+package forward
 
 import (
 	"flag"
@@ -9,7 +9,7 @@ import (
 	"github.com/ICKelin/gtun/transport/mux"
 )
 
-func main() {
+func Main() {
 	flgConf := flag.String("c", "", "config file path")
 	flag.Parse()
 

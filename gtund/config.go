@@ -9,7 +9,6 @@ import (
 
 type Config struct {
 	ServerConfig   ServerConfig `yaml:"server"`
-	Scheme         string       `yaml:"scheme"`
 	ListenerConfig string       `yaml:"listenerConfig"`
 	Log            Log          `yaml:"log"`
 }

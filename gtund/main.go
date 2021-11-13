@@ -35,19 +35,21 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
+	logs.Debug("config: %s", conf.String())
+
 	var listener transport.Listener
 	switch conf.ServerConfig.Scheme {
 	case "kcp":
-		listener = kcp.NewListener(conf.ServerConfig.Listen,[]byte(conf.ListenerConfig))
+		listener = kcp.NewListener(conf.ServerConfig.Listen, []byte(conf.ListenerConfig))
 		err := listener.Listen()
 		if err != nil {
-			logs.Error("new kcp server fail; %v",err)
+			logs.Error("new kcp server fail; %v", err)
 			return
 		}
 		defer listener.Close()
 
 	default:
-		listener :=mux.NewListener(conf.ServerConfig.Listen)
+		listener = mux.NewListener(conf.ServerConfig.Listen)
 		err := listener.Listen()
 		if err != nil {
 			logs.Error("new mux server fail: %v", err)

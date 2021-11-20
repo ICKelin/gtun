@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-// Dialer defines transport dialer for client side
+// Dialer defines transport_api dialer for client side
 type Dialer interface {
 	Dial() (Conn, error)
 }
 
-// Listener defines transport listener for server side
+// Listener defines transport_api listener for server side
 type Listener interface {
 	Listen() error
 	// Accept returns a connection
@@ -24,7 +24,7 @@ type Listener interface {
 	Addr() net.Addr
 }
 
-// Conn defines a transport connection
+// Conn defines a transport_api connection
 type Conn interface {
 	OpenStream() (Stream, error)
 	AcceptStream() (Stream, error)
@@ -33,7 +33,7 @@ type Conn interface {
 	RemoteAddr() net.Addr
 }
 
-// Stream defines a transport stream base on
+// Stream defines a transport_api stream base on
 // Conn.OpenStream or Conn.AcceptStream
 type Stream interface {
 	Write(buf []byte) (int, error)

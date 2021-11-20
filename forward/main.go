@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport"
-	"github.com/ICKelin/gtun/transport/kcp"
-	"github.com/ICKelin/gtun/transport/mux"
+	"github.com/ICKelin/gtun/transport/transport_api"
 )
 
 func Main() {
@@ -22,39 +20,20 @@ func Main() {
 	logs.Init("forward.log", "debug", 10)
 
 	// initial local listener
-	var listener transport.Listener
 	lisCfg := cfg.ListenerConfig
-	switch lisCfg.Scheme {
-	case "kcp":
-		listener = kcp.NewListener(lisCfg.ListenAddr, []byte(lisCfg.RawConfig))
-		err := listener.Listen()
-		if err != nil {
-			logs.Error("new kcp server fail; %v", err)
-			return
-		}
-		defer listener.Close()
-
-	default:
-		listener = mux.NewListener(lisCfg.ListenAddr)
-		err := listener.Listen()
-		if err != nil {
-			logs.Error("new mux server fail: %v", err)
-			return
-		}
-		defer listener.Close()
+	listener, err := transport_api.NewListen(lisCfg.Scheme, lisCfg.ListenAddr, lisCfg.RawConfig)
+	if err != nil {
+		logs.Error("new listener fail: %v", err)
+		return
 	}
+	defer listener.Close()
 
-	// initial nexthop dialer
-	var dialer transport.Dialer
+	// initial next hop dialer
 	dialerCfg := cfg.NexthopConfig
-	switch dialerCfg.Scheme {
-	case "kcp":
-		dialer = kcp.NewDialer(dialerCfg.NexthopAddr, []byte(dialerCfg.RawConfig))
-	default:
-		dialer = mux.NewDialer(dialerCfg.NexthopAddr)
-	}
+	routeTable := NewRouteTable()
+	routeTable.Add(dialerCfg.Scheme, dialerCfg.NexthopAddr, dialerCfg.RawConfig)
 
-	f := NewForward(listener, dialer)
+	f := NewForward(listener, routeTable)
 
 	if err := f.Serve(); err != nil {
 		logs.Error("forward exist: %v", err)

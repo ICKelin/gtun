@@ -3,17 +3,19 @@ package forward
 import (
 	"fmt"
 	"github.com/ICKelin/gtun/transport"
+	"github.com/ICKelin/gtun/transport/transport_api"
+	"math"
 	"sync"
 )
 
 var (
 	errNoRoute = fmt.Errorf("no route to host")
+	maxRtt     = math.MinInt32
 )
 
 type RouteEntry struct {
 	scheme, addr string
 	rtt          int32
-	lastActive   int64
 	conn         transport.Conn
 }
 
@@ -30,8 +32,8 @@ func NewRouteTable() *RouteTable {
 	}
 }
 
-func (r *RouteTable) Add(scheme, addr string) error {
-	dialer, err := transport.Dial(scheme, addr)
+func (r *RouteTable) Add(scheme, addr, cfg string) error {
+	dialer, err := transport_api.NewDialer(scheme, addr, cfg)
 	if err != nil {
 		return err
 	}

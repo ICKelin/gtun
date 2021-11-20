@@ -9,16 +9,14 @@ import (
 
 type Forward struct {
 	listener   transport.Listener
-	dialer     transport.Dialer
 	routeTable *RouteTable
 	mempool    sync.Pool
 }
 
-func NewForward(listener transport.Listener, dialer transport.Dialer) *Forward {
+func NewForward(listener transport.Listener, routeTable *RouteTable) *Forward {
 	return &Forward{
 		listener:   listener,
-		dialer:     dialer,
-		routeTable: NewRouteTable(),
+		routeTable: routeTable,
 		mempool: sync.Pool{
 			New: func() interface{} {
 				return make([]byte, 1024*4)
@@ -50,7 +48,7 @@ func (f *Forward) forward(conn transport.Conn) {
 	}
 
 	defer entry.conn.Close()
-	logs.Debug("open a new connection to nexthop")
+	logs.Debug("open a new connection to next hop")
 
 	for {
 		stream, err := conn.AcceptStream()
@@ -62,7 +60,7 @@ func (f *Forward) forward(conn transport.Conn) {
 		logs.Debug("accept stream: %v", conn.RemoteAddr())
 		dst, err := entry.conn.OpenStream()
 		if err != nil {
-			logs.Error("open nexthop stream fail: %v", err)
+			logs.Error("open next hop stream fail: %v", err)
 			return
 		}
 

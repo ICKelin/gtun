@@ -18,6 +18,7 @@ func Main() {
 	}
 
 	logs.Init("forward.log", "debug", 10)
+	logs.Debug("forward config: %v", cfg)
 
 	// initial local listener
 	lisCfg := cfg.ListenerConfig

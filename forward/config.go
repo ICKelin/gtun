@@ -1,6 +1,7 @@
 package forward
 
 import (
+	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )
@@ -35,4 +36,9 @@ func ParseConfig(path string) (*Config, error) {
 	}
 
 	return &cfg, err
+}
+
+func (c *Config) String() string {
+	b, _ := json.MarshalIndent(c, "", "   ")
+	return string(b)
 }

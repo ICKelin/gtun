@@ -49,7 +49,7 @@ func (f *Forward) forward(conn transport.Conn) {
 	}
 
 	defer entry.conn.Close()
-	logs.Debug("open a new connection to next hop")
+	logs.Debug("open a new connection to next hop:%v", entry.conn.RemoteAddr())
 
 	for {
 		stream, err := conn.AcceptStream()
@@ -70,6 +70,9 @@ func (f *Forward) forward(conn transport.Conn) {
 }
 
 func (f *Forward) handleStream(dst, src transport.Stream) {
+	defer dst.Close()
+	defer src.Close()
+
 	go func() {
 		obj := f.mempool.Get()
 		defer f.mempool.Put(obj)

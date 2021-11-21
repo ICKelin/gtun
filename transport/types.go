@@ -41,4 +41,5 @@ type Stream interface {
 	Close() error
 	SetWriteDeadline(time.Time) error
 	SetReadDeadline(time.Time) error
+	RemoteAddr() net.Addr
 }

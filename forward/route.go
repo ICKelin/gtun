@@ -7,6 +7,7 @@ import (
 	"github.com/ICKelin/gtun/transport/transport_api"
 	"math"
 	"sync"
+	"time"
 )
 
 var (
@@ -15,9 +16,9 @@ var (
 )
 
 type RouteEntry struct {
-	scheme, addr string
-	rtt          int32
-	conn         transport.Conn
+	scheme, addr, cfg string
+	rtt               int32
+	conn              transport.Conn
 }
 
 type RouteTable struct {
@@ -28,26 +29,57 @@ type RouteTable struct {
 }
 
 func NewRouteTable() *RouteTable {
-	return &RouteTable{
+	rt := &RouteTable{
 		table: make(map[string]*RouteEntry),
+	}
+
+	go rt.healthy()
+	return rt
+}
+
+func (r *RouteTable) healthy() {
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+
+	for range tick.C {
+		for entryKey, entry := range r.table {
+			if entry.conn.IsClosed() {
+				logs.Warn("%s is closed", entryKey)
+				e, err := r.newEntry(entry.scheme, entry.addr, entry.cfg)
+				if err != nil {
+					logs.Error("new entry for %s fail: %v", entryKey, err)
+					continue
+				}
+				r.table[entryKey] = e
+			}
+		}
 	}
 }
 
-func (r *RouteTable) Add(scheme, addr, cfg string) error {
+func (r *RouteTable) newEntry(scheme, addr, cfg string) (*RouteEntry, error) {
 	dialer, err := transport_api.NewDialer(scheme, addr, cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	conn, err := dialer.Dial()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	entry := &RouteEntry{
 		scheme: scheme,
 		addr:   addr,
+		cfg:    cfg,
 		conn:   conn,
+	}
+	return entry, nil
+}
+
+func (r *RouteTable) Add(scheme, addr, cfg string) error {
+	entry, err := r.newEntry(scheme, addr, cfg)
+	if err != nil {
+		return err
 	}
 
 	entryKey := fmt.Sprintf("%s://%s", scheme, addr)

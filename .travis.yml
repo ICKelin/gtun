@@ -1,6 +1,6 @@
 language: go
 go:
-    - 1.13
+    - 1.16
 before_install:
 install:
 before_script:

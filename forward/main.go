@@ -31,7 +31,11 @@ func Main() {
 	// initial next hop dialer
 	dialerCfg := cfg.NexthopConfig
 	routeTable := NewRouteTable()
-	routeTable.Add(dialerCfg.Scheme, dialerCfg.NexthopAddr, dialerCfg.RawConfig)
+	err = routeTable.Add(dialerCfg.Scheme, dialerCfg.NexthopAddr, dialerCfg.RawConfig)
+	if err != nil {
+		logs.Error("add route table fail: %v", err)
+		return
+	}
 
 	f := NewForward(listener, routeTable)
 

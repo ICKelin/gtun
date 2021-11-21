@@ -2,6 +2,7 @@ package forward
 
 import (
 	"fmt"
+	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/transport"
 	"github.com/ICKelin/gtun/transport/transport_api"
 	"math"
@@ -53,6 +54,7 @@ func (r *RouteTable) Add(scheme, addr, cfg string) error {
 	r.tableMu.Lock()
 	defer r.tableMu.Unlock()
 	r.table[entryKey] = entry
+	logs.Debug("add route table: %s %+v", entryKey, entry)
 	return nil
 }
 
@@ -77,7 +79,10 @@ func (r *RouteTable) Route() (*RouteEntry, error) {
 
 	entry, ok := r.table[r.minRttKey]
 	if !ok {
-		return nil, errNoRoute
+		for _, e := range r.table {
+			entry = e
+			break
+		}
 	}
 
 	return entry, nil

@@ -33,6 +33,7 @@ func (f *Forward) Serve() error {
 			break
 		}
 
+		logs.Debug("accept new connection: %v", conn.RemoteAddr())
 		go f.forward(conn)
 	}
 

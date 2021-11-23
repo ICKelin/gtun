@@ -7,6 +7,10 @@ import (
 )
 
 type Config struct {
+	RouteConfig []RouteConfig `yaml:"route_config"`
+}
+
+type RouteConfig struct {
 	ListenerConfig ListenerConfig `yaml:"listener"`
 	NexthopConfig  NextHopConfig  `yaml:"dialer"`
 }

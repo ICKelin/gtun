@@ -1,9 +1,0 @@
-route_config:
-  - listener:
-      listen_addr: ":5014"
-      scheme: "mux"
-      raw_config: ""
-    dialer:
-      nexthop_addr: "127.0.0.1:5014"
-      scheme: "mux"
-      raw_config: ""

@@ -48,8 +48,7 @@ func (f *Forward) forward(conn transport.Conn) {
 		return
 	}
 
-	defer entry.conn.Close()
-	logs.Debug("open a new connection to next hop:%v", entry.conn.RemoteAddr())
+	logs.Debug("prev hop %v next hop:%v", conn.RemoteAddr(), entry.conn.RemoteAddr())
 
 	for {
 		stream, err := conn.AcceptStream()

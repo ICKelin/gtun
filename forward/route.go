@@ -48,11 +48,11 @@ func (r *RouteTable) healthy() {
 				e, err := r.newEntry(entry.scheme, entry.addr, entry.cfg)
 				if err != nil {
 					logs.Error("new entry for %s fail: %v", entryKey, err)
-					continue
 				}
-				r.table[entryKey] = e
+				entry = e
 			}
 		}
+
 	}
 }
 

@@ -2,20 +2,20 @@ package forward
 
 import (
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport"
 	"io"
+	"net"
 	"sync"
 )
 
 type Forward struct {
-	listener   transport.Listener
+	addr       string
 	routeTable *RouteTable
 	mempool    sync.Pool
 }
 
-func NewForward(listener transport.Listener, routeTable *RouteTable) *Forward {
+func NewForward(addr string, routeTable *RouteTable) *Forward {
 	return &Forward{
-		listener:   listener,
+		addr:       addr,
 		routeTable: routeTable,
 		mempool: sync.Pool{
 			New: func() interface{} {
@@ -25,11 +25,17 @@ func NewForward(listener transport.Listener, routeTable *RouteTable) *Forward {
 	}
 }
 
-func (f *Forward) Serve() error {
+func (f *Forward) ListenAndServe() error {
+	listener, err := net.Listen("tcp", f.addr)
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+
 	for {
-		conn, err := f.listener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			logs.Error("accept local fail: %v", err)
+			logs.Debug("accept fail: %v", err)
 			break
 		}
 
@@ -40,47 +46,31 @@ func (f *Forward) Serve() error {
 	return nil
 }
 
-func (f *Forward) forward(conn transport.Conn) {
+func (f *Forward) forward(conn net.Conn) {
 	defer conn.Close()
 	entry, err := f.routeTable.Route()
 	if err != nil {
 		logs.Error("route fail: %v", err)
 		return
 	}
-
 	logs.Debug("prev hop %v next hop:%v", conn.RemoteAddr(), entry.conn.RemoteAddr())
 
-	for {
-		stream, err := conn.AcceptStream()
-		if err != nil {
-			logs.Error("accept stream fail: %v", err)
-			break
-		}
-
-		logs.Debug("accept stream: %v", conn.RemoteAddr())
-		dst, err := entry.conn.OpenStream()
-		if err != nil {
-			logs.Error("open next hop stream fail: %v", err)
-			return
-		}
-
-		go f.handleStream(dst, stream)
+	stream, err := entry.conn.OpenStream()
+	if err != nil {
+		logs.Error("open next hop stream fail: %v", err)
+		return
 	}
-}
-
-func (f *Forward) handleStream(dst, src transport.Stream) {
-	defer dst.Close()
-	defer src.Close()
+	defer stream.Close()
 
 	go func() {
 		obj := f.mempool.Get()
 		defer f.mempool.Put(obj)
 		buf := obj.([]byte)
-		io.CopyBuffer(dst, src, buf)
+		io.CopyBuffer(conn, stream, buf)
 	}()
 
 	obj := f.mempool.Get()
 	defer f.mempool.Put(obj)
 	buf := obj.([]byte)
-	io.CopyBuffer(src, dst, buf)
+	io.CopyBuffer(stream, conn, buf)
 }

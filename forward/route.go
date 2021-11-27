@@ -38,21 +38,40 @@ func NewRouteTable() *RouteTable {
 }
 
 func (r *RouteTable) healthy() {
-	tick := time.NewTicker(time.Second)
+	tick := time.NewTicker(time.Second * 5)
 	defer tick.Stop()
 
 	for range tick.C {
+		deadConn := make(map[string]*RouteEntry)
+		aliveConn := make(map[string]*RouteEntry)
+
+		r.tableMu.Lock()
 		for entryKey, entry := range r.table {
 			if entry.conn.IsClosed() {
-				logs.Warn("%s is closed", entryKey)
-				e, err := r.newEntry(entry.scheme, entry.addr, entry.cfg)
-				if err != nil {
-					logs.Error("new entry for %s fail: %v", entryKey, err)
-				}
-				entry = e
+				logs.Error("next hop %s disconnect", entryKey)
+				deadConn[entryKey] = entry
+			} else {
+				aliveConn[entryKey] = entry
 			}
 		}
+		r.table = aliveConn
+		r.tableMu.Unlock()
 
+		if len(deadConn) > 0 {
+			for entryKey, entry := range deadConn {
+				e, err := r.newEntry(entry.scheme, entry.addr, entry.cfg)
+				if err != nil {
+					logs.Debug("new entry fail: %v", err)
+					continue
+				}
+
+				logs.Info("reconnect next hop %s", entryKey)
+
+				r.tableMu.Lock()
+				r.table[entryKey] = e
+				r.tableMu.Unlock()
+			}
+		}
 	}
 }
 

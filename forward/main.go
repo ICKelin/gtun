@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport/transport_api"
 )
 
 func Main() {
@@ -23,12 +22,6 @@ func Main() {
 	for _, routeCfg := range cfg.RouteConfig {
 		// initial local listener
 		lisCfg := routeCfg.ListenerConfig
-		listener, err := transport_api.NewListen(lisCfg.Scheme, lisCfg.ListenAddr, lisCfg.RawConfig)
-		if err != nil {
-			logs.Error("new listener fail: %v", err)
-			return
-		}
-		defer listener.Close()
 
 		// initial next hop dialer
 		dialerCfg := routeCfg.NexthopConfig
@@ -39,9 +32,9 @@ func Main() {
 			return
 		}
 
-		f := NewForward(listener, routeTable)
+		f := NewForward(lisCfg.ListenAddr, routeTable)
 
-		if err := f.Serve(); err != nil {
+		if err := f.ListenAndServe(); err != nil {
 			logs.Error("forward exist: %v", err)
 		}
 	}

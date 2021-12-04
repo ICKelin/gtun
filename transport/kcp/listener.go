@@ -11,23 +11,8 @@ import (
 
 var _ transport.Listener = &Listener{}
 
-var defaultListenConfig = KCPConfig{
-	FecDataShards:   10,
-	FecParityShards: 3,
-	Nodelay:         1,
-	Interval:        10,
-	Resend:          2,
-	Nc:              1,
-	SndWnd:          1024,
-	RcvWnd:          1024,
-	Mtu:             1350,
-	AckNoDelay:      true,
-	Rcvbuf:          4194304,
-	SndBuf:          4194304,
-}
-
 type Listener struct {
-	laddr string
+	laddr  string
 	config KCPConfig
 	*kcpgo.Listener
 }

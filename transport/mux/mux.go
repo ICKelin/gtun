@@ -2,6 +2,7 @@ package mux
 
 import (
 	"net"
+	"time"
 
 	"github.com/ICKelin/gtun/transport"
 	"github.com/xtaci/smux"
@@ -11,7 +12,7 @@ var _ transport.Listener = &Listener{}
 var _ transport.Dialer = &Dialer{}
 var _ transport.Conn = &Conn{}
 
-type Dialer struct{
+type Dialer struct {
 	remote string
 }
 
@@ -53,7 +54,7 @@ func (c *Conn) LocalAddr() net.Addr {
 	return c.mux.LocalAddr()
 }
 
-func NewDialer(remote string)transport.Dialer {
+func NewDialer(remote string) transport.Dialer {
 	return &Dialer{remote}
 }
 
@@ -63,7 +64,10 @@ func (d *Dialer) Dial() (transport.Conn, error) {
 		return nil, err
 	}
 
-	mux, err := smux.Client(conn, nil)
+	cfg := smux.DefaultConfig()
+	cfg.KeepAliveTimeout = time.Second * 10
+	cfg.KeepAliveInterval = time.Second * 5
+	mux, err := smux.Client(conn, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +75,8 @@ func (d *Dialer) Dial() (transport.Conn, error) {
 	return &Conn{mux: mux}, nil
 }
 
-func NewListener(laddr string)*Listener {
-	return &Listener{laddr:laddr}
+func NewListener(laddr string) *Listener {
+	return &Listener{laddr: laddr}
 }
 
 func (l *Listener) Accept() (transport.Conn, error) {
@@ -81,7 +85,10 @@ func (l *Listener) Accept() (transport.Conn, error) {
 		return nil, err
 	}
 
-	mux, err := smux.Server(conn, nil)
+	cfg := smux.DefaultConfig()
+	cfg.KeepAliveTimeout = time.Second * 10
+	cfg.KeepAliveInterval = time.Second * 5
+	mux, err := smux.Server(conn, cfg)
 	if err != nil {
 		return nil, err
 	}

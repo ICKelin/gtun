@@ -66,7 +66,7 @@ func (d *Dialer) Dial() (transport.Conn, error) {
 
 	cfg := smux.DefaultConfig()
 	cfg.KeepAliveTimeout = time.Second * 10
-	cfg.KeepAliveInterval = time.Second * 5
+	cfg.KeepAliveInterval = time.Second * 3
 	mux, err := smux.Client(conn, cfg)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (l *Listener) Accept() (transport.Conn, error) {
 
 	cfg := smux.DefaultConfig()
 	cfg.KeepAliveTimeout = time.Second * 10
-	cfg.KeepAliveInterval = time.Second * 5
+	cfg.KeepAliveInterval = time.Second * 3
 	mux, err := smux.Server(conn, cfg)
 	if err != nil {
 		return nil, err

@@ -3,13 +3,11 @@ package gtun
 import (
 	"flag"
 	"fmt"
+	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport"
-	"github.com/ICKelin/gtun/transport/kcp"
-	"github.com/ICKelin/gtun/transport/mux"
 )
 
 func init() {
@@ -28,6 +26,12 @@ func Main() {
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
 	for region, cfg := range conf.Forwards {
+		dialer, err := transport_api.NewDialer(cfg.Transport.Scheme, cfg.ServerAddr, cfg.Transport.ConfigContent)
+		if err != nil {
+			logs.Error("new dialer fail: %v", err)
+			continue
+		}
+
 		tcpfw := NewTCPForward(region, cfg.TCPForward)
 		lis, err := tcpfw.Listen()
 		if err != nil {
@@ -46,18 +50,9 @@ func Main() {
 
 		go udpfw.Serve(udpConn)
 
-		var dialer transport.Dialer
-		switch cfg.Transport.Scheme {
-		case "kcp":
-			dialer = kcp.NewDialer(cfg.ServerAddr, []byte(cfg.Transport.ConfigContent))
-		case "mux":
-			dialer = mux.NewDialer(cfg.ServerAddr)
-		default:
-			dialer = mux.NewDialer(cfg.ServerAddr)
-		}
-
 		client := NewClient(dialer)
 		go client.Run(region)
+
 	}
 
 	select {}

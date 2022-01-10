@@ -3,7 +3,7 @@ package gtun
 import (
 	"sync"
 
-	"github.com/ICKelin/gtun/transport"
+	"github.com/ICKelin/optw/transport"
 )
 
 var sessionMgr = &SessionManager{}

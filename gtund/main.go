@@ -7,9 +7,9 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport"
-	"github.com/ICKelin/gtun/transport/kcp"
-	"github.com/ICKelin/gtun/transport/mux"
+	"github.com/ICKelin/optw/transport"
+	"github.com/ICKelin/optw/transport/kcp"
+	"github.com/ICKelin/optw/transport/mux"
 )
 
 var version = ""

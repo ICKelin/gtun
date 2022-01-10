@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/gtun/transport"
+	"github.com/ICKelin/optw/transport"
 )
 
 type ClientConfig struct {
@@ -29,7 +29,7 @@ func (c *Client) Run(region string) {
 	for {
 		conn, err := c.dialer.Dial()
 		if err != nil {
-			logs.Error("connect to %s fail: %v", region,err)
+			logs.Error("connect to %s fail: %v", region, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}

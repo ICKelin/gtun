@@ -12,7 +12,7 @@ import (
 
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/proto"
-	"github.com/ICKelin/gtun/transport"
+	"github.com/ICKelin/optw/transport"
 )
 
 var (

@@ -25,34 +25,35 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	for region, cfg := range conf.Forwards {
-		dialer, err := transport_api.NewDialer(cfg.Transport.Scheme, cfg.ServerAddr, cfg.Transport.ConfigContent)
-		if err != nil {
-			logs.Error("new dialer fail: %v", err)
-			continue
+	for region, regionCfg := range conf.Forwards {
+		for _, cfg := range regionCfg {
+			dialer, err := transport_api.NewDialer(cfg.Transport.Scheme, cfg.ServerAddr, cfg.Transport.ConfigContent)
+			if err != nil {
+				logs.Error("new dialer fail: %v", err)
+				continue
+			}
+
+			tcpfw := NewTCPForward(region, cfg.TCPForward)
+			lis, err := tcpfw.Listen()
+			if err != nil {
+				logs.Error("listen tproxy tcp fail: %v", err)
+				return
+			}
+
+			go tcpfw.Serve(lis)
+
+			udpfw := NewUDPForward(region, cfg.UDPForward)
+			udpConn, err := udpfw.Listen()
+			if err != nil {
+				logs.Error("listen tproxy udp fail: %v", err)
+				return
+			}
+
+			go udpfw.Serve(udpConn)
+
+			client := NewClient(dialer)
+			go client.Run(region)
 		}
-
-		tcpfw := NewTCPForward(region, cfg.TCPForward)
-		lis, err := tcpfw.Listen()
-		if err != nil {
-			logs.Error("listen tproxy tcp fail: %v", err)
-			return
-		}
-
-		go tcpfw.Serve(lis)
-
-		udpfw := NewUDPForward(region, cfg.UDPForward)
-		udpConn, err := udpfw.Listen()
-		if err != nil {
-			logs.Error("listen tproxy udp fail: %v", err)
-			return
-		}
-
-		go udpfw.Serve(udpConn)
-
-		client := NewClient(dialer)
-		go client.Run(region)
-
 	}
 
 	select {}

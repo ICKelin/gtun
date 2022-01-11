@@ -157,7 +157,7 @@ func (f *UDPForward) Serve(lconn *net.UDPConn) error {
 			f.udpsessLock.Unlock()
 		} else {
 			f.udpsessLock.Unlock()
-			sess := f.sessMgr.GetSession(f.region)
+			sess := f.sessMgr.GetSession(f.region, dip)
 			if sess == nil {
 				logs.Error("no route to host: %s", dip)
 				continue

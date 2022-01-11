@@ -6,25 +6,24 @@ import (
 	"github.com/ICKelin/optw/transport"
 )
 
-var sessionMgr = &SessionManager{}
-
-// SessionManager defines the session info add/delete/get actions
-type SessionManager struct {
-	sessions sync.Map
+var sessionMgr = &SessionManager{
+	sessions: make(map[string][]*Session),
 }
 
-// GetSessionManager returs the singleton of session manager
+type SessionMap map[string]*Session
+
+type SessionManager struct {
+	rwmu     sync.RWMutex
+	sessions map[string][]*Session
+}
+
 func GetSessionManager() *SessionManager {
 	return sessionMgr
 }
 
-// Session defines each opennotr_client to opennotr_server connection
 type Session struct {
-	// conn    *smux.Session
-	conn    transport.Conn
-	region  string
-	rxbytes uint64
-	txbytes uint64
+	conn   transport.Conn
+	region string
 }
 
 func newSession(conn transport.Conn, region string) *Session {
@@ -34,18 +33,54 @@ func newSession(conn transport.Conn, region string) *Session {
 	}
 }
 
-func (mgr *SessionManager) AddSession(vip string, sess *Session) {
-	mgr.sessions.Store(vip, sess)
+func (mgr *SessionManager) AddSession(region string, sess *Session) {
+	mgr.rwmu.Lock()
+	defer mgr.rwmu.Unlock()
+	regionSessions := mgr.sessions[region]
+	if regionSessions == nil {
+		regionSessions = make([]*Session, 0)
+	}
+
+	regionSessions = append(regionSessions, sess)
+	mgr.sessions[region] = regionSessions
 }
 
-func (mgr *SessionManager) GetSession(vip string) *Session {
-	val, ok := mgr.sessions.Load(vip)
+func (mgr *SessionManager) GetSession(region, dip string) *Session {
+	mgr.rwmu.RLock()
+	defer mgr.rwmu.RUnlock()
+
+	regionSessions, ok := mgr.sessions[region]
 	if !ok {
 		return nil
 	}
-	return val.(*Session)
+
+	if len(regionSessions) <= 0 {
+		return nil
+	}
+
+	hash := 0
+	for _, c := range dip {
+		hash += int(c)
+	}
+	return regionSessions[hash%len(regionSessions)]
 }
 
-func (mgr *SessionManager) DeleteSession(vip string) {
-	mgr.sessions.Delete(vip)
+func (mgr *SessionManager) DeleteSession(region string, sess *Session) {
+	mgr.rwmu.Lock()
+	defer mgr.rwmu.Unlock()
+	regionSessions := mgr.sessions[region]
+	if regionSessions == nil {
+		return
+	}
+
+	newSessions := make([]*Session, 0, len(regionSessions))
+	for _, s := range regionSessions {
+		if s.conn.RemoteAddr().String() == sess.conn.RemoteAddr().String() {
+			continue
+		}
+
+		newSessions = append(newSessions, s)
+	}
+
+	mgr.sessions[region] = newSessions
 }

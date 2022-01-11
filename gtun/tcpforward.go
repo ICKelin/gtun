@@ -100,7 +100,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	dip, dport, _ := net.SplitHostPort(conn.LocalAddr().String())
 	sip, sport, _ := net.SplitHostPort(conn.RemoteAddr().String())
 
-	sess := f.sessMgr.GetSession(f.region)
+	sess := f.sessMgr.GetSession(f.region, dip)
 	if sess == nil {
 		logs.Error("no route to host: %s", dip)
 		return

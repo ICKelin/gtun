@@ -7,8 +7,8 @@ import (
 )
 
 type Config struct {
-	Forwards map[string]ForwardConfig `yaml:"forwards"`
-	Log      Log                      `yaml:"log"`
+	Forwards map[string][]ForwardConfig `yaml:"forwards"`
+	Log      Log                        `yaml:"log"`
 }
 
 type ForwardConfig struct {

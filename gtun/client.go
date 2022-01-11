@@ -44,7 +44,7 @@ func (c *Client) Run(region string) {
 			}
 		}
 
-		c.sessionMgr.DeleteSession(region)
+		c.sessionMgr.DeleteSession(region, sess)
 		logs.Warn("reconnect")
 	}
 }

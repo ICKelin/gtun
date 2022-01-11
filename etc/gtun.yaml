@@ -1,13 +1,21 @@
 forwards:
-  CN: 
-    server: "10.60.6.95:8524"
-    authKey: "rewrite with your auth key"
-    tcp:
-      listen: ":8524"
-    udp:
-      listen: ":8525"
-    transport:
-      scheme: kcp
+  CN:
+    - server: "10.60.6.95:8524"
+      authKey: "rewrite with your auth key"
+      tcp:
+        listen: ":8524"
+      udp:
+        listen: ":8525"
+      transport:
+        scheme: kcp
+    - server: "10.60.6.95:8525"
+      authKey: "rewrite with your auth key"
+      tcp:
+        listen: ":8526"
+      udp:
+        listen: ":8527"
+      transport:
+        scheme: mux
 
 log:
   days: 5

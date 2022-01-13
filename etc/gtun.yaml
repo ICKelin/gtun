@@ -1,20 +1,15 @@
 forwards:
-  CN:
-    - server: "10.60.6.95:8524"
-      authKey: "rewrite with your auth key"
-      tcp:
-        listen: ":8524"
-      udp:
-        listen: ":8525"
-      transport:
+  - region: US
+    tcp:
+      listen: ":2012"
+    udp:
+      listen: ":2012"
+    next_hops:
+      - server: "38.77.228.185:5011"
+        authKey: "rewrite with your auth key"
         scheme: kcp
-    - server: "10.60.6.95:8525"
-      authKey: "rewrite with your auth key"
-      tcp:
-        listen: ":8526"
-      udp:
-        listen: ":8527"
-      transport:
+      - server: "38.77.228.185:5012"
+        authKey: "rewrite with your auth key"
         scheme: mux
 
 log:

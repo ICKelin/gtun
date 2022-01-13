@@ -7,16 +7,15 @@ import (
 )
 
 type Config struct {
-	Forwards map[string][]ForwardConfig `yaml:"forwards"`
-	Log      Log                        `yaml:"log"`
+	Forwards []ForwardConfig `yaml:"forwards"`
+	Log      Log             `yaml:"log"`
 }
 
 type ForwardConfig struct {
-	ServerAddr string           `yaml:"server"`
-	AuthKey    string           `yaml:"authKey"`
-	TCPForward TCPForwardConfig `yaml:"tcp"`
-	UDPForward UDPForwardConfig `yaml:"udp"`
-	Transport  TransportConfig  `yaml:"transport"`
+	Region     string            `yaml:"region"`
+	TCPForward TCPForwardConfig  `yaml:"tcp"`
+	UDPForward UDPForwardConfig  `yaml:"udp"`
+	Transport  []TransportConfig `yaml:"transport"`
 }
 
 type TCPForwardConfig struct {
@@ -33,6 +32,8 @@ type UDPForwardConfig struct {
 }
 
 type TransportConfig struct {
+	Server        string `yaml:"server"`
+	AuthKey       string `yaml:"auth_key"`
 	Scheme        string `yaml:"scheme"`
 	ConfigContent string `yaml:"config"`
 }

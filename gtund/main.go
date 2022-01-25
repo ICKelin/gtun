@@ -3,13 +3,11 @@ package gtund
 import (
 	"flag"
 	"fmt"
+	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
 	_ "net/http/pprof"
 
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/optw/transport"
-	"github.com/ICKelin/optw/transport/kcp"
-	"github.com/ICKelin/optw/transport/mux"
 )
 
 var version = ""
@@ -37,27 +35,17 @@ func Main() {
 
 	logs.Debug("config: %s", conf.String())
 
-	var listener transport.Listener
-	switch conf.ServerConfig.Scheme {
-	case "kcp":
-		listener = kcp.NewListener(conf.ServerConfig.Listen, []byte(conf.ListenerConfig))
-		err := listener.Listen()
+	for _, cfg := range conf.ServerConfig {
+		listener, err := transport_api.NewListen(cfg.Scheme, cfg.Listen, cfg.ListenerConfig)
 		if err != nil {
-			logs.Error("new kcp server fail; %v", err)
+			logs.Error("new listener fail: %v", err)
 			return
 		}
 		defer listener.Close()
 
-	default:
-		listener = mux.NewListener(conf.ServerConfig.Listen)
-		err := listener.Listen()
-		if err != nil {
-			logs.Error("new mux server fail: %v", err)
-			return
-		}
-		defer listener.Close()
+		s := NewServer(listener)
+		go s.Run()
 	}
 
-	server := NewServer(listener)
-	server.Run()
+	select {}
 }

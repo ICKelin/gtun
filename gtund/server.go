@@ -21,9 +21,10 @@ var (
 )
 
 type ServerConfig struct {
-	Listen  string `yaml:"listen"`
-	AuthKey string `yaml:"authKey"`
-	Scheme  string `yaml:"scheme"`
+	Listen         string `yaml:"listen"`
+	AuthKey        string `yaml:"authKey"`
+	Scheme         string `yaml:"scheme"`
+	ListenerConfig string `yaml:"listenerConfig"`
 }
 
 type Server struct {

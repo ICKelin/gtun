@@ -8,9 +8,8 @@ import (
 )
 
 type Config struct {
-	ServerConfig   ServerConfig `yaml:"server"`
-	ListenerConfig string       `yaml:"listenerConfig"`
-	Log            Log          `yaml:"log"`
+	ServerConfig []ServerConfig `yaml:"server"`
+	Log          Log            `yaml:"log"`
 }
 
 type Log struct {

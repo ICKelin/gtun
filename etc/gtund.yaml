@@ -1,7 +1,11 @@
 server:
-  listen: ":9098"
-  authKey: "rewrite with your auth key"
-  scheme: "kcp"
+  - listen: ":3002"
+    authKey: "rewrite with your auth key"
+    scheme: "kcp"
+
+  - listen: ":3001"
+    authKey: "rewrite with your auth key"
+    scheme: "mux"
 
 log:
   days: 5

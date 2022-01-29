@@ -1,7 +1,7 @@
 version: '3'
 services:     
   gtund:
-    image: ickelin/gtund:latest
+    build: .
     container_name: gtund
     restart: always
     ports:
@@ -12,11 +12,15 @@ services:
       TIME_ZONE: Asia/Shanghai
       settings: |
         server:
-          listen: ":9098"
-          authKey: "rewrite with your auth key"
-          scheme: "kcp"
+          - listen: ":3002"
+            authKey: "rewrite with your auth key"
+            scheme: "kcp"
+
+          - listen: ":3001"
+            authKey: "rewrite with your auth key"
+            scheme: "mux"
 
         log:
           days: 5
           level: "info"
-          path: "/opt/logs/gtund.log"
+          path: "gtund.log"

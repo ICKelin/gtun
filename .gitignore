@@ -9,3 +9,7 @@ bin
 research
 
 .idea
+*.tar.gz
+
+docker-build/gtun/gtun*
+docker-build/gtund/gtund

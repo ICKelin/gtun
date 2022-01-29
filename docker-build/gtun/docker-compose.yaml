@@ -1,7 +1,7 @@
 version: '3'
 services:     
   gtun:
-    image: ickelin/gtun:latest
+    build: .
     container_name: gtun
     restart: always
     network_mode: host
@@ -11,16 +11,75 @@ services:
     environment:
       TIME_ZONE: Asia/Shanghai
       settings: |
-       forwards:
-          CN: 
-            server: "127.0.0.1:9098"
-            authKey: "rewrite with your auth key"
+        forwards:
+          # 美国
+          - region: US
             tcp:
-              listen: ":8524"
+              listen: ":2006"
             udp:
-              listen: ":8525"
+              listen: ":2006"
+            transport:
+              - server: "1.2.3.4:3001"
+                authKey: "rewrite with your auth key"
+                scheme: mux
+              - server: "1.2.3.4:3002"
+                authKey: "rewrite with your auth key"
+                scheme: kcp
+          # 新加坡
+          - region: SG
+            tcp:
+              listen: ":2011"
+            udp:
+              listen: ":2011"
+            transport:
+              - server: "1.2.3.5:3001"
+                authKey: "rewrite with your auth key"
+                scheme: mux
+              - server: "1.2.3.5:3002"
+                authKey: "rewrite with your auth key"
+                scheme: kcp
+          # 菲律宾
+          - region: PH
+            tcp:
+              listen: ":2016"
+            udp:
+              listen: ":2016"
+            transport:
+              - server: "1.2.3.6:3001"
+                authKey: "rewrite with your auth key"
+                scheme: mux
+              - server: "1.2.3.6:3002"
+                authKey: "rewrite with your auth key"
+                scheme: kcp
+
+          # 土耳其
+          - region: TR
+            tcp:
+              listen: ":2026"
+            udp:
+              listen: ":2026"
+            transport:
+              #    - server: "1.2.3.7:3001"
+              #      authKey: "rewrite with your auth key"
+              #      scheme: mux
+              - server: "1.2.3.7:3002"
+                authKey: "rewrite with your auth key"
+                scheme: kcp
+          # 沙特
+          - region: SA
+            tcp:
+              listen: ":2031"
+            udp:
+              listen: ":2031"
+            transport:
+              #    - server: "1.2.3.8:3001"
+              #      authKey: "rewrite with your auth key"
+              #      scheme: mux
+              - server: "1.2.3.8:3002"
+                authKey: "rewrite with your auth key"
+                scheme: kcp
 
         log:
           days: 5
-          level: "info"
-          path: "/opt/logs/gtun.log"
+          level: "debug"
+          path: "gtun.log"

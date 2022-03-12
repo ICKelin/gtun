@@ -69,7 +69,7 @@ gtun本身只提供流量代理通道，至于哪些流量需要被劫持，这�
 ### 安装运行gtund
 gtund需要运行在公有云上，相对比较简单，原则上越靠近源站越好。
 
-首先生成配置文件，可以下载[gtund.yaml](https://github.com/ICKelin/gtun/blob/tproxy/etc/gtund.yaml)进行修改
+首先生成配置文件，可以下载[gtund.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtund.yaml)进行修改
 
 ```yaml
 server:
@@ -89,19 +89,22 @@ log:
 ### 安装运行gtun
 gtun可以运行在内网，也可以运行在公有云，在本场景当中，gtun会被部署在内网。
 
-首先生成配置文件，可以下载[gtun.yaml](https://github.com/ICKelin/gtun/blob/tproxy/etc/gtun.yaml)进行修改
+首先生成配置文件，可以下载[gtun.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtun.yaml)进行修改
 
 ```yaml
 forwards:
-  CN: 
-    server: "10.60.6.95:8524"
-    authKey: "rewrite with your auth key"
+  - region: US
     tcp:
-      listen: ":8524"
+      listen: ":2012"
     udp:
-      listen: ":8524"    
-    transport:
-      scheme: kcp
+      listen: ":2012"
+    next_hops:
+      - server: "10.60.6.95:5011"
+        authKey: "rewrite with your auth key"
+        scheme: kcp
+      - server: "10.60.6.95:5012"
+        authKey: "rewrite with your auth key"
+        scheme: mux
 
 log:
   days: 5
@@ -116,7 +119,7 @@ log:
 
 配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。
 ### 配置加速ip
-在上述过程中，启动了gtun和gtund程序，但是并未添加任何需要加速的信息，那么gtun如何进行加速呢？需要额外手动配置加速ip，并将该ip的tcp流量全部转发至`127.0.0.1:8524`端口，udp流量全部转发至`127.0.0.1:8525`端口。
+在上述过程中，启动了gtun和gtund程序，但是并未添加任何需要加速的信息，那么gtun如何进行加速呢？需要额外手动配置加速ip，并将该ip的tcp流量全部转发至`127.0.0.1:2012`端口，udp流量全部转发至`127.0.0.1:2012`端口。
 
 这个过程是通过ipset和路由来配置的。以`1.1.1.1`为例
 
@@ -129,8 +132,8 @@ log:
 第二步，创建iptables规则，匹配目的ip为`GTUN-US`这个ipset内部的ip，然后做`tproxy`操作，将流量重定向到本地`8524`和`8525`端口
 
 ```
-iptables -t mangle -I PREROUTING -p tcp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 8524
-iptables -t mangle -I PREROUTING -p udp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 8525
+iptables -t mangle -I PREROUTING -p tcp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 2012
+iptables -t mangle -I PREROUTING -p udp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 2012
 iptables -t mangle -I OUTPUT -m set --match-set GTUN-US dst -j MARK --set-mark 1
 ```
 

@@ -4,7 +4,7 @@ forwards:
       listen: ":2012"
     udp:
       listen: ":2012"
-    next_hops:
+    transport:
       - server: "38.77.228.185:5011"
         authKey: "rewrite with your auth key"
         scheme: kcp

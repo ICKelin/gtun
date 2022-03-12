@@ -4,10 +4,9 @@ services:
     build: .
     container_name: gtund
     restart: always
-    ports:
-      - 9098:9098/udp
+    network_mode: host
     volumes:
-      - /opt/apps/logs:/opt/logs
+      - /opt/apps/logs:/logs
     environment:
       TIME_ZONE: Asia/Shanghai
       settings: |
@@ -23,4 +22,4 @@ services:
         log:
           days: 5
           level: "info"
-          path: "gtund.log"
+          path: "/logs/gtund.log"

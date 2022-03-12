@@ -74,7 +74,7 @@ func NewUDPForward(region string, cfg UDPForwardConfig) *UDPForward {
 	}
 }
 
-// Listen listens a udp port, since that we use tproxy to
+// Listen listens an udp port, since that we use tproxy to
 // redirect traffic to this listened udp port
 // so the socket should set to ip transparent option
 func (f *UDPForward) Listen() (*net.UDPConn, error) {

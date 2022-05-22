@@ -69,7 +69,7 @@ gtun本身只提供流量代理通道，至于哪些流量需要被劫持，这�
 ### 安装运行gtund
 gtund需要运行在公有云上，相对比较简单，原则上越靠近源站越好。
 
-首先生成配置文件，可以下载[gtund.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtund.yaml)进行修改
+首先生成配置文件，可以下载 [gtund.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtund.yaml) 进行修改
 
 ```yaml
 server:
@@ -89,7 +89,7 @@ log:
 ### 安装运行gtun
 gtun可以运行在内网，也可以运行在公有云，在本场景当中，gtun会被部署在内网。
 
-首先生成配置文件，可以下载[gtun.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtun.yaml)进行修改
+首先生成配置文件，可以下载 [gtun.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtun.yaml) 进行修改
 
 ```yaml
 forwards:

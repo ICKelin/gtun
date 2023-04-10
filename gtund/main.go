@@ -44,6 +44,7 @@ func Main() {
 		defer listener.Close()
 
 		s := NewServer(listener)
+		go NewTraceServer(cfg.Trace).ListenAndServe()
 		go s.Run()
 	}
 

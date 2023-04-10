@@ -22,6 +22,7 @@ var (
 
 type ServerConfig struct {
 	Listen         string `yaml:"listen"`
+	Trace          string `yaml:"trace"`
 	AuthKey        string `yaml:"authKey"`
 	Scheme         string `yaml:"scheme"`
 	ListenerConfig string `yaml:"listenerConfig"`

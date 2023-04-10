@@ -35,6 +35,7 @@ type TransportConfig struct {
 	Server        string `yaml:"server"`
 	AuthKey       string `yaml:"auth_key"`
 	Scheme        string `yaml:"scheme"`
+	TraceAddr     string `yaml:"trace_addr"`
 	ConfigContent string `yaml:"config"`
 }
 

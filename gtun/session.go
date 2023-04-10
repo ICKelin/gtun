@@ -1,6 +1,8 @@
 package gtun
 
 import (
+	"github.com/ICKelin/gtun/internal/logs"
+	"strings"
 	"sync"
 
 	"github.com/ICKelin/optw/transport"
@@ -13,12 +15,17 @@ var sessionMgr = &SessionManager{
 type SessionMap map[string]*Session
 
 type SessionManager struct {
-	rwmu     sync.RWMutex
-	sessions map[string][]*Session
+	rwmu        sync.RWMutex
+	sessions    map[string][]*Session
+	raceManager *RaceManager
 }
 
 func GetSessionManager() *SessionManager {
 	return sessionMgr
+}
+
+func (sessionMgr *SessionManager) SetRaceManager(raceManager *RaceManager) {
+	sessionMgr.raceManager = raceManager
 }
 
 type Session struct {
@@ -58,6 +65,26 @@ func (mgr *SessionManager) GetSession(region, dip string) *Session {
 		return nil
 	}
 
+	bestNode := mgr.raceManager.GetBestNode(region)
+	bestIP := strings.Split(bestNode, ":")[0]
+	// 根据竞速返回地址
+	for i := 0; i < len(regionSessions); i++ {
+		sess := regionSessions[i]
+		if sess.conn.IsClosed() {
+			logs.Warn("%s %s is closed", region, sess.conn.RemoteAddr())
+			continue
+		}
+
+		if len(bestIP) != 0 {
+			sessIP := strings.Split(sess.conn.RemoteAddr().String(), ":")[0]
+			if bestIP == sessIP {
+				logs.Debug("best ip match %s", bestIP)
+				return sess
+			}
+		}
+	}
+
+	logs.Warn("use random session")
 	hash := 0
 	for _, c := range dip {
 		hash += int(c)

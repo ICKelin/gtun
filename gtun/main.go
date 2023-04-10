@@ -25,6 +25,8 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
+	raceManager := NewRaceManager()
+	raceTargets := make(map[string][]string)
 	for _, cfg := range conf.Forwards {
 		tcpfw := NewTCPForward(cfg.Region, cfg.TCPForward)
 		lis, err := tcpfw.Listen()
@@ -53,8 +55,16 @@ func Main() {
 
 			client := NewClient(dialer)
 			go client.Run(cfg.Region)
+			raceTargets[cfg.Region] = append(raceTargets[cfg.Region], hopCfg.TraceAddr)
 		}
 	}
+
+	for region, targets := range raceTargets {
+		race := NewRace(targets)
+		raceManager.AddRegionRace(region, race)
+	}
+
+	GetSessionManager().SetRaceManager(raceManager)
 
 	select {}
 }

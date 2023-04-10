@@ -6,10 +6,10 @@ forwards:
       listen: ":2012"
     transport:
       - server: "38.77.228.185:5011"
-        authKey: "rewrite with your auth key"
+        auth_key: "rewrite with your auth key"
         scheme: kcp
       - server: "38.77.228.185:5012"
-        authKey: "rewrite with your auth key"
+        auth_key: "rewrite with your auth key"
         scheme: mux
 
 log:

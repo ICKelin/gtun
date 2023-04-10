@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -23,7 +22,7 @@ var (
 type ServerConfig struct {
 	Listen         string `yaml:"listen"`
 	Trace          string `yaml:"trace"`
-	AuthKey        string `yaml:"authKey"`
+	AuthKey        string `yaml:"auth_key"`
 	Scheme         string `yaml:"scheme"`
 	ListenerConfig string `yaml:"listenerConfig"`
 }
@@ -85,7 +84,7 @@ func (s *Server) handleStream(stream transport.Stream) {
 	lenbuf := make([]byte, 2)
 	_, err := stream.Read(lenbuf)
 	if err != nil {
-		log.Println(err)
+		logs.Error("read stream len fail: %v", err)
 		stream.Close()
 		return
 	}
@@ -191,7 +190,7 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 			break
 		}
 
-		bytes := encode(buf[:nr])
+		bytes := proto.EncodeData(buf[:nr])
 		stream.SetWriteDeadline(time.Now().Add(time.Second * 10))
 		nw, err := stream.Write(bytes)
 		stream.SetWriteDeadline(time.Time{})
@@ -204,11 +203,4 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 			logs.Error("bug: stream write %d bytes, expected %d", nw, len(bytes))
 		}
 	}
-}
-
-func encode(raw []byte) []byte {
-	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, uint16(len(raw)))
-	buf = append(buf, raw...)
-	return buf
 }

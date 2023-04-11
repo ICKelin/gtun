@@ -15,11 +15,18 @@
 
 gtun是一款开源的ip代理加速软件，通过`tproxy`技术实现流量劫持，`quic`和`kcp`等协议优化广域网传输，gtun提供一个基础通道，所有加入`ipset`的ip，出口，入口流量都会被gtun进行拦截并代理到指定出口。
 
-gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。
+gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。您可以结合dnsmasq来使用，将需要配置加速的域名解析结果加入ipset，从而实现域名加速。
 
-你可以使用gtun来作为一个ip加速器，加速访问位于海外的跳板机，云服务器，网站。
+**使用场景**
 
-同时我们也基于gtun开发了收费版本，对标阿里云的全球应用加速，ucloud的pathX等产品的功能，可以访问[我们的网站](https://dash.beyondnetwork.net)进行免费免费体验。
+- SaaS软件加速，加速访问Salesforce，offce365等产品
+- 云服务器加速，加速访问海外服务器，跳板机，提升操作流畅度
+- 直播加速，tiktok海外直播加速，抖音直播加速
+- 游戏加速，结合专线网络和路由盒子实现游戏加速盒
+
+gtun是一个完整的加速器，**目前只支持linux**
+
+同时我们也基于gtun开发了收费版本，对标阿里云的全球应用加速，ucloud的pathX等产品的功能，只是会更加灵活，支持私有化部署，独立部署，可以下沉到办公室，如果您感兴趣，可以访问[我们的网站](https://www.beyondnetwork.net)进行免费免费体验。
 
 关于项目有任何问题需要咨询，可以[联系作者](#关于作者)进行交流
 
@@ -41,8 +48,9 @@ gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络�
 
 - 纯应用层实现，不存在overlay网络，支持tcp和udp协议以及运行在其上的所有七层协议
 - 支持ip加速，配合dnsmasq等软件可支持域名加速场景
+- 支持多链路容灾和竞速
 - 支持动态和静态内容访问加速
-- 引入`kcp`，`quic`等协议优化跨境传输
+- 引入`kcp`，`quic`等协议优化跨境传输（quic进行中）
 
 [返回目录](#目录)
 
@@ -75,14 +83,21 @@ gtund需要运行在公有云上，相对比较简单，原则上越靠近源站
 
 ```yaml
 server:
-  listen: ":9098"
-  authKey: "rewrite with your auth key"
-  scheme: "kcp"
+  - listen: ":3002"
+    trace: ":3003"
+    auth_key: "rewrite with your auth key"
+    scheme: "kcp"
+
+  - listen: ":3001"
+    trace: ":3004"
+    auth_key: "rewrite with your auth key"
+    scheme: "mux"
 
 log:
   days: 5
-  level: "info"
+  level: "debug"
   path: "gtund.log"
+
 ```
 
 大部分情况下您只需要修改`authKey`字段即可，配置文件生成之后，通过运行
@@ -100,12 +115,12 @@ forwards:
       listen: ":2012"
     udp:
       listen: ":2012"
-    next_hops:
-      - server: "10.60.6.95:5011"
-        authKey: "rewrite with your auth key"
+    transport:
+      - server: "xx.xx.xx.xx:5011"
+        auth_key: "rewrite with your auth key"
         scheme: kcp
-      - server: "10.60.6.95:5012"
-        authKey: "rewrite with your auth key"
+      - server: "xx.xx.xx.xx:5012"
+        auth_key: "rewrite with your auth key"
         scheme: mux
 
 log:

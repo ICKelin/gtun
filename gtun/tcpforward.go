@@ -1,6 +1,7 @@
 package gtun
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -103,12 +104,14 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	sess := f.sessMgr.GetSession(f.region, dip)
 	if sess == nil {
 		logs.Error("no route to host: %s", dip)
+		f.forwardDirect(conn, dip, dport)
 		return
 	}
 	logs.Debug("%s:%s=>%s:%s", sip, sport, dip, dport)
 	stream, err := sess.conn.OpenStream()
 	if err != nil {
 		logs.Error("open stream fail: %v", err)
+		f.forwardDirect(conn, dip, dport)
 		return
 	}
 	defer stream.Close()
@@ -119,6 +122,7 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	stream.SetWriteDeadline(time.Time{})
 	if err != nil {
 		logs.Error("stream write fail: %v", err)
+		f.forwardDirect(conn, dip, dport)
 		return
 	}
 
@@ -140,4 +144,32 @@ func (f *TCPForward) forwardTCP(conn net.Conn) {
 	defer f.mempool.Put(obj)
 	buf := obj.([]byte)
 	io.CopyBuffer(conn, stream, buf)
+}
+
+func (f *TCPForward) forwardDirect(conn net.Conn, dip, dport string) {
+	rconn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", dip, dport))
+	if err != nil {
+		logs.Error("forward direct fail: %v", err)
+		return
+	}
+	defer rconn.Close()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	defer wg.Wait()
+
+	go func() {
+		defer wg.Done()
+		defer rconn.Close()
+		defer conn.Close()
+		obj := f.mempool.Get()
+		defer f.mempool.Put(obj)
+		buf := obj.([]byte)
+		io.CopyBuffer(rconn, conn, buf)
+	}()
+
+	obj := f.mempool.Get()
+	defer f.mempool.Put(obj)
+	buf := obj.([]byte)
+	io.CopyBuffer(conn, rconn, buf)
 }

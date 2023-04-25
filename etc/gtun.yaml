@@ -5,12 +5,13 @@ forwards:
     udp:
       listen: ":2012"
     transport:
-      - server: "38.77.228.185:5011"
+      - server: "ip:port"
         auth_key: "rewrite with your auth key"
         scheme: kcp
       - server: "38.77.228.185:5012"
         auth_key: "rewrite with your auth key"
         scheme: mux
+    rate_limit: 1000
 
 log:
   days: 5

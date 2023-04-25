@@ -28,7 +28,10 @@ func Main() {
 	raceManager := NewRaceManager()
 	raceTargets := make(map[string][]string)
 	for _, cfg := range conf.Forwards {
-		tcpfw := NewTCPForward(cfg.Region, cfg.TCPForward)
+		ratelimit := NewRateLimit()
+		ratelimit.SetRateLimit(int64(cfg.Ratelimit * 1024 * 1024))
+
+		tcpfw := NewTCPForward(cfg.Region, cfg.TCPForward, ratelimit)
 		lis, err := tcpfw.Listen()
 		if err != nil {
 			logs.Error("listen tproxy tcp fail: %v", err)
@@ -37,7 +40,7 @@ func Main() {
 
 		go tcpfw.Serve(lis)
 
-		udpfw := NewUDPForward(cfg.Region, cfg.UDPForward)
+		udpfw := NewUDPForward(cfg.Region, cfg.UDPForward, ratelimit)
 		udpConn, err := udpfw.Listen()
 		if err != nil {
 			logs.Error("listen tproxy udp fail: %v", err)

@@ -34,9 +34,11 @@ type TCPForward struct {
 	sessMgr *SessionManager
 
 	mempool sync.Pool
+
+	ratelimit *RateLimit
 }
 
-func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
+func NewTCPForward(region string, cfg TCPForwardConfig, ratelimit *RateLimit) *TCPForward {
 	tcpReadTimeout := cfg.ReadTimeout
 	if tcpReadTimeout <= 0 {
 		tcpReadTimeout = defaultTCPTimeout
@@ -58,6 +60,7 @@ func NewTCPForward(region string, cfg TCPForwardConfig) *TCPForward {
 				return make([]byte, 32*1024)
 			},
 		},
+		ratelimit: ratelimit,
 	}
 }
 

@@ -16,6 +16,7 @@ type ForwardConfig struct {
 	TCPForward TCPForwardConfig  `yaml:"tcp"`
 	UDPForward UDPForwardConfig  `yaml:"udp"`
 	Transport  []TransportConfig `yaml:"transport"`
+	Ratelimit  uint64            `yaml:"rate_limit"` // rate limit mbps
 }
 
 type TCPForwardConfig struct {

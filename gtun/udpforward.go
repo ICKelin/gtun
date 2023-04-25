@@ -45,9 +45,11 @@ type UDPForward struct {
 	// the purpose of udpSession is to reuse stream
 	udpSessions map[string]*udpSession
 	udpsessLock sync.Mutex
+
+	ratelimit *RateLimit
 }
 
-func NewUDPForward(region string, cfg UDPForwardConfig) *UDPForward {
+func NewUDPForward(region string, cfg UDPForwardConfig, ratelimit *RateLimit) *UDPForward {
 	readTimeout := cfg.ReadTimeout
 	if readTimeout <= 0 {
 		readTimeout = defaultUDPTimeout
@@ -71,6 +73,7 @@ func NewUDPForward(region string, cfg UDPForwardConfig) *UDPForward {
 		sessionTimeout: sessionTimeout,
 		sessMgr:        GetSessionManager(),
 		udpSessions:    make(map[string]*udpSession),
+		ratelimit:      ratelimit,
 	}
 }
 

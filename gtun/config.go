@@ -16,7 +16,7 @@ type ForwardConfig struct {
 	TCPForward TCPForwardConfig  `yaml:"tcp"`
 	UDPForward UDPForwardConfig  `yaml:"udp"`
 	Transport  []TransportConfig `yaml:"transport"`
-	Ratelimit  uint64            `yaml:"rate_limit"` // rate limit mbps
+	Ratelimit  uint64            `yaml:"rateLimit"` // rate limit mbps
 }
 
 type TCPForwardConfig struct {
@@ -34,9 +34,9 @@ type UDPForwardConfig struct {
 
 type TransportConfig struct {
 	Server        string `yaml:"server"`
-	AuthKey       string `yaml:"auth_key"`
+	AuthKey       string `yaml:"authKey"`
 	Scheme        string `yaml:"scheme"`
-	TraceAddr     string `yaml:"trace_addr"`
+	TraceAddr     string `yaml:"traceAddr"`
 	ConfigContent string `yaml:"config"`
 }
 

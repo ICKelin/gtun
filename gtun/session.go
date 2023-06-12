@@ -1,9 +1,10 @@
 package gtun
 
 import (
-	"github.com/ICKelin/gtun/internal/logs"
 	"strings"
 	"sync"
+
+	"github.com/ICKelin/gtun/internal/logs"
 
 	"github.com/ICKelin/optw/transport"
 )
@@ -65,9 +66,9 @@ func (mgr *SessionManager) GetSession(region, dip string) *Session {
 		return nil
 	}
 
+	// get bestNode from race module
 	bestNode := mgr.raceManager.GetBestNode(region)
 	bestIP := strings.Split(bestNode, ":")[0]
-	// 根据竞速返回地址
 	for i := 0; i < len(regionSessions); i++ {
 		sess := regionSessions[i]
 		if sess.conn.IsClosed() {

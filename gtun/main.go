@@ -3,9 +3,9 @@ package gtun
 import (
 	"flag"
 	"fmt"
-	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
-	_ "net/http/pprof"
+
+	"github.com/ICKelin/optw/transport/transport_api"
 
 	"github.com/ICKelin/gtun/internal/logs"
 )

@@ -2,36 +2,38 @@ package gtun
 
 import (
 	"encoding/binary"
-	"github.com/ICKelin/gtun/internal/logs"
 	"math"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/ICKelin/gtun/internal/logs"
 )
 
 var gRaceManager *RaceManager
+var singleton sync.Once
 
+// RaceManager manage region race
 type RaceManager struct {
 	regionRaceMu sync.Mutex
-	RegionRace   map[string]*Race
+	regionRace   map[string]*Race
 }
 
+// NewRaceManager is a singleton of create a race manager
 func NewRaceManager() *RaceManager {
-	m := &RaceManager{
-		RegionRace: make(map[string]*Race),
-	}
-	gRaceManager = m
+	singleton.Do(func() {
+		gRaceManager = &RaceManager{
+			regionRace: make(map[string]*Race),
+		}
+	})
 	return gRaceManager
 }
 
-func GetRaceManager() *RaceManager {
-	return gRaceManager
-}
-
+// AddRegionRace adds a race instance for region
 func (m *RaceManager) AddRegionRace(region string, race *Race) {
 	m.regionRaceMu.Lock()
 	defer m.regionRaceMu.Unlock()
-	m.RegionRace[region] = race
+	m.regionRace[region] = race
 }
 
 //
@@ -44,8 +46,9 @@ func (m *RaceManager) AddRegionRace(region string, race *Race) {
 //	}
 //}
 
+// GetBestNode returns the hightest score of region target region
 func (m *RaceManager) GetBestNode(region string) string {
-	regionRace := m.RegionRace[region]
+	regionRace := m.regionRace[region]
 	if regionRace == nil {
 		return ""
 	}
@@ -53,6 +56,7 @@ func (m *RaceManager) GetBestNode(region string) string {
 	return regionRace.GetBestNode()
 }
 
+// Race is a region race instance
 type Race struct {
 	targets       []string
 	targetScoreMu sync.Mutex
@@ -60,6 +64,7 @@ type Race struct {
 	totalRtt      int32
 }
 
+// NewRace return race instance
 func NewRace(targets []string) *Race {
 	return &Race{
 		targets:       targets,
@@ -68,9 +73,7 @@ func NewRace(targets []string) *Race {
 	}
 }
 
-// 竞速规则：
-// 每分钟竞速一次，发60个包，统计丢包和延迟，计算score
-
+// Run race job
 func (r *Race) Run() {
 	r.race()
 	tick := time.NewTicker(time.Second * 120)
@@ -98,7 +101,7 @@ func (r *Race) race() {
 		seq := uint64(0)
 		buf := make([]byte, 8)
 		for i := 0; i < 60; i++ {
-			seq += 1
+			seq++
 			binary.BigEndian.PutUint64(buf, seq)
 
 			beg := time.Now()
@@ -117,14 +120,13 @@ func (r *Race) race() {
 				logs.Error("read from udp fail: %v", err)
 				continue
 			}
-			loss -= 1
+			loss--
 			diff := time.Now().Sub(beg).Milliseconds()
 			rtt += int(diff)
 		}
 		remoteAddr := rconn.RemoteAddr().String()
 		rconn.Close()
 
-		// 统计结果
 		if rtt < 0 {
 			rtt = math.MaxInt
 		}
@@ -139,12 +141,11 @@ func (r *Race) race() {
 	}
 }
 
-// 丢包评分方程:
-//f(p)  = 50                              p = 0,
-//f(p) = 40+(0.75-p)x13                   0%  < p <= 0.75%,
-//f(p) = 35+(1.25-p)x10                   0.75% < p <= 1.25%,
-//f(p) = 30+(2.25-p)x5                    1.25% < p <= 2.25%,
-//f(p) = 30+(p-2.25)x5x-1                 p > 2.25%
+// f(p)  = 50                              p = 0,
+// f(p) = 40+(0.75-p)x13                   0%  < p <= 0.75%,
+// f(p) = 35+(1.25-p)x10                   0.75% < p <= 1.25%,
+// f(p) = 30+(2.25-p)x5                    1.25% < p <= 2.25%,
+// f(p) = 30+(p-2.25)x5x-1                 p > 2.25%
 func (r *Race) calcLossScore(loss int) float64 {
 	lossRate := float64(loss) / 60
 	if 0 < lossRate && lossRate <= 0.75 {
@@ -176,6 +177,7 @@ func (r *Race) calcRttScore(rtt int) float64 {
 	return 0
 }
 
+// GetBestNode of all the targets of race
 func (r *Race) GetBestNode() string {
 	r.targetScoreMu.Lock()
 	defer r.targetScoreMu.Unlock()

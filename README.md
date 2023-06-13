@@ -17,7 +17,7 @@ gtun是一款开源的ip代理加速软件，通过`tproxy`技术实现流量劫
 
 gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。您可以结合dnsmasq来使用，将需要配置加速的域名解析结果加入ipset，从而实现域名加速。
 
-[![使用gtun配置IP加速](https://img.youtube.com/vi/pxv02e5EXPE/0.jpg)](https://www.youtube.com/watch?v=pxv02e5EXPE)
+[![](https://res.cloudinary.com/marcomontalbano/image/upload/v1686622903/video_to_markdown/images/youtube--pxv02e5EXPE-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://www.youtube.com/watch?v=pxv02e5EXPE "")
 
 **使用场景**
 

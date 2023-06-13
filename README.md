@@ -86,19 +86,20 @@ gtund需要运行在公有云上，相对比较简单，原则上越靠近源站
 ```yaml
 server:
   - listen: ":3002"
-    trace: ":3003"
-    auth_key: "rewrite with your auth key"
+    authKey: "rewrite with your auth key"
     scheme: "kcp"
+    trace: ":3003"
 
   - listen: ":3001"
-    trace: ":3004"
-    auth_key: "rewrite with your auth key"
+    authKey: "rewrite with your auth key"
     scheme: "mux"
+    trace: ":3003"
 
 log:
   days: 5
   level: "debug"
   path: "gtund.log"
+
 
 ```
 
@@ -118,12 +119,15 @@ forwards:
     udp:
       listen: ":2012"
     transport:
-      - server: "xx.xx.xx.xx:5011"
-        auth_key: "rewrite with your auth key"
+      - server: "ip1:port1"
+        authKey: "rewrite with your auth key"
         scheme: kcp
-      - server: "xx.xx.xx.xx:5012"
+        traceAddr: ""
+      - server: "ip2:port2"
         auth_key: "rewrite with your auth key"
         scheme: mux
+        traceAddr: ""
+    rateLimit: 1000
 
 log:
   days: 5

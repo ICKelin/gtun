@@ -84,16 +84,15 @@ gtund需要运行在公有云上，相对比较简单，原则上越靠近源站
 首先生成配置文件，可以下载 [gtund.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtund.yaml) 进行修改
 
 ```yaml
+trace: ":3003"
 server:
   - listen: ":3002"
     authKey: "rewrite with your auth key"
     scheme: "kcp"
-    trace: ":3003"
 
   - listen: ":3001"
     authKey: "rewrite with your auth key"
     scheme: "mux"
-    trace: ":3003"
 
 log:
   days: 5
@@ -135,12 +134,19 @@ log:
   path: "gtun.log"
 ```
 
-- `forwards`配置了转发路线相关配置，key为转发的区域
-- `server`字段配置了gtund所在机器的ip和端口
-- `authKey`字段配置了gtun和gtund双方认证的key，在gtund的配置文件当中指定
-- `tcp/udp`为tcp/udp代理相关配置，此处配置了tcp/udp代理监听的端口，所有需要代理加速的流量都会被重定向到该端口。
+- `forwards`配置了转发路线相关配置
+  - `region`字段配置区域信息
+  - `tcp`字段定义了本地tcp流量劫持的端口
+  - `udp`字段定义了本地udp流量劫持的端口
+  - `transport`字段定义了下一跳信息
+    - `server`: 下一跳地址
+    - `scheme`: 下一跳使用的协议
+    - `traceAddr`: 下一跳探测地址
 
 配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。
+
+[返回目录](#目录)
+
 ### 配置加速ip
 在上述过程中，启动了gtun和gtund程序，但是并未添加任何需要加速的信息，那么gtun如何进行加速呢？需要额外手动配置加速ip，并将该ip的tcp流量全部转发至`127.0.0.1:2012`端口，udp流量全部转发至`127.0.0.1:2012`端口。
 
@@ -177,6 +183,8 @@ Non-authoritative answer:
 Name:	www.google.com
 Address: 142.250.73.228
 ```
+
+[返回目录](#目录)
 
 ### 加速效果
 
@@ -217,6 +225,8 @@ root@raspberrypi:/home/pi# wget http://speedtest.atlanta.linode.com/100MB-atlant
 ```
 
 可以看见，通过gtun加速之后，速度可以达到2.39MB/s，而未通过gtun加速的正常下载速度则为15KB/s左右的速度，两者差了一个数量级。
+
+[返回目录](#目录)
 
 ## 应用场景
 

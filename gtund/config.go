@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	Trace        string         `yaml:"trace"`
 	ServerConfig []ServerConfig `yaml:"server"`
 	Log          Log            `yaml:"log"`
 }

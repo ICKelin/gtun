@@ -1,13 +1,12 @@
+trace: ":3003"
 server:
   - listen: ":3002"
     authKey: "rewrite with your auth key"
     scheme: "kcp"
-    trace: ":3003"
 
   - listen: ":3001"
     authKey: "rewrite with your auth key"
     scheme: "mux"
-    trace: ":3003"
 
 log:
   days: 5

@@ -21,7 +21,6 @@ var (
 
 type ServerConfig struct {
 	Listen         string `yaml:"listen"`
-	Trace          string `yaml:"trace"`
 	AuthKey        string `yaml:"authKey"`
 	Scheme         string `yaml:"scheme"`
 	ListenerConfig string `yaml:"listenerConfig"`
@@ -140,7 +139,7 @@ func (s *Server) tcpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 }
 
 func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
-	addr := fmt.Sprintf("%s:%s", p.DstIP, p.DstPort)
+	addr := net.JoinHostPort(p.DstPort, p.DstPort)
 	raddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		logs.Error("resolve %s fail: %v", addr, err)
@@ -153,6 +152,7 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 		logs.Error("dial %s udp fail: %v", raddr, err)
 		return
 	}
+	defer remoteConn.Close()
 
 	go func() {
 		defer remoteConn.Close()

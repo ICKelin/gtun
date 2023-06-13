@@ -35,6 +35,7 @@ func Main() {
 
 	logs.Debug("config: %s", conf.String())
 
+	go NewTraceServer(conf.Trace).ListenAndServe()
 	for _, cfg := range conf.ServerConfig {
 		listener, err := transport_api.NewListen(cfg.Scheme, cfg.Listen, cfg.ListenerConfig)
 		if err != nil {
@@ -44,7 +45,6 @@ func Main() {
 		defer listener.Close()
 
 		s := NewServer(listener)
-		go NewTraceServer(cfg.Trace).ListenAndServe()
 		go s.Run()
 	}
 

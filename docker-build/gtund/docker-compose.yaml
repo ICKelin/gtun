@@ -14,12 +14,9 @@ services:
           - listen: ":3002"
             authKey: "rewrite with your auth key"
             scheme: "kcp"
-
-          - listen: ":3001"
-            authKey: "rewrite with your auth key"
-            scheme: "mux"
+            trace: ":3003"
 
         log:
           days: 5
-          level: "info"
-          path: "/logs/gtund.log"
+          level: "debug"
+          path: "gtund.log"

@@ -9,7 +9,7 @@ forwards:
         authKey: "rewrite with your auth key"
         scheme: kcp
         traceAddr: ""
-      - server: "38.77.228.185:5012"
+      - server: "ip:port"
         auth_key: "rewrite with your auth key"
         scheme: mux
         traceAddr: ""

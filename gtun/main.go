@@ -58,7 +58,10 @@ func Main() {
 
 			client := NewClient(dialer)
 			go client.Run(cfg.Region)
-			raceTargets[cfg.Region] = append(raceTargets[cfg.Region], hopCfg.TraceAddr)
+
+			if hopCfg.TraceAddr != "" {
+				raceTargets[cfg.Region] = append(raceTargets[cfg.Region], hopCfg.TraceAddr)
+			}
 		}
 	}
 

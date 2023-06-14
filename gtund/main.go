@@ -3,9 +3,10 @@ package gtund
 import (
 	"flag"
 	"fmt"
-	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
 	_ "net/http/pprof"
+
+	"github.com/ICKelin/optw/transport/transport_api"
 
 	"github.com/ICKelin/gtun/internal/logs"
 )
@@ -35,7 +36,10 @@ func Main() {
 
 	logs.Debug("config: %s", conf.String())
 
-	go NewTraceServer(conf.Trace).ListenAndServe()
+	if conf.Trace != "" {
+		go NewTraceServer(conf.Trace).ListenAndServe()
+	}
+
 	for _, cfg := range conf.ServerConfig {
 		listener, err := transport_api.NewListen(cfg.Scheme, cfg.Listen, cfg.ListenerConfig)
 		if err != nil {

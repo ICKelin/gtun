@@ -139,7 +139,7 @@ func (s *Server) tcpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 }
 
 func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
-	addr := net.JoinHostPort(p.DstPort, p.DstPort)
+	addr := net.JoinHostPort(p.DstIP, p.DstPort)
 	raddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
 		logs.Error("resolve %s fail: %v", addr, err)

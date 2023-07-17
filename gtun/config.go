@@ -7,11 +7,15 @@ import (
 )
 
 type Config struct {
+	Settings map[string]RegionConfig `yaml:"settings"`
+	Log      Log                     `yaml:"log"`
+}
+
+type RegionConfig struct {
 	// key: region, value: region hops
-	Route map[string][]RouteConfig `yaml:"route"`
+	Route []RouteConfig `yaml:"route"`
 	// key: proxy name, value: proxy configuration in json format
 	Proxy map[string]string `yaml:"proxy"`
-	Log   Log               `yaml:"log"`
 }
 
 type RouteConfig struct {

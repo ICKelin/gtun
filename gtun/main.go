@@ -20,32 +20,28 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	raceTargets := make(map[string][]string)
-	for region, hops := range conf.Route {
-		for _, hop := range hops {
-			raceTargets[region] = append(raceTargets[region], hop.TraceAddr)
-			dialer, err := transport_api.NewDialer(hop.Scheme, hop.Addr, "")
+	raceManager := route.GetRaceManager()
+	for region, cfg := range conf.Settings {
+		raceTargets := make([]string, 0)
+		for _, r := range cfg.Route {
+			raceTargets = append(raceTargets, r.TraceAddr)
+			dialer, err := transport_api.NewDialer(r.Scheme, r.Addr, "")
 			if err != nil {
 				fmt.Printf("new dialer fail: %v", err)
 				return
 			}
 
+			raceTargets = append(raceTargets, r.TraceAddr)
 			go route.NewClient(region, dialer).ConnectNextHop()
 		}
-	}
 
-	// init race
-	raceManager := route.GetRaceManager()
-	for region, targets := range raceTargets {
-		race := route.NewRace(targets)
-		raceManager.AddRegionRace(region, race)
-	}
-
-	// init plugins
-	err = proxy.Setup(conf.Proxy)
-	if err != nil {
-		fmt.Printf("set proxy fail: %v", err)
-		return
+		// init plugins
+		err = proxy.Setup(cfg.Proxy)
+		if err != nil {
+			fmt.Printf("set proxy fail: %v", err)
+			return
+		}
+		raceManager.AddRegionRace(region, route.NewRace(raceTargets))
 	}
 
 	select {}

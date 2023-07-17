@@ -1,21 +1,29 @@
-forwards:
-  - region: US
-    tcp:
-      listen: ":2012"
-    udp:
-      listen: ":2012"
-    transport:
-      - server: "ip:port"
-        authKey: "rewrite with your auth key"
-        scheme: kcp
-        traceAddr: ""
-      - server: "ip:port"
-        auth_key: "rewrite with your auth key"
-        scheme: mux
-        traceAddr: ""
-    rateLimit: 1000
-
-log:
-  days: 5
-  level: "info"
-  path: "gtun.log"
+settings:
+  CN:
+    route:
+      - trace_addr: ""
+        scheme: "kcp"
+        addr: ""
+        auth_key: ""
+    proxy:
+      "tproxy_tcp": |
+        {
+          "read_timeout": 30,
+          "write_timeout": 30,
+          "listen_addr": "",
+          "rate_limit": 50,
+          "region": "CN"
+        }
+      "tproxy_udp": |
+        {
+          "read_timeout": 30,
+          "write_timeout": 30,
+          "session_timeout": 30,
+          "listen_addr": "",
+          "rate_limit": 50,
+          "region": "CN"
+        }
+logs:
+  day: 5
+  level: Debug
+  path: gtun.log

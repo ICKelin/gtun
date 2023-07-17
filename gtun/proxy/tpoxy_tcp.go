@@ -1,8 +1,7 @@
-package plugins
+package proxy
 
 import (
 	"encoding/json"
-	"github.com/ICKelin/gtun/gtun/proxy"
 	"github.com/ICKelin/gtun/gtun/route"
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/proto"
@@ -15,7 +14,7 @@ import (
 )
 
 func init() {
-	_ = proxy.Register("tcp", NewTProxyTCP)
+	_ = Register("tproxy_tcp", NewTProxyTCP)
 }
 
 var (
@@ -24,10 +23,10 @@ var (
 )
 
 type TProxyTCPConfig struct {
-	ReadTimeout  int    `json:"readTimeout"`
-	WriteTimeout int    `json:"writeTimeout"`
+	ReadTimeout  int    `json:"read_timeout"`
+	WriteTimeout int    `json:"write_timeout"`
 	ListenAddr   string `json:"listen_addr"`
-	RateLimit    int    `json:"rateLimit"`
+	RateLimit    int    `json:"rate_limit"`
 	Region       string `json:"region"`
 }
 
@@ -50,7 +49,7 @@ type TProxyTCP struct {
 	routeManager *route.Manager
 }
 
-func NewTProxyTCP() proxy.Proxy {
+func NewTProxyTCP() Proxy {
 	return &TProxyTCP{}
 }
 

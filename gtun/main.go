@@ -3,16 +3,11 @@ package gtun
 import (
 	"flag"
 	"fmt"
-	"net/http"
-
-	"github.com/ICKelin/optw/transport/transport_api"
-
+	"github.com/ICKelin/gtun/gtun/proxy"
+	"github.com/ICKelin/gtun/gtun/route"
 	"github.com/ICKelin/gtun/internal/logs"
+	"github.com/ICKelin/optw/transport/transport_api"
 )
-
-func init() {
-	go http.ListenAndServe(":6060", nil)
-}
 
 func Main() {
 	flgConf := flag.String("c", "", "config file")
@@ -25,52 +20,33 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	raceManager := NewRaceManager()
 	raceTargets := make(map[string][]string)
-	for _, cfg := range conf.Forwards {
-		ratelimit := NewRateLimit()
-		ratelimit.SetRateLimit(int64(cfg.Ratelimit * 1024 * 1024))
-
-		tcpfw := NewTCPForward(cfg.Region, cfg.TCPForward, ratelimit)
-		lis, err := tcpfw.Listen()
-		if err != nil {
-			logs.Error("listen tproxy tcp fail: %v", err)
-			return
-		}
-
-		go tcpfw.Serve(lis)
-
-		udpfw := NewUDPForward(cfg.Region, cfg.UDPForward, ratelimit)
-		udpConn, err := udpfw.Listen()
-		if err != nil {
-			logs.Error("listen tproxy udp fail: %v", err)
-			return
-		}
-
-		go udpfw.Serve(udpConn)
-
-		for _, hopCfg := range cfg.Transport {
-			dialer, err := transport_api.NewDialer(hopCfg.Scheme, hopCfg.Server, hopCfg.ConfigContent)
+	for region, hops := range conf.Route {
+		for _, hop := range hops {
+			raceTargets[region] = append(raceTargets[region], hop.TraceAddr)
+			dialer, err := transport_api.NewDialer(hop.Scheme, hop.Addr, "")
 			if err != nil {
-				logs.Error("new dialer fail: %v", err)
-				continue
+				fmt.Printf("new dialer fail: %v", err)
+				return
 			}
 
-			client := NewClient(dialer)
-			go client.Run(cfg.Region)
-
-			if hopCfg.TraceAddr != "" {
-				raceTargets[cfg.Region] = append(raceTargets[cfg.Region], hopCfg.TraceAddr)
-			}
+			go route.NewClient(region, dialer).ConnectNextHop()
 		}
 	}
 
+	// init race
+	raceManager := route.GetRaceManager()
 	for region, targets := range raceTargets {
-		race := NewRace(targets)
+		race := route.NewRace(targets)
 		raceManager.AddRegionRace(region, race)
 	}
 
-	GetSessionManager().SetRaceManager(raceManager)
+	// init plugins
+	err = proxy.Setup(conf.Proxy)
+	if err != nil {
+		fmt.Printf("set proxy fail: %v", err)
+		return
+	}
 
 	select {}
 }

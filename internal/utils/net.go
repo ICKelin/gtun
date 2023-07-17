@@ -1,4 +1,4 @@
-package gtun
+package utils
 
 import (
 	"fmt"

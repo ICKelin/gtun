@@ -1,4 +1,4 @@
-package gtun
+package route
 
 import (
 	"time"
@@ -14,37 +14,39 @@ type ClientConfig struct {
 }
 
 type Client struct {
-	dialer     transport.Dialer
-	sessionMgr *SessionManager
+	dialer       transport.Dialer
+	region       string
+	routeManager *Manager
 }
 
-func NewClient(dialer transport.Dialer) *Client {
+func NewClient(region string, dialer transport.Dialer) *Client {
 	return &Client{
-		dialer:     dialer,
-		sessionMgr: GetSessionManager(),
+		dialer:       dialer,
+		region:       region,
+		routeManager: GetRouteManager(),
 	}
 }
 
-func (c *Client) Run(region string) {
+func (c *Client) ConnectNextHop() {
 	for {
 		conn, err := c.dialer.Dial()
 		if err != nil {
-			logs.Error("connect to %s fail: %v", region, err)
+			logs.Error("connect to %s fail: %v", c.region, err)
 			time.Sleep(time.Second * 3)
 			continue
 		}
 
-		logs.Info("connect to region %s success", region)
-		sess := newSession(conn, region)
-		c.sessionMgr.AddSession(region, sess)
+		logs.Info("connect to region %s success", c.region)
+		hopConn := &HopInfo{Conn: conn}
+		c.routeManager.AddRoute(c.region, hopConn)
 		tick := time.NewTicker(time.Second * 1)
 		for range tick.C {
-			if sess.conn.IsClosed() {
+			if hopConn.IsClosed() {
 				break
 			}
 		}
 
-		c.sessionMgr.DeleteSession(region, sess)
+		c.routeManager.DeleteRoute(c.region, hopConn)
 		logs.Warn("reconnect")
 	}
 }

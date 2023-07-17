@@ -7,37 +7,19 @@ import (
 )
 
 type Config struct {
-	Forwards []ForwardConfig `yaml:"forwards"`
-	Log      Log             `yaml:"log"`
+	// key: region, value: region hops
+	Route map[string][]RouteConfig `yaml:"route"`
+	// key: proxy name, value: proxy configuration in json format
+	Proxy map[string]string `yaml:"proxy"`
+	Log   Log               `yaml:"log"`
 }
 
-type ForwardConfig struct {
-	Region     string            `yaml:"region"`
-	TCPForward TCPForwardConfig  `yaml:"tcp"`
-	UDPForward UDPForwardConfig  `yaml:"udp"`
-	Transport  []TransportConfig `yaml:"transport"`
-	Ratelimit  uint64            `yaml:"rateLimit"` // rate limit mbps
-}
-
-type TCPForwardConfig struct {
-	ListenAddr   string `yaml:"listen"`
-	ReadTimeout  int    `yaml:"readTimeout"`
-	WriteTimeout int    `yaml:"writeTimeout"`
-}
-
-type UDPForwardConfig struct {
-	ListenAddr     string `yaml:"listen"`
-	ReadTimeout    int    `yaml:"readTimeout"`
-	WriteTimeout   int    `yaml:"writeTimeout"`
-	SessionTimeout int    `yaml:"sessionTimeout"`
-}
-
-type TransportConfig struct {
-	Server        string `yaml:"server"`
-	AuthKey       string `yaml:"authKey"`
-	Scheme        string `yaml:"scheme"`
-	TraceAddr     string `yaml:"traceAddr"`
-	ConfigContent string `yaml:"config"`
+type RouteConfig struct {
+	Region    string `yaml:"region"`
+	TraceAddr string `yaml:"trace_addr"`
+	Scheme    string `yaml:"scheme"`
+	Addr      string `yaml:"addr"`
+	AuthKey   string `yaml:"auth_key"`
 }
 
 type Log struct {

@@ -1,4 +1,4 @@
-package gtun
+package route
 
 import (
 	"encoding/binary"
@@ -10,23 +10,18 @@ import (
 	"github.com/ICKelin/gtun/internal/logs"
 )
 
-var gRaceManager *RaceManager
-var singleton sync.Once
+var raceManager = &RaceManager{
+	regionRace: make(map[string]*Race),
+}
+
+func GetRaceManager() *RaceManager {
+	return raceManager
+}
 
 // RaceManager manage region race
 type RaceManager struct {
 	regionRaceMu sync.Mutex
 	regionRace   map[string]*Race
-}
-
-// NewRaceManager is a singleton of create a race manager
-func NewRaceManager() *RaceManager {
-	singleton.Do(func() {
-		gRaceManager = &RaceManager{
-			regionRace: make(map[string]*Race),
-		}
-	})
-	return gRaceManager
 }
 
 // AddRegionRace adds a race instance for region
@@ -36,17 +31,7 @@ func (m *RaceManager) AddRegionRace(region string, race *Race) {
 	m.regionRace[region] = race
 }
 
-//
-//func (m *RaceManager) DeleteRegionNode(region, node string) {
-//	m.regionRaceMu.Lock()
-//	defer m.regionRaceMu.Unlock()
-//	race := m.RegionRace[region]
-//	if race == nil {
-//		return
-//	}
-//}
-
-// GetBestNode returns the hightest score of region target region
+// GetBestNode returns the highest score of region target region
 func (m *RaceManager) GetBestNode(region string) string {
 	regionRace := m.regionRace[region]
 	if regionRace == nil {

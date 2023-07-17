@@ -1,114 +1,99 @@
-package gtun
+package route
 
 import (
+	"github.com/ICKelin/gtun/internal/logs"
 	"strings"
 	"sync"
-
-	"github.com/ICKelin/gtun/internal/logs"
 
 	"github.com/ICKelin/optw/transport"
 )
 
-var sessionMgr = &SessionManager{
-	sessions: make(map[string][]*Session),
+var routeManager = &Manager{
+	regionHops:  make(map[string][]*HopInfo),
+	raceManager: GetRaceManager(),
 }
 
-type SessionMap map[string]*Session
-
-type SessionManager struct {
-	rwmu        sync.RWMutex
-	sessions    map[string][]*Session
-	raceManager *RaceManager
+type Manager struct {
+	raceManager  *RaceManager
+	regionHopsMu sync.RWMutex
+	regionHops   map[string][]*HopInfo
 }
 
-func GetSessionManager() *SessionManager {
-	return sessionMgr
+type HopInfo struct {
+	transport.Conn
 }
 
-func (sessionMgr *SessionManager) SetRaceManager(raceManager *RaceManager) {
-	sessionMgr.raceManager = raceManager
+func GetRouteManager() *Manager {
+	return routeManager
 }
 
-type Session struct {
-	conn   transport.Conn
-	region string
-}
-
-func newSession(conn transport.Conn, region string) *Session {
-	return &Session{
-		conn:   conn,
-		region: region,
+func (routeManager *Manager) AddRoute(region string, hop *HopInfo) {
+	routeManager.regionHopsMu.Lock()
+	defer routeManager.regionHopsMu.Unlock()
+	regionHops := routeManager.regionHops[region]
+	if regionHops == nil {
+		regionHops = make([]*HopInfo, 0)
 	}
+	regionHops = append(regionHops, hop)
+	routeManager.regionHops[region] = regionHops
+
 }
 
-func (mgr *SessionManager) AddSession(region string, sess *Session) {
-	mgr.rwmu.Lock()
-	defer mgr.rwmu.Unlock()
-	regionSessions := mgr.sessions[region]
-	if regionSessions == nil {
-		regionSessions = make([]*Session, 0)
-	}
+func (routeManager *Manager) Route(region, dip string) *HopInfo {
+	routeManager.regionHopsMu.RLock()
+	defer routeManager.regionHopsMu.RUnlock()
 
-	regionSessions = append(regionSessions, sess)
-	mgr.sessions[region] = regionSessions
-}
-
-func (mgr *SessionManager) GetSession(region, dip string) *Session {
-	mgr.rwmu.RLock()
-	defer mgr.rwmu.RUnlock()
-
-	regionSessions, ok := mgr.sessions[region]
+	regionHops, ok := routeManager.regionHops[region]
 	if !ok {
 		return nil
 	}
 
-	if len(regionSessions) <= 0 {
+	if len(regionHops) <= 0 {
 		return nil
 	}
 
-	// get bestNode from race module
-	bestNode := mgr.raceManager.GetBestNode(region)
+	bestNode := routeManager.raceManager.GetBestNode(region)
 	bestIP := strings.Split(bestNode, ":")[0]
-	for i := 0; i < len(regionSessions); i++ {
-		sess := regionSessions[i]
-		if sess.conn.IsClosed() {
-			logs.Warn("%s %s is closed", region, sess.conn.RemoteAddr())
+	for i := 0; i < len(regionHops); i++ {
+		hop := regionHops[i]
+		if hop.IsClosed() {
+			logs.Warn("%s %s is closed", region, hop.RemoteAddr())
 			continue
 		}
 
 		if len(bestIP) != 0 {
-			sessIP := strings.Split(sess.conn.RemoteAddr().String(), ":")[0]
-			if bestIP == sessIP {
+			hopIP := strings.Split(hop.RemoteAddr().String(), ":")[0]
+			if bestIP == hopIP {
 				logs.Debug("best ip match %s", bestIP)
-				return sess
+				return hop
 			}
 		}
 	}
 
-	logs.Warn("use random session")
+	logs.Warn("use random hop")
 	hash := 0
 	for _, c := range dip {
 		hash += int(c)
 	}
-	return regionSessions[hash%len(regionSessions)]
+	return regionHops[hash%len(regionHops)]
 }
 
-func (mgr *SessionManager) DeleteSession(region string, sess *Session) {
-	mgr.rwmu.Lock()
-	defer mgr.rwmu.Unlock()
-	regionSessions := mgr.sessions[region]
-	if regionSessions == nil {
+func (routeManager *Manager) DeleteRoute(region string, hop *HopInfo) {
+	routeManager.regionHopsMu.Lock()
+	defer routeManager.regionHopsMu.Unlock()
+	regionHops := routeManager.regionHops[region]
+	if regionHops == nil {
 		return
 	}
 
-	newSessions := make([]*Session, 0, len(regionSessions))
-	for _, s := range regionSessions {
-		if s.conn.RemoteAddr().String() == sess.conn.RemoteAddr().String() {
+	hops := make([]*HopInfo, 0, len(regionHops))
+	for _, s := range regionHops {
+		if s.RemoteAddr().String() == hop.RemoteAddr().String() {
 			continue
 		}
 
-		newSessions = append(newSessions, s)
+		hops = append(hops, s)
 	}
 
-	mgr.sessions[region] = newSessions
+	routeManager.regionHops[region] = hops
 }

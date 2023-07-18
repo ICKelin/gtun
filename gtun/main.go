@@ -41,7 +41,9 @@ func Main() {
 			fmt.Printf("set proxy fail: %v", err)
 			return
 		}
-		raceManager.AddRegionRace(region, route.NewRace(raceTargets))
+		regionRace := route.NewRace(raceTargets)
+		raceManager.AddRegionRace(region, regionRace)
+		go regionRace.Run()
 	}
 
 	select {}

@@ -10,7 +10,7 @@ settings:
         {
           "read_timeout": 30,
           "write_timeout": 30,
-          "listen_addr": "",
+          "listen_addr": ":8524",
           "rate_limit": 50,
           "region": "CN"
         }
@@ -19,11 +19,11 @@ settings:
           "read_timeout": 30,
           "write_timeout": 30,
           "session_timeout": 30,
-          "listen_addr": "",
+          "listen_addr": ":8524",
           "rate_limit": 50,
           "region": "CN"
         }
-logs:
-  day: 5
+log:
+  days: 5
   level: Debug
   path: gtun.log

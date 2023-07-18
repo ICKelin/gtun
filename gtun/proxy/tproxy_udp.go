@@ -105,6 +105,7 @@ func (p *TProxyUDP) initConfig(cfg TProxyUDPConnfig) error {
 	p.writeTimeout = time.Duration(writeTimeout) * time.Second
 	p.readTimeout = time.Duration(readTimeout) * time.Second
 	p.sessionTimeout = time.Duration(sessionTimeout) * time.Second
+	p.udpSessions = make(map[string]*udpSession)
 	p.ratelimit = rateLimit
 	p.routeManager = route.GetRouteManager()
 	return nil
@@ -113,8 +114,8 @@ func (p *TProxyUDP) initConfig(cfg TProxyUDPConnfig) error {
 // ListenAndServe listens an udp port, since that we use tproxy to
 // redirect traffic to this listened udp port
 // so the socket should set to ip transparent option
-func (f *TProxyUDP) ListenAndServe() error {
-	laddr, err := net.ResolveUDPAddr("udp", f.listenAddr)
+func (p *TProxyUDP) ListenAndServe() error {
+	laddr, err := net.ResolveUDPAddr("udp", p.listenAddr)
 	if err != nil {
 		return err
 	}
@@ -156,12 +157,12 @@ func (f *TProxyUDP) ListenAndServe() error {
 		return err
 	}
 
-	f.rawfd = rawfd
-	return f.serve(lconn)
+	p.rawfd = rawfd
+	return p.serve(lconn)
 }
 
-func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
-	go f.recycleSession()
+func (p *TProxyUDP) serve(lconn *net.UDPConn) error {
+	go p.recycleSession()
 	buf := make([]byte, 64*1024)
 	oob := make([]byte, 1024)
 	for {
@@ -173,7 +174,7 @@ func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
 			break
 		}
 
-		origindst, err := f.getOriginDst(oob[:oobn])
+		origindst, err := p.getOriginDst(oob[:oobn])
 		if err != nil {
 			logs.Error("get origin dst fail: %v", err)
 			continue
@@ -184,14 +185,14 @@ func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
 
 		key := fmt.Sprintf("%s:%s:%s:%s", sip, sport, dip, dport)
 
-		f.udpsessLock.Lock()
-		udpsess := f.udpSessions[key]
+		p.udpsessLock.Lock()
+		udpsess := p.udpSessions[key]
 		if udpsess != nil {
 			udpsess.lastActive = time.Now()
-			f.udpsessLock.Unlock()
+			p.udpsessLock.Unlock()
 		} else {
-			f.udpsessLock.Unlock()
-			sess := f.routeManager.Route(f.region, dip)
+			p.udpsessLock.Unlock()
+			sess := p.routeManager.Route(p.region, dip)
 			if sess == nil {
 				logs.Error("no route to host: %s", dip)
 				continue
@@ -205,12 +206,12 @@ func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
 
 			logs.Debug("open new stream for %s", key)
 			udpsess = &udpSession{stream, time.Now()}
-			f.udpsessLock.Lock()
-			f.udpSessions[key] = udpsess
-			f.udpsessLock.Unlock()
+			p.udpsessLock.Lock()
+			p.udpSessions[key] = udpsess
+			p.udpsessLock.Unlock()
 
 			bytes := proto.EncodeProxyProtocol("udp", sip, sport, dip, dport)
-			stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
+			stream.SetWriteDeadline(time.Now().Add(p.writeTimeout))
 			_, err = stream.Write(bytes)
 			stream.SetWriteDeadline(time.Time{})
 			if err != nil {
@@ -218,13 +219,13 @@ func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
 				continue
 			}
 
-			go f.forwardUDP(stream, key, origindst, raddr)
+			go p.forwardUDP(stream, key, origindst, raddr)
 		}
 
 		stream := udpsess.stream
 
 		bytes := proto.EncodeData(buf[:nr])
-		stream.SetWriteDeadline(time.Now().Add(f.writeTimeout))
+		stream.SetWriteDeadline(time.Now().Add(p.writeTimeout))
 		_, err = stream.Write(bytes)
 		stream.SetWriteDeadline(time.Time{})
 		if err != nil {
@@ -235,12 +236,12 @@ func (f *TProxyUDP) serve(lconn *net.UDPConn) error {
 }
 
 // forwardUDP reads from stream and write to tofd via rawsocket
-func (f *TProxyUDP) forwardUDP(stream transport.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
+func (p *TProxyUDP) forwardUDP(stream transport.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
 	defer stream.Close()
 	defer func() {
-		f.udpsessLock.Lock()
-		delete(f.udpSessions, sessionKey)
-		f.udpsessLock.Unlock()
+		p.udpsessLock.Lock()
+		delete(p.udpSessions, sessionKey)
+		p.udpsessLock.Unlock()
 	}()
 
 	hdr := make([]byte, 2)
@@ -259,7 +260,7 @@ func (f *TProxyUDP) forwardUDP(stream transport.Stream, sessionKey string, froma
 
 		nlen := binary.BigEndian.Uint16(hdr)
 		buf := make([]byte, nlen)
-		stream.SetReadDeadline(time.Now().Add(f.readTimeout))
+		stream.SetReadDeadline(time.Now().Add(p.readTimeout))
 		_, err = io.ReadFull(stream, buf)
 		stream.SetReadDeadline(time.Time{})
 		if err != nil {
@@ -267,36 +268,36 @@ func (f *TProxyUDP) forwardUDP(stream transport.Stream, sessionKey string, froma
 			break
 		}
 
-		err = utils.SendUDPViaRaw(f.rawfd, fromaddr, toaddr, buf)
+		err = utils.SendUDPViaRaw(p.rawfd, fromaddr, toaddr, buf)
 		if err != nil {
 			logs.Error("send via raw socket fail: %v", err)
 		}
 
-		f.udpsessLock.Lock()
-		udpsess := f.udpSessions[sessionKey]
+		p.udpsessLock.Lock()
+		udpsess := p.udpSessions[sessionKey]
 		if udpsess != nil {
 			udpsess.lastActive = time.Now()
 		}
-		f.udpsessLock.Unlock()
+		p.udpsessLock.Unlock()
 	}
 }
 
-func (f *TProxyUDP) recycleSession() {
+func (p *TProxyUDP) recycleSession() {
 	tick := time.NewTicker(time.Second * 5)
 	for range tick.C {
-		f.udpsessLock.Lock()
-		for k, s := range f.udpSessions {
-			if time.Now().Sub(s.lastActive).Seconds() > float64(f.sessionTimeout) {
+		p.udpsessLock.Lock()
+		for k, s := range p.udpSessions {
+			if time.Now().Sub(s.lastActive).Seconds() > float64(p.sessionTimeout) {
 				logs.Warn("remove udp session")
 				s.stream.Close()
-				delete(f.udpSessions, k)
+				delete(p.udpSessions, k)
 			}
 		}
-		f.udpsessLock.Unlock()
+		p.udpsessLock.Unlock()
 	}
 }
 
-func (f *TProxyUDP) getOriginDst(hdr []byte) (*net.UDPAddr, error) {
+func (p *TProxyUDP) getOriginDst(hdr []byte) (*net.UDPAddr, error) {
 	msgs, err := syscall.ParseSocketControlMessage(hdr)
 	if err != nil {
 		return nil, err

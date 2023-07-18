@@ -12,9 +12,7 @@ type Config struct {
 }
 
 type RegionConfig struct {
-	// key: region, value: region hops
-	Route []RouteConfig `yaml:"route"`
-	// key: proxy name, value: proxy configuration in json format
+	Route []RouteConfig     `yaml:"route"`
 	Proxy map[string]string `yaml:"proxy"`
 }
 

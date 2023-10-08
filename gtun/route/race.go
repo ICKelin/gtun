@@ -24,6 +24,12 @@ type RaceManager struct {
 	regionRace   map[string]*Race
 }
 
+func (m *RaceManager) RunRace() {
+	for _, race := range m.regionRace {
+		go race.Run()
+	}
+}
+
 // AddRegionRace adds a race instance for region
 func (m *RaceManager) AddRegionRace(region string, race *Race) {
 	m.regionRaceMu.Lock()

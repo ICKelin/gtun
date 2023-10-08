@@ -20,6 +20,17 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
+	// run proxy
+	for _, cfg := range conf.Settings {
+		// init plugins
+		err = proxy.Setup(cfg.Proxy)
+		if err != nil {
+			fmt.Printf("set proxy fail: %v", err)
+			return
+		}
+	}
+
+	// run route and race
 	raceManager := route.GetRaceManager()
 	for region, cfg := range conf.Settings {
 		raceTargets := make([]string, 0)
@@ -35,16 +46,10 @@ func Main() {
 			go route.NewClient(region, dialer).ConnectNextHop()
 		}
 
-		// init plugins
-		err = proxy.Setup(cfg.Proxy)
-		if err != nil {
-			fmt.Printf("set proxy fail: %v", err)
-			return
-		}
 		regionRace := route.NewRace(raceTargets)
 		raceManager.AddRegionRace(region, regionRace)
-		go regionRace.Run()
 	}
+	raceManager.RunRace()
 
 	select {}
 }

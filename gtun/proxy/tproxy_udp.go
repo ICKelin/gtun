@@ -35,7 +35,7 @@ type udpSession struct {
 	lastActive time.Time
 }
 
-type TProxyUDPConnfig struct {
+type TProxyUDPConfig struct {
 	ReadTimeout    int    `json:"read_timeout"`
 	WriteTimeout   int    `json:"write_timeout"`
 	SessionTimeout int    `json:"session_timeout"`
@@ -71,7 +71,7 @@ func (p *TProxyUDP) Name() string {
 }
 
 func (p *TProxyUDP) Setup(cfgContent json.RawMessage) error {
-	var cfg = TProxyUDPConnfig{}
+	var cfg = TProxyUDPConfig{}
 	err := json.Unmarshal(cfgContent, &cfg)
 	if err != nil {
 		return nil
@@ -81,7 +81,7 @@ func (p *TProxyUDP) Setup(cfgContent json.RawMessage) error {
 	return p.initConfig(cfg)
 }
 
-func (p *TProxyUDP) initConfig(cfg TProxyUDPConnfig) error {
+func (p *TProxyUDP) initConfig(cfg TProxyUDPConfig) error {
 	readTimeout := cfg.ReadTimeout
 	if readTimeout <= 0 {
 		readTimeout = defaultUDPTimeout
@@ -219,7 +219,7 @@ func (p *TProxyUDP) serve(lconn *net.UDPConn) error {
 				continue
 			}
 
-			go p.forwardUDP(stream, key, origindst, raddr)
+			go p.doProxy(stream, key, origindst, raddr)
 		}
 
 		stream := udpsess.stream
@@ -235,8 +235,8 @@ func (p *TProxyUDP) serve(lconn *net.UDPConn) error {
 	return nil
 }
 
-// forwardUDP reads from stream and write to tofd via rawsocket
-func (p *TProxyUDP) forwardUDP(stream transport.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
+// doProxy reads from stream and write to tofd via rawsocket
+func (p *TProxyUDP) doProxy(stream transport.Stream, sessionKey string, fromaddr, toaddr *net.UDPAddr) {
 	defer stream.Close()
 	defer func() {
 		p.udpsessLock.Lock()

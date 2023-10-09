@@ -10,11 +10,11 @@ import (
 
 var routeManager = &Manager{
 	regionHops:  make(map[string][]*HopInfo),
-	raceManager: GetRaceManager(),
+	raceManager: GetTraceManager(),
 }
 
 type Manager struct {
-	raceManager  *RaceManager
+	raceManager  *TraceManager
 	regionHopsMu sync.RWMutex
 	regionHops   map[string][]*HopInfo
 }

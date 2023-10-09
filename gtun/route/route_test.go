@@ -124,7 +124,7 @@ func TestManager_Route(t *testing.T) {
 				}
 			})
 
-			gomonkey.ApplyMethod(GetRouteManager().raceManager, "GetBestNode", func(manager *RaceManager) string {
+			gomonkey.ApplyMethod(GetRouteManager().raceManager, "GetBestNode", func(manager *TraceManager) string {
 				return "192.168.1.1:9000"
 			})
 			GetRouteManager().AddRoute("region2", hop)
@@ -147,7 +147,7 @@ func TestManager_Route(t *testing.T) {
 				}
 			})
 
-			gomonkey.ApplyMethod(GetRouteManager().raceManager, "GetBestNode", func(manager *RaceManager) string {
+			gomonkey.ApplyMethod(GetRouteManager().raceManager, "GetBestNode", func(manager *TraceManager) string {
 				return "127.0.0.1:10000"
 			})
 

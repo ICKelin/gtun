@@ -10,36 +10,36 @@ import (
 	"github.com/ICKelin/gtun/internal/logs"
 )
 
-var raceManager = &RaceManager{
-	regionRace: make(map[string]*Race),
+var traceManager = &TraceManager{
+	regionTrace: make(map[string]*Trace),
 }
 
-func GetRaceManager() *RaceManager {
-	return raceManager
+func GetTraceManager() *TraceManager {
+	return traceManager
 }
 
-// RaceManager manage region race
-type RaceManager struct {
-	regionRaceMu sync.Mutex
-	regionRace   map[string]*Race
+// TraceManager manage region trace
+type TraceManager struct {
+	regionTraceMu sync.Mutex
+	regionTrace   map[string]*Trace
 }
 
-func (m *RaceManager) RunRace() {
-	for _, race := range m.regionRace {
+func (m *TraceManager) RunRace() {
+	for _, race := range m.regionTrace {
 		go race.Run()
 	}
 }
 
-// AddRegionRace adds a race instance for region
-func (m *RaceManager) AddRegionRace(region string, race *Race) {
-	m.regionRaceMu.Lock()
-	defer m.regionRaceMu.Unlock()
-	m.regionRace[region] = race
+// AddRegionTrace adds a trace instance for region
+func (m *TraceManager) AddRegionTrace(region string, race *Trace) {
+	m.regionTraceMu.Lock()
+	defer m.regionTraceMu.Unlock()
+	m.regionTrace[region] = race
 }
 
 // GetBestNode returns the highest score of region target region
-func (m *RaceManager) GetBestNode(region string) string {
-	regionRace := m.regionRace[region]
+func (m *TraceManager) GetBestNode(region string) string {
+	regionRace := m.regionTrace[region]
 	if regionRace == nil {
 		return ""
 	}
@@ -47,8 +47,8 @@ func (m *RaceManager) GetBestNode(region string) string {
 	return regionRace.GetBestNode()
 }
 
-// Race is a region race instance
-type Race struct {
+// Trace is a region trace instance
+type Trace struct {
 	region        string
 	targets       []string
 	targetScoreMu sync.Mutex
@@ -56,9 +56,9 @@ type Race struct {
 	totalRtt      int32
 }
 
-// NewRace return race instance
-func NewRace(region string, targets []string) *Race {
-	return &Race{
+// NewTrace return trace instance
+func NewTrace(region string, targets []string) *Trace {
+	return &Trace{
 		region:        region,
 		targets:       targets,
 		targetScoreMu: sync.Mutex{},
@@ -66,16 +66,16 @@ func NewRace(region string, targets []string) *Race {
 	}
 }
 
-// Run race job
-func (r *Race) Run() {
-	r.race()
+// Run trace job
+func (r *Trace) Run() {
+	r.trace()
 	tick := time.NewTicker(time.Second * 120)
 	for range tick.C {
-		r.race()
+		r.trace()
 	}
 }
 
-func (r *Race) race() {
+func (r *Trace) trace() {
 	for _, target := range r.targets {
 		raddr, err := net.ResolveUDPAddr("udp", target)
 		if err != nil {
@@ -140,7 +140,7 @@ func (r *Race) race() {
 // f(p) = 35+(1.25-p)x10                   0.75% < p <= 1.25%,
 // f(p) = 30+(2.25-p)x5                    1.25% < p <= 2.25%,
 // f(p) = 30+(p-2.25)x5x-1                 p > 2.25%
-func (r *Race) calcLossScore(loss int) float64 {
+func (r *Trace) calcLossScore(loss int) float64 {
 	lossRate := float64(loss) / 60
 	if 0 < lossRate && lossRate <= 0.75 {
 		return 40 + (0.75-lossRate)*13
@@ -154,7 +154,7 @@ func (r *Race) calcLossScore(loss int) float64 {
 	return 50
 }
 
-func (r *Race) calcRttScore(rtt int) float64 {
+func (r *Trace) calcRttScore(rtt int) float64 {
 	avgRtt := float64(rtt) / 60
 	if 0 < avgRtt && avgRtt < 45.0 {
 		return 50
@@ -171,8 +171,8 @@ func (r *Race) calcRttScore(rtt int) float64 {
 	return 0
 }
 
-// GetBestNode of all the targets of race
-func (r *Race) GetBestNode() string {
+// GetBestNode of all the targets of trace
+func (r *Trace) GetBestNode() string {
 	r.targetScoreMu.Lock()
 	defer r.targetScoreMu.Unlock()
 	bestScore := float64(-1)

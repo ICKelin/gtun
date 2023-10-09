@@ -27,18 +27,6 @@ func GetRouteManager() *Manager {
 	return routeManager
 }
 
-func (routeManager *Manager) AddRoute(region string, hop *HopInfo) {
-	routeManager.regionHopsMu.Lock()
-	defer routeManager.regionHopsMu.Unlock()
-	regionHops := routeManager.regionHops[region]
-	if regionHops == nil {
-		regionHops = make([]*HopInfo, 0)
-	}
-	regionHops = append(regionHops, hop)
-	routeManager.regionHops[region] = regionHops
-
-}
-
 func (routeManager *Manager) Route(region, dip string) *HopInfo {
 	routeManager.regionHopsMu.RLock()
 	defer routeManager.regionHopsMu.RUnlock()
@@ -62,6 +50,8 @@ func (routeManager *Manager) Route(region, dip string) *HopInfo {
 		}
 
 		if len(bestIP) != 0 {
+			// use only ip address for the same node
+			// TODO: use scheme://ip:port
 			hopIP := strings.Split(hop.RemoteAddr().String(), ":")[0]
 			if bestIP == hopIP {
 				logs.Debug("best ip match %s", bestIP)
@@ -75,7 +65,23 @@ func (routeManager *Manager) Route(region, dip string) *HopInfo {
 	for _, c := range dip {
 		hash += int(c)
 	}
-	return regionHops[hash%len(regionHops)]
+
+	hop := regionHops[hash%len(regionHops)]
+	if hop == nil || hop.IsClosed() {
+		return nil
+	}
+	return hop
+}
+
+func (routeManager *Manager) AddRoute(region string, hop *HopInfo) {
+	routeManager.regionHopsMu.Lock()
+	defer routeManager.regionHopsMu.Unlock()
+	regionHops := routeManager.regionHops[region]
+	if regionHops == nil {
+		regionHops = make([]*HopInfo, 0)
+	}
+	regionHops = append(regionHops, hop)
+	routeManager.regionHops[region] = regionHops
 }
 
 func (routeManager *Manager) DeleteRoute(region string, hop *HopInfo) {

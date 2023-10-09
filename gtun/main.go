@@ -6,7 +6,6 @@ import (
 	"github.com/ICKelin/gtun/gtun/proxy"
 	"github.com/ICKelin/gtun/gtun/route"
 	"github.com/ICKelin/gtun/internal/logs"
-	"github.com/ICKelin/optw/transport/transport_api"
 )
 
 func Main() {
@@ -36,17 +35,15 @@ func Main() {
 		raceTargets := make([]string, 0)
 		for _, r := range cfg.Route {
 			raceTargets = append(raceTargets, r.TraceAddr)
-			dialer, err := transport_api.NewDialer(r.Scheme, r.Addr, "")
+			hopConn, err := route.CreateConnection(region, r.Scheme, r.Addr, r.AuthKey)
 			if err != nil {
-				fmt.Printf("new dialer fail: %v", err)
+				fmt.Printf("connect to %s://%s fail: %v\n", r.Scheme, r.Addr, err)
 				return
 			}
-
-			raceTargets = append(raceTargets, r.TraceAddr)
-			go route.NewClient(region, dialer).ConnectNextHop()
+			go hopConn.ConnectNextHop()
 		}
 
-		regionRace := route.NewRace(raceTargets)
+		regionRace := route.NewRace(region, raceTargets)
 		raceManager.AddRegionRace(region, regionRace)
 	}
 	raceManager.RunRace()

@@ -49,6 +49,7 @@ func (m *RaceManager) GetBestNode(region string) string {
 
 // Race is a region race instance
 type Race struct {
+	region        string
 	targets       []string
 	targetScoreMu sync.Mutex
 	targetScore   map[string]float64
@@ -56,8 +57,9 @@ type Race struct {
 }
 
 // NewRace return race instance
-func NewRace(targets []string) *Race {
+func NewRace(region string, targets []string) *Race {
 	return &Race{
+		region:        region,
 		targets:       targets,
 		targetScoreMu: sync.Mutex{},
 		targetScore:   make(map[string]float64),
@@ -125,7 +127,8 @@ func (r *Race) race() {
 		lossRank := r.calcLossScore(loss)
 		delayRank := r.calcRttScore(rtt)
 		score := lossRank + delayRank
-		logs.Debug("%s loss %d rtt %d lossRank %.4f delayRank %.4f score %.4f", target, loss, rtt, lossRank, delayRank, score)
+		logs.Debug("region[%s] %s loss %d rtt %d lossRank %.4f delayRank %.4f score %.4f",
+			r.region, target, loss, rtt, lossRank, delayRank, score)
 		r.targetScoreMu.Lock()
 		r.targetScore[remoteAddr] = score
 		r.targetScoreMu.Unlock()

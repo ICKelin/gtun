@@ -30,7 +30,7 @@ func Main() {
 	}
 
 	// run route and race
-	raceManager := route.GetRaceManager()
+	raceManager := route.GetTraceManager()
 	for region, cfg := range conf.Settings {
 		raceTargets := make([]string, 0)
 		for _, r := range cfg.Route {
@@ -43,8 +43,8 @@ func Main() {
 			go hopConn.ConnectNextHop()
 		}
 
-		regionRace := route.NewRace(region, raceTargets)
-		raceManager.AddRegionRace(region, regionRace)
+		regionRace := route.NewTrace(region, raceTargets)
+		raceManager.AddRegionTrace(region, regionRace)
 	}
 	raceManager.RunRace()
 

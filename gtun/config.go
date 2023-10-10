@@ -1,9 +1,8 @@
 package gtun
 
 import (
-	"io/ioutil"
-
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
 type Config struct {
@@ -31,15 +30,15 @@ type Log struct {
 }
 
 func ParseConfig(path string) (*Config, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseConfig(content)
+	return ParseBuffer(content)
 }
 
-func parseConfig(content []byte) (*Config, error) {
+func ParseBuffer(content []byte) (*Config, error) {
 	conf := Config{}
 	err := yaml.Unmarshal(content, &conf)
 	return &conf, err

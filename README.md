@@ -90,19 +90,13 @@ server:
     authKey: "rewrite with your auth key"
     scheme: "kcp"
 
-  - listen: ":3001"
-    authKey: "rewrite with your auth key"
-    scheme: "mux"
-
 log:
   days: 5
   level: "debug"
   path: "gtund.log"
-
-
 ```
 
-大部分情况下您只需要修改`authKey`字段即可，配置文件生成之后，通过运行
+大部分情况下，如果您的端口未被占用，不需要修改任何配置
 `./gtund -c gtund.yaml`文件即可。
 
 ### 安装运行gtun
@@ -111,69 +105,58 @@ gtun可以运行在内网，也可以运行在公有云，在本场景当中，g
 首先生成配置文件，可以下载 [gtun.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtun.yaml) 进行修改
 
 ```yaml
-forwards:
-  - region: US
-    tcp:
-      listen: ":2012"
-    udp:
-      listen: ":2012"
-    transport:
-      - server: "ip1:port1"
-        authKey: "rewrite with your auth key"
-        scheme: kcp
-        traceAddr: ""
-      - server: "ip2:port2"
-        auth_key: "rewrite with your auth key"
-        scheme: mux
-        traceAddr: ""
-    rateLimit: 1000
-
+settings:
+  CN:
+    # 代理ip文件，可以是本地文件，也可以是网络文件，一行是一个IP或者cidr
+    proxy_file: "https://www.ipdeny.com/ipblocks/data/countries/us.zone"
+    route:
+      # 拨测地址，需要修改CN_SERVER_IP和CN_SERVER_TRACE_PORT，对应gtund的公网IP和端口
+      - trace_addr: ${CN_SERVER_IP}:${CN_SERVER_TRACE_PORT}
+        scheme: "kcp"
+        # 服务端地址，修改为对应gtund的IP和端口
+        addr: ${CN_SERVER_IP}:${CN_SERVER_PORT}
+        auth_key: ""
+    proxy:
+      # 代理插件配置
+      "tproxy_tcp": |
+        {
+          "read_timeout": 30,
+          "write_timeout": 30,
+          "listen_addr": ":8524",
+          "rate_limit": 50,
+          "region": "CN"
+        }
+      "tproxy_udp": |
+        {
+          "read_timeout": 30,
+          "write_timeout": 30,
+          "session_timeout": 30,
+          "listen_addr": ":8524",
+          "rate_limit": 50,
+          "region": "CN"
+        }
 log:
   days: 5
-  level: "info"
-  path: "gtun.log"
+  level: Debug
+  path: gtun.log
+
+http_server:
+  listen_addr: ":9001""
 ```
 
-- `forwards`配置了转发路线相关配置
-  - `region`字段配置区域信息
-  - `tcp`字段定义了本地tcp流量劫持的端口
-  - `udp`字段定义了本地udp流量劫持的端口
-  - `transport`字段定义了下一跳信息
-    - `server`: 下一跳地址
-    - `scheme`: 下一跳使用的协议
-    - `traceAddr`: 下一跳探测地址
-
 配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。
+
+gtund启动时，会自动设置 iptables规则和路由表，并将需要加速的ip加入ipset当中，如果ip量比较大，启动时间会稍微长一些。
 
 [返回目录](#目录)
 
 ### 配置加速ip
-在上述过程中，启动了gtun和gtund程序，但是并未添加任何需要加速的信息，那么gtun如何进行加速呢？需要额外手动配置加速ip，并将该ip的tcp流量全部转发至`127.0.0.1:2012`端口，udp流量全部转发至`127.0.0.1:2012`端口。
+目前支持两种方式配置IP：
 
-这个过程是通过ipset和路由来配置的。以`1.1.1.1`为例
+- 基于接口的方式，我们提供HTTP接口进行动态增删IP，目前正在开发页面配置动态管理加速的IP，应用，域名，敬请期待。
+- 使用命令手动配置，手动将ip加入到ipset当中
 
-第一步，创建ipset，并将`1.1.1.1`加入其中
-
-`ipset create GTUN-US hash:net`
-
-`ipset add GTUN-US 1.1.1.1`
-
-第二步，创建iptables规则，匹配目的ip为`GTUN-US`这个ipset内部的ip，然后做`tproxy`操作，将流量重定向到本地`8524`和`8525`端口
-
-```
-iptables -t mangle -I PREROUTING -p tcp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 2012
-iptables -t mangle -I PREROUTING -p udp -m set --match-set GTUN-US dst -j TPROXY --tproxy-mark 1/1 --on-port 2012
-iptables -t mangle -I OUTPUT -m set --match-set GTUN-US dst -j MARK --set-mark 1
-```
-
-第三步，添加路由表，确保数据包不被路由选择子系统丢弃
-
-```
-ip rule add fwmark 1 lookup 100
-ip ro add local default dev lo table 100
-```
-
-至此所有配置都已经完成，后续需要新增代理ip，只使用以下命令将ip加入`GTUN-US`这个ipset当中即可，现在可以先尝试测试`1.1.1.1`这个ip的代理
+接下来以命令配置的方式进行配置，以`1.1.1.1`为例，只需要将`1.1.1.1`加入其中ipset当中`ipset add GTUN-US 1.1.1.1`即可。
 ```
 root@raspberrypi:/home/pi# nslookup www.google.com 1.1.1.1
 Server:		1.1.1.1

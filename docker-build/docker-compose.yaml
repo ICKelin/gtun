@@ -1,0 +1,65 @@
+version: '3'
+services:
+  gtun:
+    build: ./gtun
+    container_name: gtun
+    restart: always
+    network_mode: host
+    privileged: true
+    volumes:
+      - /opt/apps/logs:/opt/logs
+    environment:
+      TIME_ZONE: Asia/Shanghai
+      settings: |
+        settings:
+          CN:
+            proxy_file: "https://www.ipdeny.com/ipblocks/data/countries/us.zone"
+            route:
+              - trace_addr: ${CN_SERVER_IP}:${CN_SERVER_TRACE_PORT}
+                scheme: "kcp"
+                addr: ${CN_SERVER_IP}:${CN_SERVER_PORT}
+                auth_key: ""
+            proxy:
+              "tproxy_tcp": |
+                {
+                  "read_timeout": 30,
+                  "write_timeout": 30,
+                  "listen_addr": ":8524",
+                  "rate_limit": 50,
+                  "region": "CN"
+                }
+              "tproxy_udp": |
+                {
+                  "read_timeout": 30,
+                  "write_timeout": 30,
+                  "session_timeout": 30,
+                  "listen_addr": ":8524",
+                  "rate_limit": 50,
+                  "region": "CN"
+                }
+        log:
+          days: 5
+          level: Debug
+          path: gtun.log
+        
+        http_server:
+          listen_addr: ":9001"
+  gtund:
+    build: ./gtund
+    container_name: gtund
+    restart: always
+    network_mode: host
+    volumes:
+      - /opt/apps/logs:/logs
+    environment:
+      TIME_ZONE: Asia/Shanghai
+      settings: |
+        server:
+          - listen: ":3002"
+            authKey: "rewrite with your auth key"
+            scheme: "kcp"
+            trace: ":3003"
+        log:
+          days: 5
+          level: "debug"
+          path: "gtund.log"

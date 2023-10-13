@@ -9,5 +9,6 @@ GOOS=linux go build -o bin/gtun/gtun-linux_amd64 cmd/gtun/*.go
 GOARCH=arm GOOS=linux go build -o bin/gtun/gtun-linux_arm  cmd/gtun/*.go
 echo "builded gtun...."
 
-cp before_script.sh bin/
-cp after_script.sh bin/
+cp -r etc/gtun.yaml bin/gtun/
+cp -r etc/gtund.yaml bin/gtund/
+cp install.sh bin/gtun/

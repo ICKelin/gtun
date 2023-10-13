@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/utils"
+	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
 var errRegistered = fmt.Errorf("already registered")
@@ -70,27 +73,58 @@ func AddApp(region, appName string) error {
 }
 
 func AddFromFile(region, file string) {
+	ips := loadIPs(file)
+
+	for _, ip := range ips {
+		AddIP(region, ip)
+	}
+}
+
+func loadIPs(file string) []string {
 	if len(file) <= 0 {
-		return
+		return nil
 	}
 
-	fp, err := os.Open(file)
-	if err != nil {
-		logs.Warn("open rule file fail: %v", err)
-		return
-	}
-	defer fp.Close()
+	ips := make([]string, 0)
+	var br *bufio.Reader
+	if strings.HasPrefix(file, "http://") || strings.HasPrefix(file, "https://") {
+		// load from url
+		req, err := http.NewRequest("GET", file, nil)
+		if err != nil {
+			logs.Warn("load file fail: %v", err)
+			return nil
+		}
 
-	br := bufio.NewReader(fp)
+		cli := http.Client{
+			Timeout: time.Second * 120,
+		}
+
+		resp, err := cli.Do(req)
+		if err != nil {
+			logs.Warn("load file fail: %v", err)
+			return nil
+		}
+
+		defer resp.Body.Close()
+		br = bufio.NewReader(resp.Body)
+	} else {
+		// load from file
+		fp, err := os.Open(file)
+		if err != nil {
+			logs.Warn("open rule file fail: %v", err)
+			return nil
+		}
+		defer fp.Close()
+		br = bufio.NewReader(fp)
+	}
+
 	for {
 		line, _, err := br.ReadLine()
 		if err != nil {
 			break
 		}
-
-		err = AddIP(region, string(line))
-		if err != nil {
-			logs.Warn("add %s %s proxy fail: %v", region, string(line), err)
-		}
+		ips = append(ips, string(line))
 	}
+
+	return ips
 }

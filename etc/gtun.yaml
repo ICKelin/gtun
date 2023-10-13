@@ -1,9 +1,10 @@
 settings:
   CN:
+    proxy_file: "https://www.ipdeny.com/ipblocks/data/countries/us.zone"
     route:
-      - trace_addr: ""
+      - trace_addr: ${CN_SERVER_IP}:${CN_SERVER_TRACE_PORT}
         scheme: "kcp"
-        addr: ""
+        addr: ${CN_SERVER_IP}:${CN_SERVER_PORT}
         auth_key: ""
     proxy:
       "tproxy_tcp": |
@@ -22,13 +23,6 @@ settings:
           "listen_addr": ":8524",
           "rate_limit": 50,
           "region": "CN"
-        }
-      "tun_proxy": |
-        {
-          "mtu": 1400,
-          "region": "CN",
-          "read_timeout": 10,
-          "write_timeout": 10
         }
 log:
   days: 5

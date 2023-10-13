@@ -3,16 +3,10 @@ package gtun
 import (
 	"flag"
 	"fmt"
-	"net/http"
-
-	"github.com/ICKelin/optw/transport/transport_api"
-
+	"github.com/ICKelin/gtun/gtun/proxy"
+	"github.com/ICKelin/gtun/gtun/route"
 	"github.com/ICKelin/gtun/internal/logs"
 )
-
-func init() {
-	go http.ListenAndServe(":6060", nil)
-}
 
 func Main() {
 	flgConf := flag.String("c", "", "config file")
@@ -25,52 +19,34 @@ func Main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	raceManager := NewRaceManager()
-	raceTargets := make(map[string][]string)
-	for _, cfg := range conf.Forwards {
-		ratelimit := NewRateLimit()
-		ratelimit.SetRateLimit(int64(cfg.Ratelimit * 1024 * 1024))
-
-		tcpfw := NewTCPForward(cfg.Region, cfg.TCPForward, ratelimit)
-		lis, err := tcpfw.Listen()
+	// run proxy
+	for region, cfg := range conf.Settings {
+		// init plugins
+		err = proxy.Setup(region, cfg.ProxyFile, cfg.Proxy)
 		if err != nil {
-			logs.Error("listen tproxy tcp fail: %v", err)
+			fmt.Printf("set proxy fail: %v\n", err)
 			return
 		}
+	}
 
-		go tcpfw.Serve(lis)
-
-		udpfw := NewUDPForward(cfg.Region, cfg.UDPForward, ratelimit)
-		udpConn, err := udpfw.Listen()
-		if err != nil {
-			logs.Error("listen tproxy udp fail: %v", err)
-			return
-		}
-
-		go udpfw.Serve(udpConn)
-
-		for _, hopCfg := range cfg.Transport {
-			dialer, err := transport_api.NewDialer(hopCfg.Scheme, hopCfg.Server, hopCfg.ConfigContent)
+	// run route and race
+	raceManager := route.GetTraceManager()
+	for region, cfg := range conf.Settings {
+		raceTargets := make([]string, 0)
+		for _, r := range cfg.Route {
+			raceTargets = append(raceTargets, r.TraceAddr)
+			hopConn, err := route.CreateConnection(region, r.Scheme, r.Addr, r.AuthKey)
 			if err != nil {
-				logs.Error("new dialer fail: %v", err)
-				continue
+				fmt.Printf("connect to %s://%s fail: %v\n", r.Scheme, r.Addr, err)
+				return
 			}
-
-			client := NewClient(dialer)
-			go client.Run(cfg.Region)
-
-			if hopCfg.TraceAddr != "" {
-				raceTargets[cfg.Region] = append(raceTargets[cfg.Region], hopCfg.TraceAddr)
-			}
+			go hopConn.ConnectNextHop()
 		}
+
+		regionRace := route.NewTrace(region, raceTargets)
+		raceManager.AddRegionTrace(region, regionRace)
 	}
+	raceManager.RunRace()
 
-	for region, targets := range raceTargets {
-		race := NewRace(targets)
-		raceManager.AddRegionRace(region, race)
-	}
-
-	GetSessionManager().SetRaceManager(raceManager)
-
-	select {}
+	panic(NewHTTPServer(conf.HTTPServer.ListenAddr).ListenAndServe())
 }

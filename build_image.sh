@@ -7,7 +7,6 @@ cp $WORKSPACE/bin/gtund/gtund .
 docker build . -t gtund
 echo "builded gtund docker image"
 
-
 echo "building gtun docker image"
 cd $WORKSPACE/docker-build/gtun
 cp $WORKSPACE/bin/gtun/gtun-linux_amd64 .

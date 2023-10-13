@@ -1,4 +1,4 @@
-package gtun
+package utils
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ func CheckSum(buf []byte) uint16 {
 	return checksumWrapper(checksumAdd(buf, 0))
 }
 
-func sendUDPViaRaw(fd int, src, dst *net.UDPAddr, payload []byte) error {
+func SendUDPViaRaw(fd int, src, dst *net.UDPAddr, payload []byte) error {
 	iplen, ulen := uint16(28+len(payload)), uint16(8+len(payload))
 	if iplen > 65535 {
 		return fmt.Errorf("too big packet")

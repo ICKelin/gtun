@@ -1,43 +1,34 @@
 package gtun
 
 import (
-	"io/ioutil"
-
 	"gopkg.in/yaml.v2"
+	"os"
 )
 
+var gConfig *Config
+
 type Config struct {
-	Forwards []ForwardConfig `yaml:"forwards"`
-	Log      Log             `yaml:"log"`
+	Settings   map[string]RegionConfig `yaml:"settings"`
+	HTTPServer HTTPConfig              `json:"http_server"`
+	Log        Log                     `yaml:"log"`
 }
 
-type ForwardConfig struct {
-	Region     string            `yaml:"region"`
-	TCPForward TCPForwardConfig  `yaml:"tcp"`
-	UDPForward UDPForwardConfig  `yaml:"udp"`
-	Transport  []TransportConfig `yaml:"transport"`
-	Ratelimit  uint64            `yaml:"rateLimit"` // rate limit mbps
+type HTTPConfig struct {
+	ListenAddr string `json:"listen_addr"`
 }
 
-type TCPForwardConfig struct {
-	ListenAddr   string `yaml:"listen"`
-	ReadTimeout  int    `yaml:"readTimeout"`
-	WriteTimeout int    `yaml:"writeTimeout"`
+type RegionConfig struct {
+	Route     []RouteConfig     `yaml:"route"`
+	ProxyFile string            `yaml:"proxy_file"`
+	Proxy     map[string]string `yaml:"proxy"`
 }
 
-type UDPForwardConfig struct {
-	ListenAddr     string `yaml:"listen"`
-	ReadTimeout    int    `yaml:"readTimeout"`
-	WriteTimeout   int    `yaml:"writeTimeout"`
-	SessionTimeout int    `yaml:"sessionTimeout"`
-}
-
-type TransportConfig struct {
-	Server        string `yaml:"server"`
-	AuthKey       string `yaml:"authKey"`
-	Scheme        string `yaml:"scheme"`
-	TraceAddr     string `yaml:"traceAddr"`
-	ConfigContent string `yaml:"config"`
+type RouteConfig struct {
+	Region    string `yaml:"region"`
+	TraceAddr string `yaml:"trace_addr"`
+	Scheme    string `yaml:"scheme"`
+	Addr      string `yaml:"addr"`
+	AuthKey   string `yaml:"auth_key"`
 }
 
 type Log struct {
@@ -47,16 +38,24 @@ type Log struct {
 }
 
 func ParseConfig(path string) (*Config, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return parseConfig(content)
+	return ParseBuffer(content)
 }
 
-func parseConfig(content []byte) (*Config, error) {
+func ParseBuffer(content []byte) (*Config, error) {
 	conf := Config{}
 	err := yaml.Unmarshal(content, &conf)
+	if err != nil {
+		return nil, err
+	}
+	gConfig = &conf
 	return &conf, err
+}
+
+func GetConfig() *Config {
+	return gConfig
 }

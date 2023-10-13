@@ -20,11 +20,11 @@ func Main() {
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
 	// run proxy
-	for _, cfg := range conf.Settings {
+	for region, cfg := range conf.Settings {
 		// init plugins
-		err = proxy.Setup(cfg.Proxy)
+		err = proxy.Setup(region, cfg.ProxyFile, cfg.Proxy)
 		if err != nil {
-			fmt.Printf("set proxy fail: %v", err)
+			fmt.Printf("set proxy fail: %v\n", err)
 			return
 		}
 	}
@@ -48,5 +48,5 @@ func Main() {
 	}
 	raceManager.RunRace()
 
-	select {}
+	panic(NewHTTPServer(conf.HTTPServer.ListenAddr).ListenAndServe())
 }

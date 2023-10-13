@@ -12,6 +12,7 @@ import (
 	"github.com/ICKelin/optw/transport"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -77,8 +78,12 @@ func (p *TProxyUDP) Setup(cfgContent json.RawMessage) error {
 		return nil
 	}
 
-	// TODO: verify configuration
-	return p.initConfig(cfg)
+	err = p.initConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	return p.initRedirect()
 }
 
 func (p *TProxyUDP) initConfig(cfg TProxyUDPConfig) error {
@@ -108,6 +113,16 @@ func (p *TProxyUDP) initConfig(cfg TProxyUDPConfig) error {
 	p.udpSessions = make(map[string]*udpSession)
 	p.ratelimit = rateLimit
 	p.routeManager = route.GetRouteManager()
+	return nil
+}
+
+func (p *TProxyUDP) initRedirect() error {
+	ipPort := strings.Split(p.listenAddr, ":")
+	if len(ipPort) != 2 {
+		return fmt.Errorf("invalid listen addr")
+	}
+
+	initRedirect("udp", p.region, ipPort[1])
 	return nil
 }
 

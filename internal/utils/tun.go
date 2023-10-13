@@ -38,7 +38,7 @@ func NewInterface() (*Interface, error) {
 }
 
 func (iface *Interface) SetMTU(mtu int) error {
-	out, err := execCmd("ifconfig", []string{iface.tun.Name(), "mtu", fmt.Sprintf("%d", mtu)})
+	out, err := ExecCmd("ifconfig", []string{iface.tun.Name(), "mtu", fmt.Sprintf("%d", mtu)})
 	if err != nil {
 		return fmt.Errorf("set mtu fail: %s %v", out, err)
 	}
@@ -48,7 +48,7 @@ func (iface *Interface) SetMTU(mtu int) error {
 func (iface *Interface) Up() error {
 	switch runtime.GOOS {
 	case "linux":
-		out, err := execCmd("ifconfig", []string{iface.tun.Name(), "up"})
+		out, err := ExecCmd("ifconfig", []string{iface.tun.Name(), "up"})
 		if err != nil {
 			return fmt.Errorf("ifconfig fail: %s %v", out, err)
 		}
@@ -79,7 +79,7 @@ func (iface *Interface) Close() {
 	iface.tun.Close()
 }
 
-func execCmd(cmd string, args []string) (string, error) {
+func ExecCmd(cmd string, args []string) (string, error) {
 	b, err := exec.Command(cmd, args...).CombinedOutput()
 	return string(b), err
 }

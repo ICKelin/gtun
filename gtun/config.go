@@ -5,14 +5,22 @@ import (
 	"os"
 )
 
+var gConfig *Config
+
 type Config struct {
-	Settings map[string]RegionConfig `yaml:"settings"`
-	Log      Log                     `yaml:"log"`
+	Settings   map[string]RegionConfig `yaml:"settings"`
+	HTTPServer HTTPConfig              `json:"http_server"`
+	Log        Log                     `yaml:"log"`
+}
+
+type HTTPConfig struct {
+	ListenAddr string `json:"listen_addr"`
 }
 
 type RegionConfig struct {
-	Route []RouteConfig     `yaml:"route"`
-	Proxy map[string]string `yaml:"proxy"`
+	Route     []RouteConfig     `yaml:"route"`
+	ProxyFile string            `yaml:"proxy_file"`
+	Proxy     map[string]string `yaml:"proxy"`
 }
 
 type RouteConfig struct {
@@ -41,5 +49,13 @@ func ParseConfig(path string) (*Config, error) {
 func ParseBuffer(content []byte) (*Config, error) {
 	conf := Config{}
 	err := yaml.Unmarshal(content, &conf)
+	if err != nil {
+		return nil, err
+	}
+	gConfig = &conf
 	return &conf, err
+}
+
+func GetConfig() *Config {
+	return gConfig
 }

@@ -23,7 +23,17 @@ settings:
           "rate_limit": 50,
           "region": "CN"
         }
+      "tun_proxy": |
+        {
+          "mtu": 1400,
+          "region": "CN",
+          "read_timeout": 10,
+          "write_timeout": 10
+        }
 log:
   days: 5
   level: Debug
   path: gtun.log
+
+http_server:
+  listen_addr: ":9001""

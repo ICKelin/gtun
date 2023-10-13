@@ -57,6 +57,11 @@ func (p *TunProxy) Setup(cfg json.RawMessage) error {
 		return err
 	}
 
+	err = dev.Up()
+	if err != nil {
+		return err
+	}
+
 	p.config = config
 	p.dev = dev
 	return nil
@@ -73,7 +78,7 @@ func (p *TunProxy) ListenAndServe() error {
 		}
 
 		if nextHopConn == nil || nextHopConn.IsClosed() {
-			nextHopConn := route.GetRouteManager().Route(p.config.Region, "")
+			nextHopConn = route.GetRouteManager().Route(p.config.Region, "")
 			if nextHopConn == nil {
 				logs.Warn("route to next hop fail")
 				continue

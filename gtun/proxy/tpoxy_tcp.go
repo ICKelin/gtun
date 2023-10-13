@@ -2,12 +2,14 @@ package proxy
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ICKelin/gtun/gtun/route"
 	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/ICKelin/gtun/internal/proto"
 	"github.com/ICKelin/gtun/internal/utils"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -64,8 +66,12 @@ func (p *TProxyTCP) Setup(cfgContent json.RawMessage) error {
 		return nil
 	}
 
-	// TODO: verify configuration
-	return p.initConfig(cfg)
+	err = p.initConfig(cfg)
+	if err != nil {
+		return err
+	}
+
+	return p.initRedirect()
 }
 
 func (p *TProxyTCP) initConfig(cfg TProxyTCPConfig) error {
@@ -93,6 +99,16 @@ func (p *TProxyTCP) initConfig(cfg TProxyTCPConfig) error {
 	}
 	p.ratelimit = rateLimit
 	p.routeManager = route.GetRouteManager()
+	return nil
+}
+
+func (p *TProxyTCP) initRedirect() error {
+	ipPort := strings.Split(p.listenAddr, ":")
+	if len(ipPort) != 2 {
+		return fmt.Errorf("invalid listen addr")
+	}
+
+	initRedirect("tcp", p.region, ipPort[1])
 	return nil
 }
 

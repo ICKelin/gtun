@@ -11,19 +11,39 @@ services:
     environment:
       TIME_ZONE: Asia/Shanghai
       settings: |
-        forwards:
-          - region: US
-            tcp:
-              listen: ":2012"
-            udp:
-              listen: ":2012"
-            transport:
-              - server: "ip:port"
-                scheme: kcp
-                traceAddr: ""
-            rateLimit: 1000
-
+        settings:
+          CN:
+            route:
+              - trace_addr: ""
+                scheme: "kcp"
+                addr: ""
+                auth_key: ""
+            proxy:
+              "tproxy_tcp": |
+                {
+                  "read_timeout": 30,
+                  "write_timeout": 30,
+                  "listen_addr": ":8524",
+                  "rate_limit": 50,
+                  "region": "CN"
+                }
+              "tproxy_udp": |
+                {
+                  "read_timeout": 30,
+                  "write_timeout": 30,
+                  "session_timeout": 30,
+                  "listen_addr": ":8524",
+                  "rate_limit": 50,
+                  "region": "CN"
+                }
+              "tun_proxy": |
+                {
+                  "mtu": 1400,
+                  "region": "CN",
+                  "read_timeout": 10,
+                  "write_timeout": 10
+                }
         log:
           days: 5
-          level: "info"
-          path: "gtun.log"
+          level: Debug
+          path: gtun.log

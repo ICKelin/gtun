@@ -61,7 +61,7 @@ func addIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add to ipset
-	err = proxy.AddIP(form.Region, form.IP)
+	err = proxy.GetManager().AddIP(form.Region, form.IP)
 	if err != nil {
 		reply(w, &response{
 			Code:    -1,
@@ -71,6 +71,7 @@ func addIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// write to proxy file
 	reply(w, &response{Code: 0, Message: "success"})
 }
 
@@ -88,7 +89,7 @@ func delIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// delete from ipset
-	err = proxy.DelIP(form.Region, form.IP)
+	err = proxy.GetManager().DelIP(form.Region, form.IP)
 	if err != nil {
 		reply(w, &response{
 			Code:    -1,

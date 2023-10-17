@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	_ = Register("tproxy_udp", NewTProxyUDP)
+	_ = GetManager().Register("tproxy_udp", NewTProxyUDP)
 }
 
 var (

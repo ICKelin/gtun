@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	Register("tun_proxy", NewTunProxy)
+	_ = GetManager().Register("tun_proxy", NewTunProxy)
 }
 
 type TunProxyConfig struct {

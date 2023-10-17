@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	_ = Register("tproxy_tcp", NewTProxyTCP)
+	_ = GetManager().Register("tproxy_tcp", NewTProxyTCP)
 }
 
 var (

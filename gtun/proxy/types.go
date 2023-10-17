@@ -17,13 +17,19 @@ var errNotRegister = fmt.Errorf("proxy not register")
 var ipsetNamePrefix = "GTUN-"
 
 type Manager struct {
-	regionProxyFiles map[string][]string
-	registerProxy    map[string]func() Proxy
+	ruleFiles     map[string]proxyRule
+	registerProxy map[string]func() Proxy
+}
+
+type proxyRule struct {
+	regionProxyFile string
+	ipProxyFile     string
+	proxyIPs        map[string]struct{}
 }
 
 var manager = &Manager{
-	regionProxyFiles: make(map[string][]string),
-	registerProxy:    make(map[string]func() Proxy),
+	ruleFiles:     make(map[string]proxyRule),
+	registerProxy: make(map[string]func() Proxy),
 }
 
 func GetManager() *Manager {
@@ -45,7 +51,7 @@ func (m *Manager) Register(name string, constructor func() Proxy) error {
 	return nil
 }
 
-func (m *Manager) Setup(region, ruleFile string, proxyConfigs map[string]string) error {
+func (m *Manager) Setup(region, ruleFile, ipProxyFile string, proxyConfigs map[string]string) error {
 	for name, config := range proxyConfigs {
 		constructor := m.registerProxy[name]
 		if constructor == nil {
@@ -58,6 +64,11 @@ func (m *Manager) Setup(region, ruleFile string, proxyConfigs map[string]string)
 		}
 
 		m.AddFromFile(region, ruleFile)
+		m.AddFromFile(region, ipProxyFile)
+
+		rule := m.ruleFiles[region]
+		rule.ipProxyFile = ipProxyFile
+		rule.regionProxyFile = ruleFile
 		go p.ListenAndServe()
 	}
 	return nil
@@ -69,6 +80,12 @@ func (m *Manager) AddIP(region string, ip string) error {
 		return fmt.Errorf("add to ipset fail: %v %s", err, out)
 	}
 
+	rule := m.ruleFiles[region]
+	if len(rule.ipProxyFile) <= 0 {
+		return nil
+	}
+
+	rule.proxyIPs[ip] = struct{}{}
 	// TODO: write to proxy file
 	return nil
 }
@@ -78,9 +95,23 @@ func (m *Manager) DelIP(region, ip string) error {
 	if err != nil {
 		return fmt.Errorf("del from ipset fail: %v %s", err, out)
 	}
-	// TODO: delete from proxy file
 
+	rule := m.ruleFiles[region]
+	if len(rule.ipProxyFile) <= 0 {
+		return nil
+	}
+	delete(rule.proxyIPs, ip)
+	// TODO: delete from proxy file
 	return nil
+}
+
+func (m *Manager) IPList(region string) []string {
+	rule := m.ruleFiles[region]
+	ips := make([]string, 0)
+	for ip, _ := range rule.proxyIPs {
+		ips = append(ips, ip)
+	}
+	return ips
 }
 
 func (m *Manager) AddApp(region, appName string) error {

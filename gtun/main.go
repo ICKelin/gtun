@@ -22,7 +22,7 @@ func Main() {
 	// run proxy
 	for region, cfg := range conf.Settings {
 		// init plugins
-		err = proxy.GetManager().Setup(region, cfg.ProxyFile, cfg.Proxy)
+		err = proxy.GetManager().Setup(region, cfg.RegionProxyFile, cfg.Proxy)
 		if err != nil {
 			fmt.Printf("set proxy fail: %v\n", err)
 			return

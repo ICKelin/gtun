@@ -3,6 +3,7 @@ package gtun
 import (
 	"encoding/json"
 	"github.com/ICKelin/gtun/gtun/proxy"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 )
@@ -16,9 +17,11 @@ func NewHTTPServer(listenAddr string) *HTTPServer {
 }
 
 func (s *HTTPServer) ListenAndServe() error {
-	http.HandleFunc("/meta", loadMeta)
-	http.HandleFunc("/ip/add", addIP)
-	http.HandleFunc("/ip/delete", delIP)
+	srv := gin.Default()
+	srv.GET("/meta", loadMeta)
+	srv.POST("/ip/add", addIP)
+	srv.DELETE("/ip/delete", delIP)
+	srv.GET("/ip/list/:region", listIP)
 	return http.ListenAndServe(s.listenAddr, nil)
 }
 
@@ -28,7 +31,7 @@ type response struct {
 	Data    interface{} `json:"data"`
 }
 
-func loadMeta(w http.ResponseWriter, r *http.Request) {
+func loadMeta(ctx *gin.Context) {
 	regionList := make([]string, 0)
 	regions := GetConfig().Settings
 	for region, _ := range regions {
@@ -44,26 +47,26 @@ func loadMeta(w http.ResponseWriter, r *http.Request) {
 		Regions: regionList,
 		Cfg:     GetConfig(),
 	}
-	reply(w, body)
+	ctx.JSON(http.StatusOK, body)
 }
 
-func addIP(w http.ResponseWriter, r *http.Request) {
+func addIP(ctx *gin.Context) {
 	type req struct {
 		Region string `json:"region"`
 		IP     string `json:"ip"`
 	}
 
 	var form = req{}
-	err := bindForm(r, &form)
+	err := bindForm(ctx, &form)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// add to ipset
 	err = proxy.GetManager().AddIP(form.Region, form.IP)
 	if err != nil {
-		reply(w, &response{
+		ctx.JSON(http.StatusOK, &response{
 			Code:    -1,
 			Message: err.Error(),
 			Data:    nil,
@@ -72,26 +75,26 @@ func addIP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// write to proxy file
-	reply(w, &response{Code: 0, Message: "success"})
+	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success"})
 }
 
-func delIP(w http.ResponseWriter, r *http.Request) {
+func delIP(ctx *gin.Context) {
 	type req struct {
 		Region string `json:"region"`
 		IP     string `json:"ip"`
 	}
 
 	var form = req{}
-	err := bindForm(r, &form)
+	err := bindForm(ctx, &form)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.Writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	// delete from ipset
 	err = proxy.GetManager().DelIP(form.Region, form.IP)
 	if err != nil {
-		reply(w, &response{
+		ctx.JSON(http.StatusOK, &response{
 			Code:    -1,
 			Message: err.Error(),
 			Data:    nil,
@@ -99,18 +102,23 @@ func delIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reply(w, &response{Code: 0, Message: "success"})
+	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success"})
 }
 
-func bindForm(r *http.Request, obj interface{}) error {
-	cnt, err := io.ReadAll(r.Body)
+func listIP(ctx *gin.Context) {
+	region := ctx.Param("region")
+	ips := proxy.GetManager().IPList(region)
+	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success", Data: ips})
+}
+
+func bindForm(ctx *gin.Context, obj interface{}) error {
+	cnt, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(cnt, obj)
 }
 
-func reply(w http.ResponseWriter, obj interface{}) {
-	buf, _ := json.Marshal(obj)
-	_, _ = w.Write(buf)
+func reply(ctx *gin.Context, obj interface{}) {
+	ctx.JSON(http.StatusOK, obj)
 }

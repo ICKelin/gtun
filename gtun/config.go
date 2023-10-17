@@ -18,9 +18,11 @@ type HTTPConfig struct {
 }
 
 type RegionConfig struct {
-	Route     []RouteConfig     `yaml:"route"`
-	ProxyFile string            `yaml:"proxy_file"`
-	Proxy     map[string]string `yaml:"proxy"`
+	Route           []RouteConfig     `yaml:"route"`
+	RegionProxyFile string            `yaml:"proxy_file"`
+	IPProxyFile     string            `yaml:"ip_proxy_file"`
+	AppProxyFile    string            `yaml:"app_proxy_file"`
+	Proxy           map[string]string `yaml:"proxy"`
 }
 
 type RouteConfig struct {

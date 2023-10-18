@@ -55,5 +55,5 @@ func Main() {
 		raceManager.AddRegionTrace(region, regionRace)
 	}
 	raceManager.RunRace()
-	panic(NewHTTPServer(":9095").ListenAndServe())
+	panic(NewHTTPServer(httpListen).ListenAndServe())
 }

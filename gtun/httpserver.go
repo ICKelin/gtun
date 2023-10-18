@@ -22,11 +22,20 @@ func (s *HTTPServer) ListenAndServe() error {
 	srv := gin.Default()
 	srv.POST("/sys/init", initSys)
 	srv.POST("/sys/restart", restartSys)
-	srv.GET("/meta", loadMeta)
-	srv.POST("/ip/add", addIP)
-	srv.DELETE("/ip/delete", delIP)
-	srv.GET("/ip/list/:region", listIP)
+	srv.GET("/meta", midInit(), loadMeta)
+	srv.POST("/ip/add", midInit(), addIP)
+	srv.DELETE("/ip/delete", midInit(), delIP)
+	srv.GET("/ip/list/:region", midInit(), listIP)
 	return http.ListenAndServe(s.listenAddr, nil)
+}
+
+func midInit() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if needSysInit {
+			ctx.JSON(http.StatusForbidden, &response{Code: -1, Message: "need system initialize"})
+			ctx.Abort()
+		}
+	}
 }
 
 type response struct {

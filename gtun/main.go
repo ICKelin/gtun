@@ -8,13 +8,21 @@ import (
 	"github.com/ICKelin/gtun/internal/logs"
 )
 
+var (
+	needSysInit = false
+	httpListen  = ":9095"
+	confPath    = ""
+)
+
 func Main() {
-	flgConf := flag.String("c", "", "config file")
+	flag.StringVar(&confPath, "c", "", "config file")
 	flag.Parse()
 
-	conf, err := ParseConfig(*flgConf)
+	conf, err := ParseConfig(confPath)
 	if err != nil {
-		fmt.Printf("load config fail: %v\n", err)
+		fmt.Printf("load config fail: %v, waiting for sys init\n", err)
+		needSysInit = true
+		panic(NewHTTPServer(httpListen).ListenAndServe())
 		return
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
@@ -22,7 +30,7 @@ func Main() {
 	// run proxy
 	for region, cfg := range conf.Settings {
 		// init plugins
-		err = proxy.GetManager().Setup(region, cfg.RegionProxyFile, cfg.Proxy)
+		err = proxy.GetManager().Setup(region, cfg.RegionProxyFile, cfg.IPProxyFile, cfg.Proxy)
 		if err != nil {
 			fmt.Printf("set proxy fail: %v\n", err)
 			return
@@ -47,6 +55,5 @@ func Main() {
 		raceManager.AddRegionTrace(region, regionRace)
 	}
 	raceManager.RunRace()
-
-	panic(NewHTTPServer(conf.HTTPServer.ListenAddr).ListenAndServe())
+	panic(NewHTTPServer(":9095").ListenAndServe())
 }

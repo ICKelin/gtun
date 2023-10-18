@@ -86,7 +86,7 @@ func (m *Manager) AddIP(region string, ip string) error {
 	}
 
 	rule.proxyIPs[ip] = struct{}{}
-	// TODO: write to proxy file
+	m.writeToFile(rule.ipProxyFile, rule.proxyIPs)
 	return nil
 }
 
@@ -101,7 +101,7 @@ func (m *Manager) DelIP(region, ip string) error {
 		return nil
 	}
 	delete(rule.proxyIPs, ip)
-	// TODO: delete from proxy file
+	m.writeToFile(rule.ipProxyFile, rule.proxyIPs)
 	return nil
 }
 
@@ -124,6 +124,18 @@ func (m *Manager) AddFromFile(region, file string) {
 
 	for _, ip := range ips {
 		m.AddIP(region, ip)
+	}
+}
+
+func (m *Manager) writeToFile(file string, ips map[string]struct{}) {
+	fp, err := os.Open(file)
+	if err != nil {
+		return
+	}
+	defer fp.Close()
+
+	for ip, _ := range ips {
+		fp.WriteString(ip + "\n")
 	}
 }
 

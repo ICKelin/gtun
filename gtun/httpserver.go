@@ -3,9 +3,11 @@ package gtun
 import (
 	"encoding/json"
 	"github.com/ICKelin/gtun/gtun/proxy"
+	"github.com/ICKelin/gtun/internal/logs"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"os"
 )
 
 type HTTPServer struct {
@@ -18,6 +20,8 @@ func NewHTTPServer(listenAddr string) *HTTPServer {
 
 func (s *HTTPServer) ListenAndServe() error {
 	srv := gin.Default()
+	srv.POST("/sys/init", initSys)
+	srv.POST("/sys/restart", restartSys)
 	srv.GET("/meta", loadMeta)
 	srv.POST("/ip/add", addIP)
 	srv.DELETE("/ip/delete", delIP)
@@ -29,6 +33,36 @@ type response struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
+}
+
+func initSys(ctx *gin.Context) {
+	cnt, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		logs.Error("read request fail: %v", err)
+		reply(ctx, nil, err)
+		return
+	}
+
+	fp, err := os.Open(confPath)
+	if err != nil {
+		logs.Error("write file fail: %v", err)
+		reply(ctx, nil, err)
+		return
+	}
+	defer fp.Close()
+
+	_, err = fp.Write(cnt)
+	if err != nil {
+		logs.Error("write to file fail: %v", err)
+		reply(ctx, nil, err)
+		return
+	}
+
+	reply(ctx, nil, nil)
+}
+
+func restartSys(ctx *gin.Context) {
+	os.Exit(0)
 }
 
 func loadMeta(ctx *gin.Context) {
@@ -47,7 +81,7 @@ func loadMeta(ctx *gin.Context) {
 		Regions: regionList,
 		Cfg:     GetConfig(),
 	}
-	ctx.JSON(http.StatusOK, body)
+	reply(ctx, body, nil)
 }
 
 func addIP(ctx *gin.Context) {
@@ -66,16 +100,12 @@ func addIP(ctx *gin.Context) {
 	// add to ipset
 	err = proxy.GetManager().AddIP(form.Region, form.IP)
 	if err != nil {
-		ctx.JSON(http.StatusOK, &response{
-			Code:    -1,
-			Message: err.Error(),
-			Data:    nil,
-		})
+		reply(ctx, nil, err)
 		return
 	}
 
 	// write to proxy file
-	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success"})
+	reply(ctx, nil, nil)
 }
 
 func delIP(ctx *gin.Context) {
@@ -94,21 +124,17 @@ func delIP(ctx *gin.Context) {
 	// delete from ipset
 	err = proxy.GetManager().DelIP(form.Region, form.IP)
 	if err != nil {
-		ctx.JSON(http.StatusOK, &response{
-			Code:    -1,
-			Message: err.Error(),
-			Data:    nil,
-		})
+		reply(ctx, nil, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success"})
+	reply(ctx, nil, nil)
 }
 
 func listIP(ctx *gin.Context) {
 	region := ctx.Param("region")
 	ips := proxy.GetManager().IPList(region)
-	ctx.JSON(http.StatusOK, &response{Code: 0, Message: "success", Data: ips})
+	reply(ctx, ips, nil)
 }
 
 func bindForm(ctx *gin.Context, obj interface{}) error {
@@ -119,6 +145,18 @@ func bindForm(ctx *gin.Context, obj interface{}) error {
 	return json.Unmarshal(cnt, obj)
 }
 
-func reply(ctx *gin.Context, obj interface{}) {
-	ctx.JSON(http.StatusOK, obj)
+func reply(ctx *gin.Context, data interface{}, err error) {
+	var code = 0
+	var message = "success"
+	if err != nil {
+		code = -1
+		message = err.Error()
+		data = nil
+	}
+
+	ctx.JSON(http.StatusOK, &response{
+		Code:    code,
+		Message: message,
+		Data:    data,
+	})
 }

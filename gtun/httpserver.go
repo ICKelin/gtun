@@ -23,9 +23,16 @@ func (s *HTTPServer) ListenAndServe() error {
 	srv.POST("/sys/init", initSys)
 	srv.POST("/sys/restart", restartSys)
 	srv.GET("/meta", midInit(), loadMeta)
+
 	srv.POST("/ip/add", midInit(), addIP)
 	srv.DELETE("/ip/delete", midInit(), delIP)
 	srv.GET("/ip/list", midInit(), listIP)
+
+	srv.POST("/region/update", midInit(), updateRegionFile)
+
+	srv.POST("/upload", uploadFile)
+
+	srv.StaticFS("/", http.Dir("./web"))
 	return srv.Run(s.listenAddr)
 }
 
@@ -145,6 +152,39 @@ func listIP(ctx *gin.Context) {
 	region := ctx.Query("region")
 	ips := proxy.GetManager().IPList(region)
 	reply(ctx, ips, nil)
+}
+
+func updateRegionFile(ctx *gin.Context) {
+	type req struct {
+		Region   string `json:"region"`
+		Filename string `json:"filename"`
+	}
+
+	var form = req{}
+	err := bindForm(ctx, &form)
+	if err != nil {
+		reply(ctx, nil, err)
+		return
+	}
+
+	err = proxy.GetManager().UpdateRegionProxyFile(form.Region, form.Filename)
+	reply(ctx, nil, err)
+}
+
+func uploadFile(ctx *gin.Context) {
+	fh, err := ctx.FormFile("file")
+	if err != nil {
+		reply(ctx, nil, err)
+		return
+	}
+
+	err = ctx.SaveUploadedFile(fh, fh.Filename)
+	if err != nil {
+		reply(ctx, nil, err)
+		return
+	}
+
+	reply(ctx, fh.Filename, nil)
 }
 
 func bindForm(ctx *gin.Context, obj interface{}) error {

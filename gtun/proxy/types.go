@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ var errNotRegister = fmt.Errorf("proxy not register")
 var ipsetNamePrefix = "GTUN-"
 
 type Manager struct {
+	ruleFilesLock sync.Mutex
 	ruleFiles     map[string]proxyRule
 	registerProxy map[string]func() Proxy
 }
@@ -66,6 +68,7 @@ func (m *Manager) Setup(region, ruleFile, ipProxyFile string, proxyConfigs map[s
 		m.AddFromFile(region, ruleFile)
 		ips := m.AddFromFile(region, ipProxyFile)
 
+		m.ruleFilesLock.Lock()
 		rule := m.ruleFiles[region]
 		rule.ipProxyFile = ipProxyFile
 		rule.regionProxyFile = ruleFile
@@ -74,6 +77,7 @@ func (m *Manager) Setup(region, ruleFile, ipProxyFile string, proxyConfigs map[s
 			rule.proxyIPs[ip] = struct{}{}
 		}
 		m.ruleFiles[region] = rule
+		m.ruleFilesLock.Unlock()
 		go p.ListenAndServe()
 	}
 	return nil
@@ -85,6 +89,8 @@ func (m *Manager) AddIP(region string, ip string) error {
 		return fmt.Errorf("add to ipset fail: %v %s", err, out)
 	}
 
+	m.ruleFilesLock.Lock()
+	defer m.ruleFilesLock.Unlock()
 	rule := m.ruleFiles[region]
 	if len(rule.ipProxyFile) <= 0 {
 		logs.Warn("empty ip proxy file")
@@ -102,6 +108,8 @@ func (m *Manager) DelIP(region, ip string) error {
 		return fmt.Errorf("del from ipset fail: %v %s", err, out)
 	}
 
+	m.ruleFilesLock.Lock()
+	defer m.ruleFilesLock.Unlock()
 	rule := m.ruleFiles[region]
 	if len(rule.ipProxyFile) <= 0 {
 		return nil
@@ -112,6 +120,9 @@ func (m *Manager) DelIP(region, ip string) error {
 }
 
 func (m *Manager) IPList(region string) map[string][]string {
+	m.ruleFilesLock.Lock()
+	defer m.ruleFilesLock.Unlock()
+
 	regionIPs := make(map[string][]string, 0)
 	if len(region) <= 0 {
 		for region, r := range m.ruleFiles {
@@ -133,6 +144,24 @@ func (m *Manager) IPList(region string) map[string][]string {
 	}
 }
 
+func (m *Manager) UpdateRegionProxyFile(region, file string) error {
+	m.ruleFilesLock.Lock()
+	regionRule, ok := m.ruleFiles[region]
+	if !ok {
+		m.ruleFilesLock.Unlock()
+		return fmt.Errorf("region %s withou configuration", region)
+	}
+	m.ruleFilesLock.Unlock()
+
+	m.flushIPSet(region)
+	m.AddFromFile(region, file)
+
+	m.ruleFilesLock.Lock()
+	regionRule.regionProxyFile = file
+	m.ruleFilesLock.Unlock()
+	return nil
+}
+
 func (m *Manager) AddApp(region, appName string) error {
 	m.AddFromFile(region, appName)
 	return nil
@@ -145,6 +174,13 @@ func (m *Manager) AddFromFile(region, file string) []string {
 		m.AddIP(region, ip)
 	}
 	return ips
+}
+
+func (m *Manager) flushIPSet(region string) {
+	out, err := utils.ExecCmd("ipset", []string{"flush", "-!", ipsetNamePrefix + region})
+	if err != nil {
+		logs.Warn("flush ipset fail: %v %s", err, out)
+	}
 }
 
 func (m *Manager) writeToFile(file string, ips map[string]struct{}) {

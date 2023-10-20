@@ -1,6 +1,8 @@
 package gtun
 
 import (
+	"encoding/json"
+	"fmt"
 	"gopkg.in/yaml.v2"
 	"os"
 )
@@ -18,11 +20,12 @@ type HTTPConfig struct {
 }
 
 type RegionConfig struct {
-	Route           []RouteConfig     `yaml:"route"`
-	RegionProxyFile string            `yaml:"proxy_file"`
-	IPProxyFile     string            `yaml:"ip_proxy_file"`
-	AppProxyFile    string            `yaml:"app_proxy_file"`
-	Proxy           map[string]string `yaml:"proxy"`
+	Route           []RouteConfig          `yaml:"route"`
+	RegionProxyFile string                 `yaml:"proxy_file"`
+	IPProxyFile     string                 `yaml:"ip_proxy_file"`
+	AppProxyFile    string                 `yaml:"app_proxy_file"`
+	Proxy           map[string]string      `yaml:"proxy"`
+	ProxyObj        map[string]interface{} `yaml:"-"`
 }
 
 type RouteConfig struct {
@@ -55,6 +58,19 @@ func ParseBuffer(content []byte) (*Config, error) {
 		return nil, err
 	}
 	gConfig = &conf
+
+	for _, cfg := range gConfig.Settings {
+		cfg.ProxyObj = make(map[string]interface{})
+		for name, content := range cfg.Proxy {
+			obj := make(map[string]interface{})
+			err = json.Unmarshal([]byte(content), &obj)
+			if err != nil {
+				fmt.Printf("invalid configuration %v", err)
+			}
+			cfg.ProxyObj[name] = obj
+		}
+	}
+
 	return &conf, err
 }
 

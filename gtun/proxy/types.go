@@ -64,11 +64,16 @@ func (m *Manager) Setup(region, ruleFile, ipProxyFile string, proxyConfigs map[s
 		}
 
 		m.AddFromFile(region, ruleFile)
-		m.AddFromFile(region, ipProxyFile)
+		ips := m.AddFromFile(region, ipProxyFile)
 
 		rule := m.ruleFiles[region]
 		rule.ipProxyFile = ipProxyFile
 		rule.regionProxyFile = ruleFile
+		rule.proxyIPs = make(map[string]struct{})
+		for _, ip := range ips {
+			rule.proxyIPs[ip] = struct{}{}
+		}
+		m.ruleFiles[region] = rule
 		go p.ListenAndServe()
 	}
 	return nil
@@ -82,6 +87,7 @@ func (m *Manager) AddIP(region string, ip string) error {
 
 	rule := m.ruleFiles[region]
 	if len(rule.ipProxyFile) <= 0 {
+		logs.Warn("empty ip proxy file")
 		return nil
 	}
 
@@ -105,13 +111,26 @@ func (m *Manager) DelIP(region, ip string) error {
 	return nil
 }
 
-func (m *Manager) IPList(region string) []string {
-	rule := m.ruleFiles[region]
-	ips := make([]string, 0)
-	for ip, _ := range rule.proxyIPs {
-		ips = append(ips, ip)
+func (m *Manager) IPList(region string) map[string][]string {
+	regionIPs := make(map[string][]string, 0)
+	if len(region) <= 0 {
+		for region, r := range m.ruleFiles {
+			ips := make([]string, 0)
+			for ip, _ := range r.proxyIPs {
+				ips = append(ips, ip)
+			}
+			regionIPs[region] = ips
+		}
+		return regionIPs
+	} else {
+		rule := m.ruleFiles[region]
+		ips := make([]string, 0)
+		for ip, _ := range rule.proxyIPs {
+			ips = append(ips, ip)
+		}
+		regionIPs[region] = ips
+		return regionIPs
 	}
-	return ips
 }
 
 func (m *Manager) AddApp(region, appName string) error {
@@ -119,16 +138,17 @@ func (m *Manager) AddApp(region, appName string) error {
 	return nil
 }
 
-func (m *Manager) AddFromFile(region, file string) {
+func (m *Manager) AddFromFile(region, file string) []string {
 	ips := m.loadIPs(file)
 
 	for _, ip := range ips {
 		m.AddIP(region, ip)
 	}
+	return ips
 }
 
 func (m *Manager) writeToFile(file string, ips map[string]struct{}) {
-	fp, err := os.Open(file)
+	fp, err := os.Create(file)
 	if err != nil {
 		return
 	}

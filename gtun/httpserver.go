@@ -25,8 +25,8 @@ func (s *HTTPServer) ListenAndServe() error {
 	srv.GET("/meta", midInit(), loadMeta)
 	srv.POST("/ip/add", midInit(), addIP)
 	srv.DELETE("/ip/delete", midInit(), delIP)
-	srv.GET("/ip/list/:region", midInit(), listIP)
-	return http.ListenAndServe(s.listenAddr, nil)
+	srv.GET("/ip/list", midInit(), listIP)
+	return srv.Run(s.listenAddr)
 }
 
 func midInit() gin.HandlerFunc {
@@ -71,6 +71,7 @@ func initSys(ctx *gin.Context) {
 }
 
 func restartSys(ctx *gin.Context) {
+	// TODO: reload
 	os.Exit(0)
 }
 
@@ -141,7 +142,7 @@ func delIP(ctx *gin.Context) {
 }
 
 func listIP(ctx *gin.Context) {
-	region := ctx.Param("region")
+	region := ctx.Query("region")
 	ips := proxy.GetManager().IPList(region)
 	reply(ctx, ips, nil)
 }

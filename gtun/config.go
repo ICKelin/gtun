@@ -9,12 +9,12 @@ var gConfig *Config
 
 type Config struct {
 	Settings   map[string]RegionConfig `yaml:"settings"`
-	HTTPServer HTTPConfig              `json:"http_server"`
+	HTTPServer HTTPConfig              `yaml:"http_server"`
 	Log        Log                     `yaml:"log"`
 }
 
 type HTTPConfig struct {
-	ListenAddr string `json:"listen_addr"`
+	ListenAddr string `yaml:"listen_addr"`
 }
 
 type RegionConfig struct {

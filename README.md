@@ -106,16 +106,16 @@ gtun可以运行在内网，也可以运行在公有云，在本场景当中，g
 
 ```yaml
 settings:
-  CN:
+  US:
     # 代理ip文件，可以是本地文件，也可以是网络文件，一行是一个IP或者cidr
     proxy_file: "https://www.ipdeny.com/ipblocks/data/countries/us.zone"
     route:
-      # 拨测地址，需要修改CN_SERVER_IP和CN_SERVER_TRACE_PORT，对应gtund的公网IP和端口
-      - trace_addr: ${CN_SERVER_IP}:${CN_SERVER_TRACE_PORT}
+      # 拨测地址，需要修改US_SERVER_IP和US_SERVER_TRACE_PORT，对应gtund的公网IP和端口
+      - trace_addr: ${US_SERVER_IP}:${US_SERVER_TRACE_PORT}
         scheme: "kcp"
         # 服务端地址，修改为对应gtund的IP和端口
-        addr: ${CN_SERVER_IP}:${CN_SERVER_PORT}
-        auth_key: ""
+        addr: ${US_SERVER_IP}:${US_SERVER_PORT}
+        auth_key: "rewrite with your auth key"
     proxy:
       # 代理插件配置
       "tproxy_tcp": |
@@ -124,7 +124,7 @@ settings:
           "write_timeout": 30,
           "listen_addr": ":8524",
           "rate_limit": 50,
-          "region": "CN"
+          "region": "US"
         }
       "tproxy_udp": |
         {
@@ -133,7 +133,7 @@ settings:
           "session_timeout": 30,
           "listen_addr": ":8524",
           "rate_limit": 50,
-          "region": "CN"
+          "region": "US"
         }
 log:
   days: 5
@@ -141,7 +141,7 @@ log:
   path: gtun.log
 
 http_server:
-  listen_addr: ":9001""
+  listen_addr: ":9001"
 ```
 
 配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。

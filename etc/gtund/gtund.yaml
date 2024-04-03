@@ -1,0 +1,14 @@
+trace: ":3003"
+server:
+  - listen: ":3002"
+    authKey: "rewrite with your auth key"
+    scheme: "kcp"
+
+  - listen: ":3001"
+    authKey: "rewrite with your auth key"
+    scheme: "mux"
+
+log:
+  days: 5
+  level: "debug"
+  path: "/opt/apps/gtund/logs/gtund.log"

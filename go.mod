@@ -7,9 +7,12 @@ require (
 	github.com/agiledragon/gomonkey/v2 v2.10.1
 	github.com/astaxie/beego v1.12.3
 	github.com/belogik/goes v0.0.0-20151229125003-e54d722c3aff
+	github.com/beyond-net/golib v0.0.0-20230917030559-01515040c020
 	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58
 	github.com/gogo/protobuf v1.3.2
+	github.com/radovskyb/watcher v1.0.7
 	github.com/smartystreets/goconvey v1.8.1
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
 	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

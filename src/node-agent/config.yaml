@@ -1,0 +1,9 @@
+log:
+  days: 5
+  level: Debug
+  path: gtun.log
+
+gtun_template_file: "/opt/apps/gtun/gtun.template"
+gtun_service: "gtun.service"
+gtun_config_file_path: "/opt/apps/gtun/gtun.yaml"
+gtun_dynamic_config_file: "/opt/apps/gtun/node.json"

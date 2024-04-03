@@ -1,0 +1,7 @@
+route_file: "/opt/apps/gtun/etc/route.json"
+proxy_file: "/opt/apps/gtun/etc/proxy.yaml"
+
+log:
+  days: 5
+  level: debug
+  path: /opt/apps/gtun/logs/gtun.log

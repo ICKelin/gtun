@@ -7,6 +7,7 @@ import (
 )
 
 var gConfig *Config
+var signatureKey = os.Getenv("GTUN_SIGNATURE")
 
 type Config struct {
 	RouteFile string `yaml:"route_file"`
@@ -33,8 +34,16 @@ func Parse(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	//lines := strings.Split(content, "\n")
+	//if !strings.HasPrefix(lines[0], "SIGNATURE=") {
+	//	return nil, fmt.Errorf("signature error")
+	//}
+	//
+	//signature := strings.Split(lines[0], "SIGNATURE=")[1]
+	//
+	//configContent := strings.Join(lines[1:], "\n")
 
-	return ParseBuffer(content)
+	return ParseBuffer([]byte(content))
 }
 
 func ParseBuffer(content []byte) (*Config, error) {

@@ -2,11 +2,11 @@ accelerator:
   HK:
     routes:
       - scheme: "kcp"
-        server: "gtun.alihk.byc.com:3002",
-        trace: "gtun.alihk.byc.com:3003",
+        server: "gtun.alihk.byc.com:3002"
+        trace: "gtun.alihk.byc.com:3003"
       - scheme: "mux"
-        server: "gtun.alihk.byc.com:3002",
-        trace: "gtun.alihk.byc.com:3003",
+        server: "gtun.alihk.byc.com:3002"
+        trace: "gtun.alihk.byc.com:3003"
     proxy:
       tproxy_tcp: |
         {

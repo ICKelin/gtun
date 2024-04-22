@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/json"
 	"github.com/ICKelin/gtun/src/internal/signature"
 	"gopkg.in/yaml.v2"
 	"os"
@@ -23,11 +22,11 @@ type RouteConfig struct {
 }
 
 type Accelerator struct {
-	Region  string                     `json:"region"`
-	GeoSite []string                   `json:"geo_site"`
-	GeoIP   []string                   `json:"geo_ip"`
-	Routes  []*RouteConfig             `json:"routes"`
-	Proxy   map[string]json.RawMessage `json:"proxy"`
+	Region  string            `json:"region"`
+	GeoSite []string          `json:"geo_site"`
+	GeoIP   []string          `json:"geo_ip"`
+	Routes  []*RouteConfig    `json:"routes"`
+	Proxy   map[string]string `json:"proxy"`
 }
 
 type Log struct {

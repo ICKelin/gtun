@@ -26,7 +26,7 @@ func Register(name string, constructor func() Proxy) error {
 	return nil
 }
 
-func Serve(region string, proxyConfig map[string]json.RawMessage) error {
+func Serve(region string, proxyConfig map[string]string) error {
 	logs.Debug("region %s proxy config %s", region, proxyConfig)
 	err := setup(region, proxyConfig)
 	if err != nil {
@@ -36,14 +36,14 @@ func Serve(region string, proxyConfig map[string]json.RawMessage) error {
 	return nil
 }
 
-func setup(region string, proxyConfigs map[string]json.RawMessage) error {
+func setup(region string, proxyConfigs map[string]string) error {
 	for name, config := range proxyConfigs {
 		constructor := registerProxy[name]
 		if constructor == nil {
 			return errNotRegister
 		}
 		p := constructor()
-		err := p.Setup(region, config)
+		err := p.Setup(region, json.RawMessage(config))
 		if err != nil {
 			return err
 		}

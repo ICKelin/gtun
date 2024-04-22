@@ -12,17 +12,3 @@
       "session_timeout": 30,
       "listen_addr": ":8524"
     }
-"US":
-  tproxy_tcp: |
-    {
-      "read_timeout": 30,
-      "write_timeout": 30,
-      "listen_addr": ":8525"
-    }
-  tproxy_udp: |
-    {
-      "read_timeout": 30,
-      "write_timeout": 30,
-      "session_timeout": 30,
-      "listen_addr": ":8525"
-    }

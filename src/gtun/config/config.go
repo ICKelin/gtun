@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"github.com/ICKelin/gtun/src/internal/signature"
 	"gopkg.in/yaml.v2"
 	"os"
 )
@@ -34,16 +35,13 @@ func Parse(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	//lines := strings.Split(content, "\n")
-	//if !strings.HasPrefix(lines[0], "SIGNATURE=") {
-	//	return nil, fmt.Errorf("signature error")
-	//}
-	//
-	//signature := strings.Split(lines[0], "SIGNATURE=")[1]
-	//
-	//configContent := strings.Join(lines[1:], "\n")
 
-	return ParseBuffer([]byte(content))
+	configContent, err := signature.UnSign(content)
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseBuffer(configContent)
 }
 
 func ParseBuffer(content []byte) (*Config, error) {
@@ -62,8 +60,13 @@ func ParseProxy(proxyFile string) (map[string]map[string]string, error) {
 		return nil, err
 	}
 
+	configContent, err := signature.UnSign(content)
+	if err != nil {
+		return nil, err
+	}
+
 	proxies := make(map[string]map[string]string)
-	err = yaml.Unmarshal(content, &proxies)
+	err = yaml.Unmarshal(configContent, &proxies)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +79,13 @@ func ParseRoute(routeFile string) ([]*RouteConfig, error) {
 		return nil, err
 	}
 
+	configContent, err := signature.UnSign(content)
+	if err != nil {
+		return nil, err
+	}
+
 	var routeConfig = make([]*RouteConfig, 0)
-	err = json.Unmarshal(content, &routeConfig)
+	err = json.Unmarshal(configContent, &routeConfig)
 	if err != nil {
 		return nil, err
 	}

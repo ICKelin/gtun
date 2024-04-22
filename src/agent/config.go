@@ -1,16 +1,28 @@
 package main
 
 import (
+	"encoding/json"
 	"gopkg.in/yaml.v3"
 	"os"
 )
 
 type Config struct {
-	GtunTemplateFile      string `yaml:"gtun_template_file"`
-	GtunService           string `yaml:"gtun_service"`
-	GtunConfigFilePath    string `yaml:"gtun_config_file_path"`
-	GtunDynamicConfigFile string `yaml:"gtun_dynamic_config_file"`
-	Log                   Log    `yaml:"log"`
+	GeoConfig  GeoConfig                  `yaml:"Geo"`
+	Fetcher    map[string]json.RawMessage `yaml:"fetcher"`
+	GtunConfig *GtunConfig                `yaml:"gtun"`
+	Log        Log                        `yaml:"log"`
+}
+
+type GeoConfig struct {
+	GeoIPFile     string `yaml:"geo_ip_file"`
+	GeoDomainFile string `yaml:"geo_domain_file"`
+}
+
+type GtunConfig struct {
+	FetcherName string   `yaml:"fetcher_name"`
+	RouteFile   string   `yaml:"route_file"`
+	ProxyFile   string   `yaml:"proxy_file"`
+	RestartCmd  []string `yaml:"restart_cmd"`
 }
 
 type Log struct {

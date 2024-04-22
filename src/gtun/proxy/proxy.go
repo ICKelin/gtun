@@ -26,26 +26,24 @@ func Register(name string, constructor func() Proxy) error {
 	return nil
 }
 
-func Serve(proxyConfig map[string]map[string]string) error {
-	for region, p := range proxyConfig {
-		logs.Debug("region %s proxy config %s", region, p)
-		err := setup(region, p)
-		if err != nil {
-			fmt.Printf("region[%s] setup proxy fail: %v\n", region, err)
-			return err
-		}
+func Serve(region string, proxyConfig map[string]json.RawMessage) error {
+	logs.Debug("region %s proxy config %s", region, proxyConfig)
+	err := setup(region, proxyConfig)
+	if err != nil {
+		fmt.Printf("region[%s] setup proxy fail: %v\n", region, err)
+		return err
 	}
 	return nil
 }
 
-func setup(region string, proxyConfigs map[string]string) error {
+func setup(region string, proxyConfigs map[string]json.RawMessage) error {
 	for name, config := range proxyConfigs {
 		constructor := registerProxy[name]
 		if constructor == nil {
 			return errNotRegister
 		}
 		p := constructor()
-		err := p.Setup(region, []byte(config))
+		err := p.Setup(region, config)
 		if err != nil {
 			return err
 		}

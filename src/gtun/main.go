@@ -20,31 +20,19 @@ func main() {
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
 
-	routeConfig, err := config.ParseRoute(conf.RouteFile)
-	if err != nil {
-		fmt.Printf("parse node config fail: %v", err)
-		return
-	}
+	for region, cfg := range conf.Accelerator {
+		err := route.Setup(region, cfg.Routes)
+		if err != nil {
+			panic(err)
+		}
 
-	proxyConfig, err := config.ParseProxy(conf.ProxyFile)
-	if err != nil {
-		fmt.Printf("parse proxy config fail: %v", err)
-		return
+		err = proxy.Serve(region, cfg.Proxy)
+		if err != nil {
+			panic(err)
+		}
 	}
+	route.Run()
 
-	// run route
-	err = route.Setup(routeConfig)
-	if err != nil {
-		fmt.Printf("route setup fail: %v", err)
-		return
-	}
-
-	// run proxy
-	err = proxy.Serve(proxyConfig)
-	if err != nil {
-		fmt.Printf("proxy setup fail: %v", err)
-		return
-	}
 	// TODO: watch for config file changes
 	select {}
 }

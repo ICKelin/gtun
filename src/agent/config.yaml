@@ -1,8 +1,0 @@
-log:
-  days: 5
-  level: Debug
-  path: gtun.log
-
-restart_cmd: ["systemctl", "restart", "gtun.service"]
-route_file: "/opt/apps/gtun/route.json"
-proxy_file: "/opt/apps/gtun/proxy.yaml"

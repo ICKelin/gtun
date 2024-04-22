@@ -113,24 +113,24 @@ func (routeManager *Manager) deleteRoute(region string, item *routeItem) {
 	routeManager.routeTable[region] = conns
 }
 
-func Setup(routeConfig []*config.RouteConfig) error {
-	for _, cfg := range routeConfig {
-		conn, err := newConn(cfg.Region, cfg.Scheme, cfg.Server, cfg.AuthKey)
+func Setup(region string, routes []*config.RouteConfig) error {
+	for _, cfg := range routes {
+		conn, err := newConn(region, cfg.Scheme, cfg.Server, cfg.AuthKey)
 		if err != nil {
 			fmt.Printf("region[%s] connect to %s://%s fail: %v",
-				cfg.Region, cfg.Scheme, cfg.Server, cfg.AuthKey)
+				region, cfg.Scheme, cfg.Server, cfg.AuthKey)
 			return err
 		}
 
-		cm.regionConn[cfg.Region] = append(cm.regionConn[cfg.Region], conn)
+		cm.regionConn[region] = append(cm.regionConn[region], conn)
 
-		t, ok := tm.regionTrace[cfg.Region]
+		t, ok := tm.regionTrace[region]
 		if !ok {
-			logs.Debug("add region[%s] trace", cfg.Region)
-			t = newTrace(cfg.Region)
-			tm.regionTrace[cfg.Region] = t
+			logs.Debug("add region[%s] trace", region)
+			t = newTrace(region)
+			tm.regionTrace[region] = t
 		} else {
-			logs.Debug("region[%s] trace exist", cfg.Region)
+			logs.Debug("region[%s] trace exist", region)
 		}
 
 		t.addTarget(traceTarget{
@@ -140,7 +140,10 @@ func Setup(routeConfig []*config.RouteConfig) error {
 		})
 	}
 
+	return nil
+}
+
+func Run() {
 	go tm.startTrace()
 	go cm.startConn()
-	return nil
 }

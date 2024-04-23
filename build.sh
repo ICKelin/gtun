@@ -3,6 +3,9 @@ mkdir -p release
 mkdir -p release/gtun/etc
 mkdir -p release/gtund/etc
 
+git log -n 5 > release/gtun/ChangeLog
+git log -n 5 > release/gtund/ChangeLog
+
 DIR=`pwd`
 
 cd src/gtun

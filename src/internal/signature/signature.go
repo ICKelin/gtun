@@ -55,3 +55,7 @@ func UnSign(buf []byte) ([]byte, error) {
 
 	return []byte(body), nil
 }
+
+func SetSignature(sig string) {
+	signature = sig
+}

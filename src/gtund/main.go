@@ -90,7 +90,7 @@ func main() {
 			logs.Info("reload config success")
 
 		default:
-			logs.Info("unhandle signal %v", sig.String())
+			logs.Info("un handle signal %v", sig.String())
 		}
 	}
 }

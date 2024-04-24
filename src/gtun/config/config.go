@@ -42,17 +42,17 @@ func Parse(path string) (*Config, error) {
 		return nil, err
 	}
 
+	return ParseBuffer(content)
+}
+
+func ParseBuffer(content []byte) (*Config, error) {
 	configContent, err := signature.UnSign(content)
 	if err != nil {
 		return nil, err
 	}
 
-	return ParseBuffer(configContent)
-}
-
-func ParseBuffer(content []byte) (*Config, error) {
 	conf := Config{}
-	err := yaml.Unmarshal(content, &conf)
+	err = yaml.Unmarshal([]byte(os.ExpandEnv(string(configContent))), &conf)
 	if err != nil {
 		return nil, err
 	}

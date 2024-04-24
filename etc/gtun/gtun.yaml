@@ -1,13 +1,13 @@
-access_token: "ICKelin:free"
+access_token: "${ACCESS_TOKEN}"
 accelerator:
   HK:
     routes:
       - scheme: "kcp"
-        server: "gtun.alihk.byc.com:3002"
-        trace: "gtun.alihk.byc.com:3003"
+        server: "${SERVER_IP}:3002"
+        trace: "${SERVER_IP}:3003"
       - scheme: "mux"
-        server: "gtun.alihk.byc.com:3002"
-        trace: "gtun.alihk.byc.com:3003"
+        server: "${SERVER_IP}:3002"
+        trace: "${SERVER_IP}:3003"
     proxy:
       tproxy_tcp: |
         {

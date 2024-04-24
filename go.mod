@@ -3,7 +3,7 @@ module github.com/ICKelin/gtun
 go 1.20
 
 require (
-	github.com/ICKelin/optw v0.0.0-20211219021958-28f4d1f075ef
+	github.com/ICKelin/optw v0.0.0-20240424081636-bc7a0dd32f38
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/astaxie/beego v1.12.3
 	github.com/belogik/goes v0.0.0-20151229125003-e54d722c3aff
@@ -26,7 +26,6 @@ require (
 	github.com/templexxx/xor v0.0.0-20191217153810-f85b25db303b // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	github.com/xtaci/kcp-go v5.4.20+incompatible // indirect
-	github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37 // indirect
 	github.com/xtaci/smux v1.5.24 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.22.0 // indirect

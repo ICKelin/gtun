@@ -12,7 +12,7 @@ add_noproxy() {
   ipset create $noproxy_set hash:net
   cat noproxy.txt | while read line
   do
-      echo "no proxy for " $line
+      echo "no proxy for" $line
       ipset add $noproxy_set $line
   done
 
@@ -21,8 +21,8 @@ add_noproxy() {
 }
 
 clear_proxy() {
-    ip ro del local default dev lo table 100 >/dev/null
-    ip rule del fwmark 1 lookup 100 >/dev/null
+    ip ro del local default dev lo table 100
+    ip rule del fwmark 1 lookup 100
     iptables -t mangle -D PREROUTING -p tcp -m set --match-set $setname dst -j TPROXY --tproxy-mark 1/1 --on-port $redirect_port
     iptables -t mangle -D PREROUTING -p udp -m set --match-set $setname dst -j TPROXY --tproxy-mark 1/1 --on-port $redirect_port
     iptables -t mangle -D OUTPUT -m set --match-set $setname dst -j MARK --set-mark 1 >/dev/null
@@ -31,8 +31,8 @@ clear_proxy() {
 
 add_proxy() {
   ipset create $setname hash:net
-  echo "proxy 0.0.0.0/1"
-  echo "proxy 128.0.0.0/1"
+  echo "proxy for 0.0.0.0/1"
+  echo "proxy for 128.0.0.0/1"
   ipset add $setname 0.0.0.0/1
   ipset add $setname 128.0.0.0/1
 
@@ -50,7 +50,7 @@ add_proxy() {
 
 sep="============================================"
 
-echo "gtun accelerator proxy all traffic"
+echo "gtun accelerator redirect configure"
 clear_noproxy
 clear_proxy
 

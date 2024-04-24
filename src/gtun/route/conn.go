@@ -2,6 +2,7 @@ package route
 
 import (
 	"fmt"
+	"github.com/ICKelin/gtun/src/gtun/config"
 	"github.com/ICKelin/gtun/src/internal/logs"
 	"github.com/ICKelin/optw/transport/transport_api"
 	"time"
@@ -35,6 +36,7 @@ func newConn(region, scheme, serverAddr, authKey string) (*conn, error) {
 	if err != nil {
 		return nil, err
 	}
+	dialer.SetAccessToken(config.Default().AccessToken)
 
 	return &conn{
 		dialer:     dialer,

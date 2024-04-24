@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ICKelin/gtun/src/internal/logs"
+	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
 	_ "net/http/pprof"
-
-	"github.com/ICKelin/optw/transport/transport_api"
+	"time"
 )
 
 var version = ""
@@ -46,6 +46,23 @@ func main() {
 			return
 		}
 		defer listener.Close()
+
+		if conf.EnableAuth {
+			listener.SetAuthFunc(func(token string) bool {
+				ok := false
+				for _, auth := range conf.Auths {
+					if auth.AccessToken == token {
+						if auth.ExpiredAt == 0 {
+							ok = true
+						} else if time.Now().Unix() < auth.ExpiredAt {
+							ok = true
+						}
+						break
+					}
+				}
+				return ok
+			})
+		}
 
 		s := NewServer(listener)
 		go s.Run()

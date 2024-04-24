@@ -10,6 +10,7 @@ var gConfig *Config
 var signatureKey = os.Getenv("GTUN_SIGNATURE")
 
 type Config struct {
+	AccessToken string                 `yaml:"access_token"`
 	Accelerator map[string]Accelerator `yaml:"accelerator"`
 	Log         Log                    `yaml:"log"`
 }
@@ -59,21 +60,6 @@ func ParseBuffer(content []byte) (*Config, error) {
 	return &conf, err
 }
 
-func ParseProxy(proxyFile string) (map[string]map[string]string, error) {
-	content, err := os.ReadFile(proxyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	configContent, err := signature.UnSign(content)
-	if err != nil {
-		return nil, err
-	}
-
-	proxies := make(map[string]map[string]string)
-	err = yaml.Unmarshal(configContent, &proxies)
-	if err != nil {
-		return nil, err
-	}
-	return proxies, nil
+func Default() *Config {
+	return gConfig
 }

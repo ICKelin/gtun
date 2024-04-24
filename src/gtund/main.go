@@ -15,17 +15,39 @@ import (
 
 var version = ""
 
+var logo = `
+====================================
+ ██████  ████████ ██    ██ ███    ██ 
+██          ██    ██    ██ ████   ██ 
+██   ███    ██    ██    ██ ██ ██  ██ 
+██    ██    ██    ██    ██ ██  ██ ██ 
+ ██████     ██     ██████  ██   ████ 
+====================================
+https://github.com/ICKelin/gtun
+`
+
 func init() {
 	go http.ListenAndServe(":6060", nil)
 }
 
 func main() {
 	flgVersion := flag.Bool("v", false, "print version")
+	flgTest := flag.Bool("t", false, "test config file")
 	flgConf := flag.String("c", "", "config file")
 	flag.Parse()
 
+	fmt.Println(logo)
+
 	if *flgVersion {
 		fmt.Println(version)
+		return
+	}
+
+	if *flgTest {
+		_, err := ParseConfig(*flgConf)
+		if err != nil {
+			fmt.Printf("FAILED: %v\n", err)
+		}
 		return
 	}
 
@@ -35,7 +57,7 @@ func main() {
 		return
 	}
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
-
+	logs.Info("%s", logo)
 	logs.Debug("config: %s", conf.String())
 
 	if conf.Trace != "" {

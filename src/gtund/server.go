@@ -116,15 +116,6 @@ func (s *Server) handleStream(stream transport.Stream) {
 		s.tcpProxy(stream, &proxyProtocol)
 	case "udp":
 		s.udpProxy(stream, &proxyProtocol)
-	case "tun":
-		if s.devStream != nil {
-			s.devStream.Close()
-			s.devStream = stream
-		} else {
-			s.devStream = stream
-			go s.readDev()
-		}
-		s.tunProxy(stream, &proxyProtocol)
 	}
 }
 
@@ -217,47 +208,6 @@ func (s *Server) udpProxy(stream transport.Stream, p *proto.ProxyProtocol) {
 
 		if nw != len(bytes) {
 			logs.Error("bug: stream write %d bytes, expected %d", nw, len(bytes))
-		}
-	}
-}
-
-func (s *Server) tunProxy(stream transport.Stream, p *proto.ProxyProtocol) {
-	defer stream.Close()
-	hdr := make([]byte, 2)
-	for {
-		_, err := io.ReadFull(stream, hdr)
-		if err != nil {
-			logs.Error("read stream fail: %v", err)
-			break
-		}
-		nlen := binary.BigEndian.Uint16(hdr)
-		buf := make([]byte, nlen)
-		_, err = io.ReadFull(stream, buf)
-		if err != nil {
-			logs.Error("read stream body fail: %v", err)
-			break
-		}
-
-		_, err = s.dev.Write(buf)
-		if err != nil {
-			logs.Error("write to dev fail: %v", err)
-			return
-		}
-	}
-}
-
-func (s *Server) readDev() {
-	for {
-		buf, err := s.dev.Read()
-		if err != nil {
-			logs.Error("read interface fail: %v", err)
-			return
-		}
-
-		bytes := proto.EncodeData(buf)
-		_, err = s.devStream.Write(bytes)
-		if err != nil {
-			logs.Error("stream write fail: %v", err)
 		}
 	}
 }

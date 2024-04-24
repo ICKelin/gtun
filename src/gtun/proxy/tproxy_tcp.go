@@ -5,7 +5,6 @@ import (
 	"github.com/ICKelin/gtun/src/gtun/route"
 	"github.com/ICKelin/gtun/src/internal/logs"
 	"github.com/ICKelin/gtun/src/internal/proto"
-	"github.com/ICKelin/gtun/src/internal/utils"
 	"io"
 	"net"
 	"sync"
@@ -26,7 +25,6 @@ type TProxyTCPConfig struct {
 	ReadTimeout  int    `json:"read_timeout"`
 	WriteTimeout int    `json:"write_timeout"`
 	ListenAddr   string `json:"listen_addr"`
-	RateLimit    int    `json:"rate_limit"`
 }
 
 type TProxyTCP struct {
@@ -42,8 +40,6 @@ type TProxyTCP struct {
 	readTimeout time.Duration
 
 	mempool sync.Pool
-
-	ratelimit *utils.RateLimit
 
 	routeManager *route.Manager
 }
@@ -83,9 +79,6 @@ func (p *TProxyTCP) initConfig(region string, cfg TProxyTCPConfig) error {
 		tcpWriteTimeout = defaultTCPTimeout
 	}
 
-	rateLimit := utils.NewRateLimit()
-	rateLimit.SetRateLimit(int64(cfg.RateLimit * 1024 * 1024))
-
 	p.region = region
 	p.listenAddr = cfg.ListenAddr
 	p.writeTimeout = time.Duration(tcpWriteTimeout) * time.Second
@@ -95,7 +88,6 @@ func (p *TProxyTCP) initConfig(region string, cfg TProxyTCPConfig) error {
 			return make([]byte, 32*1024)
 		},
 	}
-	p.ratelimit = rateLimit
 	p.routeManager = route.GetRouteManager()
 	return nil
 }
@@ -177,6 +169,8 @@ func (p *TProxyTCP) doProxy(conn net.Conn) {
 		io.CopyBuffer(stream, conn, buf)
 	}()
 
+	defer stream.Close()
+	defer conn.Close()
 	obj := p.mempool.Get()
 	defer p.mempool.Put(obj)
 	buf := obj.([]byte)

@@ -40,7 +40,6 @@ type TProxyUDPConfig struct {
 	WriteTimeout   int    `json:"write_timeout"`
 	SessionTimeout int    `json:"session_timeout"`
 	ListenAddr     string `json:"listen_addr"`
-	RateLimit      int    `json:"rate_limit"`
 }
 
 type TProxyUDP struct {
@@ -57,8 +56,6 @@ type TProxyUDP struct {
 	// the purpose of udpSession is to reuse stream
 	udpSessions map[string]*udpSession
 	udpsessLock sync.Mutex
-
-	ratelimit *utils2.RateLimit
 }
 
 func NewTProxyUDP() Proxy {
@@ -100,16 +97,12 @@ func (p *TProxyUDP) initConfig(region string, cfg TProxyUDPConfig) error {
 		sessionTimeout = defaultUDPSessionTimeout
 	}
 
-	rateLimit := utils2.NewRateLimit()
-	rateLimit.SetRateLimit(int64(cfg.RateLimit * 1024 * 1024))
-
 	p.region = region
 	p.listenAddr = cfg.ListenAddr
 	p.writeTimeout = time.Duration(writeTimeout) * time.Second
 	p.readTimeout = time.Duration(readTimeout) * time.Second
 	p.sessionTimeout = time.Duration(sessionTimeout) * time.Second
 	p.udpSessions = make(map[string]*udpSession)
-	p.ratelimit = rateLimit
 	p.routeManager = route.GetRouteManager()
 	return nil
 }

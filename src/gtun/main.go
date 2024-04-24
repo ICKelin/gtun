@@ -9,6 +9,17 @@ import (
 	"github.com/ICKelin/gtun/src/internal/logs"
 )
 
+var logo = `
+====================================
+ ██████  ████████ ██    ██ ███    ██ 
+██          ██    ██    ██ ████   ██ 
+██   ███    ██    ██    ██ ██ ██  ██ 
+██    ██    ██    ██    ██ ██  ██ ██ 
+ ██████     ██     ██████  ██   ████ 
+====================================
+https://github.com/ICKelin/gtun
+`
+
 func main() {
 	flgConf := flag.String("c", "", "config file")
 	flag.Parse()
@@ -18,8 +29,9 @@ func main() {
 		fmt.Printf("load config fail: %v\n", err)
 		return
 	}
+	fmt.Println(logo)
 	logs.Init(conf.Log.Path, conf.Log.Level, conf.Log.Days)
-
+	logs.Info("%s", logo)
 	for region, cfg := range conf.Accelerator {
 		err := route.Setup(region, cfg.Routes)
 		if err != nil {

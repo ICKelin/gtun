@@ -26,6 +26,7 @@ type Log struct {
 type AuthConfig struct {
 	AccessToken string `yaml:"access_token"`
 	ExpiredAt   int64  `yaml:"expired_at"`
+	RateLimit   int64  `yaml:"rate_limit"` // mbps
 }
 
 func ParseConfig(path string) (*Config, error) {

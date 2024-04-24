@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRoute(t *testing.T) {
@@ -69,6 +70,16 @@ func TestRoute(t *testing.T) {
 }
 
 type mockConn struct {
+}
+
+func (m *mockConn) LocalAddr() net.Addr {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *mockConn) SetDeadline(t time.Time) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m *mockConn) OpenStream() (transport.Stream, error) {

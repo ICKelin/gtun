@@ -117,7 +117,7 @@ func Setup(region string, routes []*config.RouteConfig) error {
 	for _, cfg := range routes {
 		conn, err := newConn(region, cfg.Scheme, cfg.Server, cfg.AuthKey)
 		if err != nil {
-			fmt.Printf("region[%s] connect to %s://%s fail: %v",
+			fmt.Printf("region[%s] connect to %s://%s fail: %v\n",
 				region, cfg.Scheme, cfg.Server, cfg.AuthKey)
 			return err
 		}

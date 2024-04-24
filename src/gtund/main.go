@@ -7,6 +7,9 @@ import (
 	"github.com/ICKelin/optw/transport/transport_api"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -50,7 +53,8 @@ func main() {
 		if conf.EnableAuth {
 			listener.SetAuthFunc(func(token string) bool {
 				ok := false
-				for _, auth := range conf.Auths {
+				auths := GetConfig().Auths
+				for _, auth := range auths {
 					if auth.AccessToken == token {
 						if auth.ExpiredAt == 0 {
 							ok = true
@@ -68,5 +72,25 @@ func main() {
 		go s.Run()
 	}
 
-	select {}
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP)
+
+	for sig := range c {
+		switch sig {
+		case syscall.SIGHUP:
+			logs.Info("receive hup signal")
+			cfg, err := ParseConfig(*flgConf)
+			if err != nil {
+				logs.Warn("reload config fail: %v", err)
+				continue
+			}
+
+			// rewrite conf pointer
+			conf = cfg
+			logs.Info("reload config success")
+
+		default:
+			logs.Info("unhandle signal %v", sig.String())
+		}
+	}
 }

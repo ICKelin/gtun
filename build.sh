@@ -13,6 +13,7 @@ GOOS=linux go build -o gtun
 mv gtun $DIR/release/gtun/
 cd $DIR
 cp scripts/install_gtun.sh release/gtun/install.sh
+cp -r scripts release/gtun/scripts
 cp -r etc/gtun/* release/gtun/etc
 
 cd src/gtund

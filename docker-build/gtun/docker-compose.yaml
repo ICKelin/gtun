@@ -10,3 +10,5 @@ services:
       - /opt/apps/gtun/logs:/opt/apps/gtun/logs
     environment:
       TIME_ZONE: Asia/Shanghai
+      ACCESS_TOKEN: $ACCESS_TOKEN
+      SERVER_IP: $SERVER_IP

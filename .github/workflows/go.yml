@@ -22,5 +22,5 @@ jobs:
         go-version: 1.19
 
     - name: Build
-      run: ./build_exec.sh
+      run: ./build.sh
 

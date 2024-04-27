@@ -6,11 +6,9 @@ auths:
 trace: ":3003"
 server:
   - listen: ":3002"
-    authKey: "rewrite with your auth key"
     scheme: "kcp"
 
-  - listen: ":3001"
-    authKey: "rewrite with your auth key"
+  - listen: ":3002"
     scheme: "mux"
 
 log:

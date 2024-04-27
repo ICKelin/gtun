@@ -2,7 +2,7 @@ version: '3'
 services:
   accelerator:
     build: .
-    container_name: gtun
+    container_name: gtun_2.0.7
     restart: always
     network_mode: host
     privileged: true

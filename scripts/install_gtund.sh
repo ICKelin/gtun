@@ -1,4 +1,4 @@
-systemctl stop gtun
+systemctl stop gtund
 GTUND_DIR="/opt/apps/gtund"
 mkdir -p $GTUND_DIR/logs
 cp -r . $GTUND_DIR

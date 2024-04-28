@@ -76,6 +76,7 @@ func main() {
 			listener.SetAuthFunc(func(token string) bool {
 				ok := false
 				auths := GetConfig().Auths
+				logs.Info("verify auth token %s", token)
 				for _, auth := range auths {
 					if auth.AccessToken == token {
 						if auth.ExpiredAt == 0 {

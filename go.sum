@@ -1,6 +1,6 @@
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/ICKelin/optw v0.0.0-20240428011618-ca9b64a90fcc h1:h+8a9EzkvaJFGqYEhnH+iekl0Gv9+2XsFORKyf/MwdU=
-github.com/ICKelin/optw v0.0.0-20240428011618-ca9b64a90fcc/go.mod h1:MQl8fLDhV0btvBztH05wsDamj0Rn8BDnDmCPeuIBpbY=
+github.com/ICKelin/optw v0.0.0-20240428102250-612f5bb01303 h1:+Ny6mSEahFVfuEXXzoxChuWUStKyW0V53wTA/v0r3ug=
+github.com/ICKelin/optw v0.0.0-20240428102250-612f5bb01303/go.mod h1:MQl8fLDhV0btvBztH05wsDamj0Rn8BDnDmCPeuIBpbY=
 github.com/Knetic/govaluate v3.0.0+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/agiledragon/gomonkey/v2 v2.11.0 h1:5oxSgA+tC1xuGsrIorR+sYiziYltmJyEZ9qA25b6l5U=
 github.com/agiledragon/gomonkey/v2 v2.11.0/go.mod h1:ap1AmDzcVOAz1YpeJ3TCzIgstoaWLA6jbbgxfB4w2iY=

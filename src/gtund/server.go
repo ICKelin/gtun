@@ -66,7 +66,7 @@ func (s *Server) Run() error {
 					continue
 				}
 			}
-			return err
+			continue
 		}
 
 		logs.Info("accept connect from remote: %s", conn.RemoteAddr().String())

@@ -3,7 +3,7 @@ module github.com/ICKelin/gtun
 go 1.20
 
 require (
-	github.com/ICKelin/optw v0.0.0-20240428011618-ca9b64a90fcc
+	github.com/ICKelin/optw v0.0.0-20240428102250-612f5bb01303
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/astaxie/beego v1.12.3
 	github.com/belogik/goes v0.0.0-20151229125003-e54d722c3aff

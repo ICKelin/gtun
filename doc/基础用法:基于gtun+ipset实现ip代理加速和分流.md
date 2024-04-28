@@ -10,7 +10,7 @@ gtun的基础功能是ip加速，本文通过具体的配置来讲解如何配�
 
 我们可以通过iptables非常灵活的控制加速和非加速流量。
 
-**本文的是基于gtun的2.0.7版本。**
+**本文是基于gtun的2.0.7版本。**
 
 # 安装
 安装包括两个组件：
@@ -24,8 +24,8 @@ gtun的基础功能是ip加速，本文通过具体的配置来讲解如何配�
 cd gtund
 ./install.sh
 ```
-install_gtund.sh 会创建gtund的运行目录，并通过systemd把gtund程序拉起。
-执行install_gtund.sh完成之后，gtund会：
+install.sh 会创建gtund的运行目录，并通过systemd把gtund程序拉起。
+执行install.sh完成之后，gtund会：
 - 监听tcp的3002作为mux协议的服务端口
 - 监听udp的3002作为kcp协议的服务端口
 - 日志记录在/opt/apps/gtund/logs/gtund.log
@@ -68,9 +68,9 @@ gtun的安装也类似，在release里面找到2.0.7版本的产物并进行下�
 
 ```shell
 cd gtun
-export ACCESS_KEY="ICKelin:free"
+export ACCESS_TOKEN="ICKelin:free"
 export SERVER_IP="gtund所在的服务器的ip"
-./install_gtun.sh
+./install.sh
 ```
 
 安装完成之后查看是否有错误日志
@@ -163,6 +163,37 @@ cat cn.cidr | while read line
 ```
 
 用法非常多，后续文章会不断分享一些用法。
+
+# 测试
+最后来进行一次简单的测试，首先是不加速的验证，这里我用我的一个服务器的ip来进行测试。
+
+```shell
+# 将ip加入到NOPROXY ipset当中
+ipset add NOPROXY xx.xx.xx.xx
+
+# ssh 连接ip
+ssh root@xx.xx.xx.xx
+
+# 使用who命令查看当前连接的ip
+root@iZwz97kfjnf78copv1ae65Z:~# who
+root     tty1         Jun 28 10:41
+root     pts/0        Apr 28 09:43 (119.139.xx.xx)
+```
+
+最终结果走的是本地的出口(119.139.xx.xx)。
+
+同样的方式，把这个ip从NOPROXY ipset中删除，加入到GTUN_ALL这个匹配走加速的ipset当中。
+
+```shell
+ipset del NOPROXY xx.xx.xx.xx
+ipset add GTUN_ALL xx.xx.xx.xx
+
+root@iZwz97kfjnf78copv1ae65Z:~# who
+root     tty1         Jun 28 10:41
+root     pts/1        Apr 28 09:46 (3.141.xx.xx)
+```
+
+最终走的是加速的出口（3.141.xx.xx）
 
 # 结束语
 以上是gtun的最基本的功能，实现所有流量劫持并进行加速，同时也提了一嘴如何访问大陆地区的ip不加速，通过这个实例基本上能了解gtun是如何跑起来的，也能定制一些更加适合自己的用法。

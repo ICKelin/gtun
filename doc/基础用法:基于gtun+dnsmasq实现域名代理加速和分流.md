@@ -7,6 +7,8 @@
 
 基于此我们有了基于dnsmasq的域名解析策略来实现基于域名的加速和分流，最终拓扑如下：
 
+![img.png](assets/img.png)
+
 # 前置准备
 您可以参考这篇文章来安装gtund和gtun。安装完gtun和gtund之后，您需要再安装dnsmasq并且成功启动。
 
@@ -97,4 +99,5 @@ Warning: 47.115.xx.xx is in set NOPROXY.
 demo.xxxx.tech这个域名已经被加入到NOPROXY里面了，根据之前的文章，加入到NOPROXY之后不会再走加速出口出，这里不再赘述了。
 
 # 结束语
-
+本文粗略的讲解了如何结合dnsmasq实现域名加速，截止目前位置我们已经了解到了ip加速和域名加速，但是所有的加速都是加速本机的流量，接下来我会结合
+软路由的方式，详细说明如何实现连接Wi-Fi就能实现gtun的加速。

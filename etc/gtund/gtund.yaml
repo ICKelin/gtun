@@ -1,0 +1,17 @@
+enable_auth: true
+auths:
+  - access_token: "ICKelin:free"
+    expired_ath: 0
+
+trace: ":3003"
+server:
+  - listen: ":3002"
+    scheme: "kcp"
+
+  - listen: ":3002"
+    scheme: "mux"
+
+log:
+  days: 5
+  level: "debug"
+  path: "/opt/apps/gtund/logs/gtund.log"

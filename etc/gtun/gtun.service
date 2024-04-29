@@ -1,0 +1,16 @@
+[Unit]
+Description=gtun - ip accelerator base on tproxy
+After=network.target auditd.service
+
+[Service]
+ExecStart=/opt/apps/gtun/gtun -c /opt/apps/gtun/etc/gtun.yaml
+KillMode=process
+Restart=always
+RestartPreventExitStatus=255
+Type=simple
+LimitNOFILE=1000000
+LimitNPROC=1000000
+
+[Install]
+WantedBy=multi-user.target
+Alias=gtun.service

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  accelerator:
+    build: .
+    container_name: gtund
+    restart: always
+    network_mode: host
+    privileged: true
+    volumes:
+      - /opt/apps/gtund/logs:/opt/apps/gtund/logs
+    environment:
+      TIME_ZONE: Asia/Shanghai

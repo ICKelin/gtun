@@ -1,0 +1,16 @@
+[Unit]
+Description=gtund - ip accelerator base on tproxy
+After=network.target auditd.service
+
+[Service]
+ExecStart=/opt/apps/gtund/gtund -c /opt/apps/gtund/etc/gtund.yaml
+KillMode=process
+Restart=always
+RestartPreventExitStatus=255
+Type=simple
+LimitNOFILE=1000000
+LimitNPROC=1000000
+
+[Install]
+WantedBy=multi-user.target
+Alias=gtund.service

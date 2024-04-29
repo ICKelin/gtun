@@ -83,65 +83,80 @@ gtun本身只提供流量代理通道，至于哪些流量需要被劫持，**�
 - 一台公有云服务器，用于部署服务端程序gtund，区域越靠近被加速区域（源站）越好，并且确认gtund监听的端口被打开
 - 另外一台可以是公有云服务器，也可以是内网机器，也可以是路由器，用于部署客户端程序gtun，目前gtun只支持linux系统
 
-### 安装运行gtund
-gtund需要运行在公有云上，相对比较简单，原则上越靠近需要加速的区域越好。
+### 安装gtund
+gtund部署在美国的AWS上，支持systemd和docker两种方式进行启动。
 
-首先生成配置文件，可以下载 [gtund.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtund.yaml) 进行修改
+在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.7版本的产物并进行下载，
+
+```
+cd gtund
+./install.sh
+```
+install.sh 会创建gtund的运行目录，并通过systemd把gtund程序拉起。
+执行install.sh完成之后，gtund会：
+- 监听tcp的3002作为mux协议的服务端口
+- 监听udp的3002作为kcp协议的服务端口
+- 日志记录在/opt/apps/gtund/logs/gtund.log
+
+gtund的默认配置为，默认情况下不需要作任何的修改即可
 
 ```yaml
+enable_auth: true
+auths:
+  - access_token: "ICKelin:free"
+    expired_ath: 0
+
 trace: ":3003"
 server:
   - listen: ":3002"
     scheme: "kcp"
 
-  - listen: ":3001"
+  - listen: ":3002"
     scheme: "mux"
 
 log:
   days: 5
   level: "debug"
-  path: "gtund.log"
+  path: "/opt/apps/gtund/logs/gtund.log"
 
 ```
 
-大部分情况下，如果您的端口未被占用，不需要修改任何配置
-`./gtund -c gtund.yaml`文件即可。
+您也可以使用docker-compose来进行安装：
 
-### 安装运行gtun
-gtun可以运行在内网，也可以运行在公有云，在本场景当中，gtun会被部署在内网。
-
-首先生成配置文件，可以下载 [gtun.yaml](https://github.com/ICKelin/gtun/blob/master/etc/gtun.yaml) 进行修改
-
-```yaml
-accelerator:
-  HK:
-    routes:
-      - scheme: "kcp"
-        server: "gtun.alihk.byc.com:3002"
-        trace: "gtun.alihk.byc.com:3003"
-    proxy:
-      tproxy_tcp: |
-        {
-          "read_timeout": 30,
-          "write_timeout": 30,
-          "listen_addr": ":8524"
-        }
-      tproxy_udp: |
-        {
-          "read_timeout": 30,
-          "write_timeout": 30,
-          "session_timeout": 30,
-          "listen_addr": ":8524"
-        }
-log:
-  days: 5
-  level: debug
-  path: gtun.log
-
+```shell
+cd gtund
+docker-compose up --build -d
 ```
-通常只需要修改server和trace两个字段，value为gtund的的`公网IP:监听端口`即可。
 
-配置完成之后可以启动gtun程序，运行`./gtun -c gtun.yaml`即可启动。
+执行完之后docker ps 看是否启动成功
+
+### 安装gtun
+
+gtun的安装也类似，在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.7版本的产物并进行下载，然后在本地linux上进行部署
+
+```shell
+cd gtun
+export ACCESS_TOKEN="ICKelin:free"
+export SERVER_IP="gtund所在的服务器的ip"
+./install.sh
+```
+
+其中ACCESS_TOKEN为gtund配置的认证的token，SERVER_IP是gtund的公网IP
+
+安装完成之后查看是否有错误日志
+
+```shell
+tail -f /opt/apps/gtun/logs/gtun.log
+```
+
+同样，你也可以使用docker-compose来安装
+
+```shell
+cd gtun
+docker-compose up --build -d
+```
+
+执行完成之后docker ps 看是否启动成功。
 
 [返回目录](#目录)
 

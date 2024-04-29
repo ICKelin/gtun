@@ -14,6 +14,17 @@
   - 作为路由器时，经过本机路由转发的流量的加速
 - 除了N1盒子和gtun之外，由于openwrt本身就已经刷入dnsmasq了，这里不再多说，dnsmasq的域名策略还是沿用[之前文章](基础用法:基于gtun+dnsmasq实现域名代理加速和分流.md)的配置。
 
+**本文是基于gtun的2.0.7版本。**
+
+其他文章参考:
+
+- [基础用法: 基于gtun+ipset实现ip代理加速和分流](./基础用法:基于gtun+ipset实现ip代理加速和分流.md)
+- [基础用法: 基于gtun+dnsmasq实现域名代理加速和分流](./基础用法:基于gtun+dnsmasq实现域名代理加速和分流.md)
+- [基础用法: openwrt搭载gtun打造加速软路由，连接Wi-Fi即可畅游网络](./基础用法:openwrt搭载gtun打造加速软路由，连接Wi-Fi即可畅游网络.md)
+- [基础用法: 基于gtun实现公有云访问外部加速](./基础用法:基于gtun实现公有云访问外部加速.md)
+- [玩转N1盒子：基于gtun实现的tiktok加速路由](./玩转N1盒子:基于gtun实现的tiktok加速路由.md)
+- [玩转N1盒子：基于gtun实现的游戏加速盒](./玩转N1盒子:基于gtun实现的游戏加速盒.md)
+
 # N1盒子刷入Openwrt
 - N1盒子是从淘宝购买的
 - openwrt我刷入的是[这个固件](https://github.com/ophub/flippy-openwrt-actions/releases/download/OpenWrt_lede_save_2024.04/openwrt_s905d_n1_R24.2.2_k5.15.152-flippy-88+o.img.gz)

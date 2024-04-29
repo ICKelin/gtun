@@ -10,8 +10,19 @@
 
 ![img.png](assets/domain_acc_topology.png)
 
+**本文是基于gtun的2.0.7版本。**
+
+其他文章参考:
+
+- [基础用法: 基于gtun+ipset实现ip代理加速和分流](./基础用法:基于gtun+ipset实现ip代理加速和分流.md)
+- [基础用法: 基于gtun+dnsmasq实现域名代理加速和分流](./基础用法:基于gtun+dnsmasq实现域名代理加速和分流.md)
+- [基础用法: openwrt搭载gtun打造加速软路由，连接Wi-Fi即可畅游网络](./基础用法:openwrt搭载gtun打造加速软路由，连接Wi-Fi即可畅游网络.md)
+- [基础用法: 基于gtun实现公有云访问外部加速](./基础用法:基于gtun实现公有云访问外部加速.md)
+- [玩转N1盒子：基于gtun实现的tiktok加速路由](./玩转N1盒子:基于gtun实现的tiktok加速路由.md)
+- [玩转N1盒子：基于gtun实现的游戏加速盒](./玩转N1盒子:基于gtun实现的游戏加速盒.md)
+
 # 前置准备
-您可以参考[这篇文章](基础用法:基于gtun+ipset实现ip代理加速和分流.md)来安装gtund和gtun。安装完gtun和gtund之后，您需要再安装dnsmasq并且成功启动。
+您可以参考[这篇文章](./基础用法:基于gtun+ipset实现ip代理加速和分流.md)来安装gtund和gtun。安装完gtun和gtund之后，您需要再安装dnsmasq并且成功启动。
 
 # 配置dnsmasq解析策略
 

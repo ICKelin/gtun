@@ -8,6 +8,9 @@ accelerator:
       - scheme: "mux"
         server: "${SERVER_IP}:3002"
         trace: "${SERVER_IP}:3003"
+      - scheme: "quic"
+        server: "${SERVER_IP}:4002"
+        trace: "${SERVER_IP}:3003"
     proxy:
       tproxy_tcp: |
         {

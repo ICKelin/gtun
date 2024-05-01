@@ -17,7 +17,7 @@ cp -r scripts release/gtun/scripts
 cp -r etc/gtun/* release/gtun/etc
 
 cd src/gtund
-GOOS=linux GOARCH=amd64 go build -o gtund
+GOOS=linux go build -o gtund
 mv gtund $DIR/release/gtund/
 cd $DIR
 cp scripts/install_gtund.sh release/gtund/install.sh

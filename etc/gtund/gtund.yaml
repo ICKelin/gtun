@@ -1,7 +1,7 @@
 enable_auth: true
 auths:
   - access_token: "ICKelin:free"
-    expired_ath: 0
+    expired_at: 0
 
 trace: ":3003"
 server:
@@ -10,6 +10,9 @@ server:
 
   - listen: ":3002"
     scheme: "mux"
+
+  - listen: ":4002"
+    scheme: "quic"
 
 log:
   days: 5

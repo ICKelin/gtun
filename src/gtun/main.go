@@ -17,8 +17,7 @@ var logo = `
 ██    ██    ██    ██    ██ ██  ██ ██ 
  ██████     ██     ██████  ██   ████ 
 ====================================
-https://github.com/ICKelin/gtun
-`
+https://github.com/ICKelin/gtun`
 
 func main() {
 	flgConf := flag.String("c", "", "config file")

@@ -88,7 +88,7 @@ gtun本身只提供流量代理通道，至于哪些流量需要被劫持，**�
 ### 安装运行gtund
 gtund部署在美国的AWS上，支持systemd和docker两种方式进行启动。
 
-在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.7版本的产物并进行下载，
+在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.8版本的产物并进行下载，
 
 ```
 cd gtund
@@ -140,7 +140,7 @@ docker-compose up --build -d
 
 ### 安装运行gtun
 
-gtun的安装也类似，在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.7版本的产物并进行下载，然后在本地linux上进行部署
+gtun的安装也类似，在[release](https://github.com/ICKelin/gtun/releases)里面找到2.0.8版本的产物并进行下载，然后在本地linux上进行部署
 
 ```shell
 cd gtun

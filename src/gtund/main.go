@@ -23,8 +23,7 @@ var logo = `
 ██    ██    ██    ██    ██ ██  ██ ██ 
  ██████     ██     ██████  ██   ████ 
 ====================================
-https://github.com/ICKelin/gtun
-`
+https://github.com/ICKelin/gtun`
 
 func init() {
 	go http.ListenAndServe(":6060", nil)

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/ICKelin/gtun/src/gtun/config"
 	"github.com/ICKelin/gtun/src/internal/logs"
-	"github.com/ICKelin/optw/transport/transport_api"
+	"github.com/ICKelin/optw/transport_api"
 	"time"
 
-	"github.com/ICKelin/optw/transport"
+	transport "github.com/ICKelin/optw"
 )
 
 var cm = &connManager{regionConn: map[string][]*conn{}}

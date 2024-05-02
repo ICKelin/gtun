@@ -59,7 +59,7 @@ gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络�
 - 支持ip加速，配合dnsmasq等软件可支持域名加速场景
 - 支持多链路容灾和竞速
 - 支持动态和静态内容访问加速
-- 引入`kcp`，`quic`等协议优化跨境传输（quic进行中）
+- 引入`kcp`，`quic`等协议优化跨境传输
 
 [返回目录](#目录)
 
@@ -98,6 +98,7 @@ install.sh 会创建gtund的运行目录，并通过systemd把gtund程序拉起�
 执行install.sh完成之后，gtund会：
 - 监听tcp的3002作为mux协议的服务端口
 - 监听udp的3002作为kcp协议的服务端口
+- 监听udp的4002作为quic协议的服务端口
 - 日志记录在/opt/apps/gtund/logs/gtund.log
 
 gtund的默认配置为，默认情况下不需要作任何的修改即可
@@ -115,6 +116,9 @@ server:
 
   - listen: ":3002"
     scheme: "mux"
+    
+  - listen: ":4002"
+    scheme: "quic"
 
 log:
   days: 5

@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ICKelin/optw/transport"
+	transport "github.com/ICKelin/optw"
 )
 
 var (

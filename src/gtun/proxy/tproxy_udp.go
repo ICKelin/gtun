@@ -8,8 +8,8 @@ import (
 	"github.com/ICKelin/gtun/src/gtun/route"
 	"github.com/ICKelin/gtun/src/internal/logs"
 	"github.com/ICKelin/gtun/src/internal/proto"
-	utils2 "github.com/ICKelin/gtun/src/internal/utils"
-	"github.com/ICKelin/optw/transport"
+	"github.com/ICKelin/gtun/src/internal/utils"
+	transport "github.com/ICKelin/optw"
 	"io"
 	"net"
 	"sync"
@@ -265,7 +265,7 @@ func (p *TProxyUDP) doProxy(stream transport.Stream, sessionKey string, fromaddr
 			break
 		}
 
-		err = utils2.SendUDPViaRaw(p.rawfd, fromaddr, toaddr, buf)
+		err = utils.SendUDPViaRaw(p.rawfd, fromaddr, toaddr, buf)
 		if err != nil {
 			logs.Error("send via raw socket fail: %v", err)
 		}

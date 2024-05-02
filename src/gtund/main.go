@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ICKelin/gtun/src/internal/logs"
-	"github.com/ICKelin/optw/transport/transport_api"
+	"github.com/ICKelin/optw/transport_api"
 	"net/http"
 	_ "net/http/pprof"
 	"os"

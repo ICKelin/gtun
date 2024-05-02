@@ -2,7 +2,7 @@ package route
 
 import (
 	"github.com/ICKelin/gtun/src/internal/logs"
-	"github.com/ICKelin/optw/transport"
+	transport "github.com/ICKelin/optw"
 	gomonkey "github.com/agiledragon/gomonkey/v2"
 	"github.com/smartystreets/goconvey/convey"
 	"net"

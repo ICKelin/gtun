@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/ICKelin/gtun/src/gtun/config"
 	"github.com/ICKelin/gtun/src/internal/logs"
-	"github.com/ICKelin/optw/transport"
+	transport "github.com/ICKelin/optw"
 	"sync"
 )
 

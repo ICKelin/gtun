@@ -11,7 +11,7 @@ gtun的基础功能是ip加速，本文通过具体的配置来讲解如何配�
 
 我们可以通过iptables非常灵活的控制加速和非加速流量。
 
-**本文是基于gtun的2.0.7版本。**
+**本文适用于2.0.7及以上版本**
 
 其他文章参考:
 
@@ -40,6 +40,7 @@ install.sh 会创建gtund的运行目录，并通过systemd把gtund程序拉起�
 执行install.sh完成之后，gtund会：
 - 监听tcp的3002作为mux协议的服务端口
 - 监听udp的3002作为kcp协议的服务端口
+- 监听udp的4002作为quic协议的服务端口
 - 日志记录在/opt/apps/gtund/logs/gtund.log
 
 gtund的默认配置为，默认情况下不需要作任何的修改即可
@@ -57,6 +58,9 @@ server:
 
   - listen: ":3002"
     scheme: "mux"
+    
+  - listen: ":4002"
+    scheme: "quic"
 
 log:
   days: 5

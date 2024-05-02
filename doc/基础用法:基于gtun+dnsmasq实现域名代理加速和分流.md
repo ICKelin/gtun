@@ -10,7 +10,7 @@
 
 ![img.png](assets/domain_acc_topology.png)
 
-**本文是基于gtun的2.0.7版本。**
+**本文适用于2.0.7及以上版本**
 
 其他文章参考:
 

@@ -16,7 +16,9 @@
 gtun是一款开源的ip代理加速软件，目前只支持linux，通过`tproxy`技术实现流量劫持，`quic`和`kcp`等协议优化广域网传输，gtun提供一个基础通道，所有加入`ipset`的ip的流量都会被gtun进行拦截并代理到指定出口。
 gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。您可以结合dnsmasq来使用，将需要配置加速的域名解析结果加入ipset，从而实现域名加速。
 
-[![](https://res.cloudinary.com/marcomontalbano/image/upload/v1686622903/video_to_markdown/images/youtube--pxv02e5EXPE-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://www.youtube.com/watch?v=pxv02e5EXPE "")
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/8KqUA5IEFTk/0.jpg)](https://www.youtube.com/watch?v=8KqUA5IEFTk)
+<center>基于gtun开发的office365文件下载加速服务</center>
 
 同时我们也基于gtun开发了收费版本，对标阿里云的全球应用加速，ucloud的pathX等产品的功能，只是会更加灵活，支持私有化部署，独立部署，可以部署到公有云，数据中心和软路由，如果您感兴趣，可以访问[我们的网站](https://www.beyondnetwork.net)进行免费免费体验。
 

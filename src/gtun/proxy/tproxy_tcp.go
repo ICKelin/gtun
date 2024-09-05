@@ -141,6 +141,10 @@ func (p *TProxyTCP) doProxy(conn net.Conn) {
 	logs.Debug("%s:%s=>%s:%s", sip, sport, dip, dport)
 	stream, err := sess.OpenStream()
 	if err != nil {
+		// force close to trigger reconnect
+		// quic CAN'T get close state by sess.IsClose()
+		// Close to trigger quic reconnect
+		sess.Close()
 		logs.Error("open stream fail: %v", err)
 		return
 	}

@@ -191,6 +191,10 @@ func (p *TProxyUDP) serve(lconn *net.UDPConn) error {
 			p.udpsessLock.Unlock()
 			sess := p.routeManager.Route(p.region, dip)
 			if sess == nil {
+				// force close to trigger reconnect
+				// quic CAN'T get close state by sess.IsClose()
+				// Close to trigger quic reconnect
+				sess.Close()
 				logs.Error("no route to host: %s", dip)
 				continue
 			}

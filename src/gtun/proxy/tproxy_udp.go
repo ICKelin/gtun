@@ -197,6 +197,10 @@ func (p *TProxyUDP) serve(lconn *net.UDPConn) error {
 
 			stream, err := sess.OpenStream()
 			if err != nil {
+				// force close to trigger reconnect
+				// quic CAN'T get close state by sess.IsClose()
+				// Close to trigger quic reconnect
+				sess.Close()
 				logs.Error("open stream fail: %v", err)
 				continue
 			}

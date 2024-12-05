@@ -23,11 +23,11 @@ gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络�
 
 我们基于gtun已经构建了多个SD-WAN加速场景：
 
-- 通用TCP/UDP端口加速，可以实现ssh，远程桌面，游戏等场景的加速，配置入口：https://dash.beyondnetwork.net/console/globalIpAcc/manage
-- Docker镜像拉取加速，参考视频：https://youtu.be/o6aoE1YA6kI?si=mUwFGQC670RKOiSb
-- Huggingface大模型下载加速，参考视频：https://youtu.be/fW2gI02TQSk?si=umxjIEsWVdXhzoFO
-- 海外回国加速，可免费体验3天，配置入口：https://dash.beyondnetwork.net/console/globalIpAcc/gipaBackCN
-- SaaS应用加速（基于gtun的域名&IP分流策略），需要购买加速旁路由：https://dash.beyondnetwork.net/console/globalIpAcc/gipaCpe
+- 通用TCP/UDP端口加速，可以实现ssh，远程桌面，游戏等场景的加速，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/manage)
+- Docker镜像拉取加速，参考视频：[Youtube](https://youtu.be/o6aoE1YA6kI?si=mUwFGQC670RKOiSb) | [B站](https://www.bilibili.com/video/BV18zUWY5EPC/)
+- Huggingface大模型下载加速，参考视频：[Youtube](https://youtu.be/fW2gI02TQSk?si=umxjIEsWVdXhzoFO) 
+- 海外回国加速，可免费体验3天，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/gipaBackCN)
+- SaaS应用加速（基于gtun的域名&IP分流策略），需要购买加速旁路由，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/gipaCpe)
 
 ## 目录
 - [介绍](#gtun)

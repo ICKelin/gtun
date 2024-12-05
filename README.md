@@ -21,7 +21,13 @@ gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络�
 
 同时我们也基于gtun开发了收费版本，对标阿里云的全球应用加速，ucloud的pathX等产品的功能，只是会更加灵活，支持私有化部署，独立部署，可以部署到公有云，数据中心和软路由，如果您感兴趣，可以访问[我们的网站](https://www.beyondnetwork.net)进行免费免费体验。
 
-关于项目有任何问题需要咨询，可以[联系作者](#关于作者)进行交流
+我们基于gtun已经构建了多个SD-WAN加速场景：
+
+- 通用TCP/UDP端口加速，可以实现ssh，远程桌面，游戏等场景的加速，配置入口：https://dash.beyondnetwork.net/console/globalIpAcc/manage
+- Docker镜像拉取加速，参考视频：https://youtu.be/o6aoE1YA6kI?si=mUwFGQC670RKOiSb
+- Huggingface大模型下载加速，参考视频：https://youtu.be/fW2gI02TQSk?si=umxjIEsWVdXhzoFO
+- 海外回国加速，可免费体验3天，配置入口：https://dash.beyondnetwork.net/console/globalIpAcc/gipaBackCN
+- SaaS应用加速（基于gtun的域名&IP分流策略），需要购买加速旁路由：https://dash.beyondnetwork.net/console/globalIpAcc/gipaCpe
 
 ## 目录
 - [介绍](#gtun)
@@ -266,5 +272,3 @@ root@raspberrypi:/home/pi# wget http://speedtest.atlanta.linode.com/100MB-atlant
 - 项目建议，代码问题
 - 案例分享
 - 技术交流
-
-可加微信: zyj995139094

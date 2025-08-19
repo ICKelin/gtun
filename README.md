@@ -16,19 +16,6 @@
 gtun是一款开源的ip代理加速软件，目前只支持linux，通过`tproxy`技术实现流量劫持，`quic`和`kcp`等协议优化广域网传输，gtun提供一个基础通道，所有加入`ipset`的ip的流量都会被gtun进行拦截并代理到指定出口。
 gtun支持多线路配置，可以同时对美国，日本，欧洲目的网络进行加速访问。您可以结合dnsmasq来使用，将需要配置加速的域名解析结果加入ipset，从而实现域名加速。
 
-[![gtun介绍与演示](https://res.cloudinary.com/marcomontalbano/image/upload/v1722935405/video_to_markdown/images/youtube--6edKBdVIqeE-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/6edKBdVIqeE?si=BzNcTFVD6EMzNrcy "gtun介绍与演示")
-
-
-同时我们也基于gtun开发了收费版本，对标阿里云的全球应用加速，ucloud的pathX等产品的功能，只是会更加灵活，支持私有化部署，独立部署，可以部署到公有云，数据中心和软路由，如果您感兴趣，可以访问[我们的网站](https://www.beyondnetwork.net)进行免费免费体验。
-
-我们基于gtun已经构建了多个SD-WAN加速场景：
-
-- 通用TCP/UDP端口加速，可以实现ssh，远程桌面，游戏等场景的加速，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/manage)
-- Docker镜像拉取加速，参考视频：[Youtube](https://youtu.be/o6aoE1YA6kI?si=mUwFGQC670RKOiSb) | [B站](https://www.bilibili.com/video/BV18zUWY5EPC/)
-- Huggingface大模型下载加速，参考视频：[Youtube](https://youtu.be/fW2gI02TQSk?si=umxjIEsWVdXhzoFO) 
-- 海外回国加速，可免费体验3天，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/gipaBackCN)
-- SaaS应用加速（基于gtun的域名&IP分流策略），需要购买加速旁路由，[配置入口](https://dash.beyondnetwork.net/console/globalIpAcc/gipaCpe)
-
 ## 目录
 - [介绍](#gtun)
 - [应用场景](#应用场景)
@@ -265,10 +252,4 @@ root@raspberrypi:/home/pi# wget http://speedtest.atlanta.linode.com/100MB-atlant
 [返回目录](#目录)
 
 ## 关于作者
-一个爱好编程的人，网名叫ICKelin。对于以下任何问题，包括
-
-- 项目实现细节
-- 项目使用问题
-- 项目建议，代码问题
-- 案例分享
-- 技术交流
+一个爱好编程的人，网名叫ICKelin。
